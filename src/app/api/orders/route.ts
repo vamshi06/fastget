@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Order, OrderItem, OrderStatus } from '@/types';
+import { Order, OrderStatus } from '@/types';
 import { 
   generateUUID, 
   generateToken, 
-  generatePin, 
-  hashPin,
   formatPhoneNumber,
   validateOrderForm 
 } from '@/lib/utils';
@@ -37,7 +35,6 @@ export async function POST(request: NextRequest) {
     const orderId = generateUUID();
     const statusToken = generateToken();
     const updateToken = generateToken();
-    const agentPin = generatePin();
 
     // Create order object
     const order: Order = {
@@ -68,9 +65,11 @@ export async function POST(request: NextRequest) {
     const success = await createOrderInSheets(order);
     
     if (!success) {
-      // If Sheets integration fails, we still return success but log the error
-      // In production, you'd want to queue this for retry
-      console.error('Failed to save order to Sheets, but continuing with success response');
+      console.error('Failed to save order to Sheets');
+      return NextResponse.json(
+        { error: 'We could not place the order right now. Please try again.' },
+        { status: 502 }
+      );
     }
 
     // Return order details to client
