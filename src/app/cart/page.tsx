@@ -6,9 +6,9 @@ import { formatCurrency } from '@/lib/utils';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package } from 'lucide-react';
 
 export default function CartPage() {
-  const { state, removeItem, updateQuantity, getSubtotal, getConvenienceFee, getTotal, clearCart } = useCart();
+  const { state, removeItem, updateQuantity, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
 
-  if (state.items.length === 0) {
+  if (isLoaded && state.items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">

@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { state, getSubtotal, getConvenienceFee, getTotal, clearCart } = useCart();
+  const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +22,7 @@ export default function CheckoutPage() {
     scheduledTime: '',
   });
 
-  if (state.items.length === 0) {
+  if (isLoaded && state.items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">
@@ -121,7 +121,6 @@ export default function CheckoutPage() {
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       placeholder="Enter your name"
-                      required
                     />
                   </div>
                   <div>
@@ -136,7 +135,6 @@ export default function CheckoutPage() {
                         onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                         placeholder="10-digit mobile number"
-                        required
                       />
                     </div>
                   </div>
@@ -159,7 +157,6 @@ export default function CheckoutPage() {
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
                       placeholder="Building name, street address, area, landmark"
-                      required
                     />
                   </div>
                   <div>
@@ -237,7 +234,6 @@ export default function CheckoutPage() {
                         value={formData.scheduledTime}
                         onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        required={formData.deliveryType === 'scheduled'}
                       />
                     </div>
                   )}
