@@ -274,11 +274,20 @@ vercel --prod
 # Required
 GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/...
 NEXT_PUBLIC_APP_URL=https://fastget.vercel.app
+APPS_SCRIPT_SECRET=<shared-secret-between-nextjs-and-apps-script>
 
 # Optional
 CONVENIENCE_FEE_PERCENTAGE=10
 MAX_ORDER_QUANTITY=50
 AGENT_PIN_SALT=<random-string>
+```
+
+Apps Script project properties:
+
+```bash
+SPREADSHEET_ID=<google-sheet-id>
+AGENT_PIN=<shared-agent-pin>
+APPS_SCRIPT_SECRET=<same-secret-as-vercel>
 ```
 
 ---
