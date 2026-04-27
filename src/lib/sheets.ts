@@ -55,6 +55,7 @@ export async function createOrderInSheets(order: Order): Promise<boolean> {
       redirect: 'follow',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
       },
       body: JSON.stringify({
         action: 'createOrder',
@@ -123,6 +124,7 @@ export async function updateOrderStatusInSheets(
       redirect: 'follow',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
       },
       body: JSON.stringify({
         action: 'updateStatus',
