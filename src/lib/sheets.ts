@@ -1,6 +1,7 @@
-import { Order, OrderItem, OrderFormData, OrderStatus } from '@/types';
+import { Order, OrderItem, OrderStatus } from '@/types';
 
 const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || '';
+const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET || '';
 
 interface SheetsOrderRow {
   id: string;
@@ -24,9 +25,8 @@ interface SheetsOrderRow {
 
 export async function createOrderInSheets(order: Order): Promise<boolean> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('GOOGLE_SCRIPT_URL not configured, logging order locally');
-    console.log('Order:', order);
-    return true;
+    console.error('GOOGLE_SCRIPT_URL is not configured; order was not saved');
+    return false;
   }
 
   try {
@@ -54,6 +54,7 @@ export async function createOrderInSheets(order: Order): Promise<boolean> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
       },
       body: JSON.stringify({
         action: 'createOrder',
@@ -82,6 +83,10 @@ export async function getOrderFromSheets(token: string): Promise<Order | null> {
   try {
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getOrder&token=${token}`, {
       method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+      },
     });
 
     if (!response.ok) {
@@ -117,6 +122,7 @@ export async function updateOrderStatusInSheets(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
       },
       body: JSON.stringify({
         action: 'updateStatus',
