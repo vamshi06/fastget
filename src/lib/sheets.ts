@@ -52,9 +52,9 @@ export async function createOrderInSheets(order: Order): Promise<boolean> {
 
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
+      redirect: 'follow',
       headers: {
-        'Content-Type': 'application/json',
-        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+        'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify({
         action: 'createOrder',
@@ -120,9 +120,9 @@ export async function updateOrderStatusInSheets(
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
+      redirect: 'follow',
       headers: {
-        'Content-Type': 'application/json',
-        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+        'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify({
         action: 'updateStatus',
