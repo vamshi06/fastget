@@ -1,16 +1,19 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from 'react';
 import { CartItem, Product } from '@/types';
 
 interface CartState {
   items: CartItem[];
 }
 
+const CART_STORAGE_KEY = 'fastget.cart.v1';
+
 type CartAction =
   | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { productId: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number } }
+  | { type: 'REPLACE_CART'; payload: CartState }
   | { type: 'CLEAR_CART' };
 
 const CartContext = createContext<
@@ -20,6 +23,7 @@ const CartContext = createContext<
       removeItem: (productId: string) => void;
       updateQuantity: (productId: string, quantity: number) => void;
       clearCart: () => void;
+      isLoaded: boolean;
       getItemCount: () => number;
       getSubtotal: () => number;
       getConvenienceFee: () => number;
@@ -75,6 +79,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ),
       };
     
+    case 'REPLACE_CART':
+      return action.payload;
+    
     case 'CLEAR_CART':
       return { ...state, items: [] };
     
@@ -87,6 +94,36 @@ const CONVENIENCE_FEE_PERCENTAGE = 10;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedCart = window.localStorage.getItem(CART_STORAGE_KEY);
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart) as CartState;
+        if (Array.isArray(parsed.items)) {
+          dispatch({ type: 'REPLACE_CART', payload: parsed });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore cart from localStorage:', error);
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    }
+    
+    setTimeout(() => setIsLoaded(true), 0);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.warn('Failed to save cart to localStorage:', error);
+    }
+  }, [isLoaded, state]);
 
   const addItem = useCallback((product: Product, quantity: number) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
@@ -132,6 +169,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeItem,
         updateQuantity,
         clearCart,
+        isLoaded,
         getItemCount,
         getSubtotal,
         getConvenienceFee,
