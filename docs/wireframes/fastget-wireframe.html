@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fastget Wireframe</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #171717;
+      background: #f7f7f4;
+    }
+    .topbar {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #cfcfc8;
+      background: #eeeeea;
+      font-size: 13px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid #cfcfc8;
+      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+    nav {
+      display: flex;
+      gap: 18px;
+      font-size: 14px;
+      color: #404040;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      border: 1px solid #1f1f1f;
+      background: #fff;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: default;
+    }
+    .primary {
+      background: #171717;
+      color: white;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 28px;
+      padding: 44px 28px 24px;
+      max-width: 1220px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: 52px;
+      line-height: 1.02;
+      margin: 0 0 16px;
+      letter-spacing: 0;
+    }
+    .hero p {
+      font-size: 19px;
+      line-height: 1.45;
+      margin: 0 0 22px;
+      color: #353535;
+    }
+    .searchbox {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      border: 2px solid #171717;
+      background: white;
+      margin: 22px 0 14px;
+    }
+    .searchbox span {
+      padding: 17px;
+      color: #757575;
+    }
+    .zone {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .chip {
+      border: 1px solid #a9a9a2;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    .hero-panel {
+      border: 2px solid #171717;
+      background: white;
+      padding: 20px;
+    }
+    .flow {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .flow-step {
+      border: 1px solid #cfcfc8;
+      padding: 12px;
+      background: #fafafa;
+      display: grid;
+      gap: 4px;
+      font-size: 14px;
+    }
+    .flow-step span {
+      color: #656565;
+      font-size: 13px;
+    }
+    .timer {
+      border: 1px dashed #777;
+      padding: 18px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .timer strong {
+      display: block;
+      font-size: 42px;
+      line-height: 1;
+    }
+    .site-card {
+      border: 1px solid #cfcfc8;
+      padding: 14px;
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .band {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 22px 28px;
+    }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+    .section-title h2 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .categories,
+    .products,
+    .trust {
+      display: grid;
+      gap: 12px;
+    }
+    .categories {
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .cat,
+    .product,
+    .trust-item {
+      background: white;
+      border: 1px solid #cfcfc8;
+      padding: 14px;
+      min-height: 92px;
+    }
+    .cat {
+      display: grid;
+      align-content: space-between;
+      font-weight: 700;
+    }
+    .cat small,
+    .product small,
+    .trust-item small {
+      display: block;
+      color: #656565;
+      font-weight: 400;
+      margin-top: 6px;
+    }
+    .products {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .product {
+      min-height: 190px;
+      display: grid;
+      gap: 10px;
+    }
+    .image {
+      height: 74px;
+      border: 1px dashed #aaa;
+      display: grid;
+      place-items: center;
+      color: #777;
+      background: #fafafa;
+      font-size: 13px;
+    }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 800;
+    }
+    .trust {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    .status-board {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .status-card {
+      background: white;
+      border: 1px solid #cfcfc8;
+      padding: 16px;
+    }
+    .status-line {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: start;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .dot {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #171717;
+      border-radius: 999px;
+      margin-top: 2px;
+      background: #fff;
+    }
+    .dot.done {
+      background: #171717;
+    }
+    .footer {
+      border-top: 1px solid #cfcfc8;
+      margin-top: 30px;
+      padding: 28px;
+      background: white;
+      color: #444;
+    }
+    @media (max-width: 800px) {
+      nav { display: none; }
+      .hero { grid-template-columns: 1fr; padding-top: 28px; }
+      .hero h1 { font-size: 38px; }
+      .categories { grid-template-columns: repeat(2, 1fr); }
+      .products { grid-template-columns: 1fr; }
+      .trust { grid-template-columns: 1fr; }
+      .status-board { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; gap: 4px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>Open 8am to 8pm across working days</span>
+    <span>Pay after delivery available</span>
+    <span>Serving Andheri, Goregaon, Malad</span>
+  </div>
+  <header>
+    <div class="brand">Fastget</div>
+    <nav>
+      <span>Carpentry</span>
+      <span>Plumbing</span>
+      <span>Hardware</span>
+      <span>Plywood</span>
+      <span>Electrical</span>
+    </nav>
+    <div class="actions">
+      <button>Search</button>
+      <button class="primary">Start Order</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1>Site material delivered before work stops.</h1>
+        <p>Fastget brings urgent interior, plumbing, and carpentry materials to Mumbai job sites with pay on delivery and an approximate delivery time at checkout.</p>
+        <div class="searchbox">
+          <span>Search hinges, screws, ply, CPVC fittings...</span>
+          <button class="primary">Find Material</button>
+        </div>
+        <div class="zone">
+          <span class="chip">Andheri</span>
+          <span class="chip">Goregaon</span>
+          <span class="chip">Malad</span>
+          <span class="chip">Scheduled delivery</span>
+          <span class="chip">Pay on delivery</span>
+        </div>
+      </div>
+      <aside class="hero-panel">
+        <div class="timer">
+          <strong>30 min</strong>
+          urgent site delivery target
+        </div>
+        <div class="site-card">
+          <strong>Current site order</strong>
+          <span>2 boxes screws, 4 soft-close hinges, 1 ply sheet</span>
+          <span>Delivery: Goregaon East site gate</span>
+          <span>Payment: pay on delivery</span>
+          <span>ETA shown after checkout: about 42 minutes</span>
+        </div>
+        <div class="flow">
+          <div class="flow-step">
+            <strong>1. Customer checks out</strong>
+            <span>Order details are captured into a backend Google Form.</span>
+          </div>
+          <div class="flow-step">
+            <strong>2. Fastget confirms ETA</strong>
+            <span>No map required at launch. Show approximate time clearly.</span>
+          </div>
+          <div class="flow-step">
+            <strong>3. Agent marks delivered</strong>
+            <span>Customer order status updates from out for delivery to delivered.</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="band">
+      <div class="section-title">
+        <h2>Urgent categories</h2>
+        <span>Start narrow. Stock what stops work.</span>
+      </div>
+      <div class="categories">
+        <div class="cat">Hinges & channels <small>soft close, regular, branded</small></div>
+        <div class="cat">Screws & fasteners <small>box packs, site packs</small></div>
+        <div class="cat">Plywood & boards <small>cut sizes, common sheets</small></div>
+        <div class="cat">Plumbing fittings <small>CPVC, elbows, connectors</small></div>
+        <div class="cat">Electrical basics <small>wires, boxes, switches</small></div>
+        <div class="cat">Adhesives <small>Fevicol, sealants, tapes</small></div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="section-title">
+        <h2>Fast moving site materials</h2>
+        <span>Catalog flow with real checkout, manual backend to start.</span>
+      </div>
+      <div class="products">
+        <div class="product">
+          <div class="image">product photo</div>
+          <strong>Soft-close hinge set</strong>
+          <small>Common carpentry replacement</small>
+          <div class="price-row"><span>Rs. 180</span><button>ADD</button></div>
+        </div>
+        <div class="product">
+          <div class="image">product photo</div>
+          <strong>Wood screws box</strong>
+          <small>Fastener pack for on-site fixes</small>
+          <div class="price-row"><span>Rs. 120</span><button>ADD</button></div>
+        </div>
+        <div class="product">
+          <div class="image">product photo</div>
+          <strong>CPVC elbow set</strong>
+          <small>Urgent plumbing connector pack</small>
+          <div class="price-row"><span>Rs. 90</span><button>ADD</button></div>
+        </div>
+        <div class="product">
+          <div class="image">product photo</div>
+          <strong>Ply cut sheet</strong>
+          <small>Common cut sizes for repairs</small>
+          <div class="price-row"><span>Rs. 260</span><button>ADD</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="section-title">
+        <h2>Checkout and order status</h2>
+        <span>Google Form backend now. Proper ops dashboard later.</span>
+      </div>
+      <div class="status-board">
+        <div class="status-card">
+          <strong>Checkout fields</strong>
+          <div class="site-card">
+            <span>Name and phone</span>
+            <span>Site address and landmark</span>
+            <span>Needed now or scheduled time</span>
+            <span>Pay on delivery selected by default</span>
+            <span>Order writes to Google Form for ops team</span>
+          </div>
+        </div>
+        <div class="status-card">
+          <strong>Customer status page</strong>
+          <div class="status-line"><div class="dot done"></div><div><strong>Order received</strong><br><span>Fastget is checking item availability.</span></div></div>
+          <div class="status-line"><div class="dot done"></div><div><strong>ETA assigned</strong><br><span>Approximate delivery: 42 minutes.</span></div></div>
+          <div class="status-line"><div class="dot"></div><div><strong>Out for delivery</strong><br><span>Agent picked up material from local supplier.</span></div></div>
+          <div class="status-line"><div class="dot"></div><div><strong>Delivered</strong><br><span>Agent marks success, customer status updates immediately.</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="trust">
+        <div class="trust-item"><strong>Verified material</strong><small>No mystery substitute without confirmation.</small></div>
+        <div class="trust-item"><strong>Site delivery</strong><small>Drop at gate, floor, or worker location.</small></div>
+        <div class="trust-item"><strong>Pay on delivery</strong><small>Default checkout option for workers and contractors.</small></div>
+        <div class="trust-item"><strong>Schedule ahead</strong><small>Book material before the next task starts.</small></div>
+        <div class="trust-item"><strong>Local sourcing</strong><small>Supplier network beats store trips.</small></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Fastget - urgent site materials for Mumbai contractors and skilled labourers.
+  </footer>
+</body>
+</html>
