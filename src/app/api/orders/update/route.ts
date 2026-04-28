@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateOrderStatusInSheets } from '@/lib/sheets';
+import { updateOrderStatus } from '@/lib/db';
 import { OrderStatus } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await updateOrderStatusInSheets(
+    const result = await updateOrderStatus(
       updateToken,
       status as OrderStatus,
       pin,

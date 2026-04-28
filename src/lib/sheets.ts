@@ -59,6 +59,7 @@ export async function createOrderInSheets(order: Order): Promise<boolean> {
       },
       body: JSON.stringify({
         action: 'createOrder',
+        secret: APPS_SCRIPT_SECRET || undefined,
         data: row,
       }),
     });
@@ -82,7 +83,14 @@ export async function getOrderFromSheets(token: string): Promise<Order | null> {
   }
 
   try {
-    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getOrder&token=${token}`, {
+    const url = new URL(GOOGLE_SCRIPT_URL);
+    url.searchParams.set('action', 'getOrder');
+    url.searchParams.set('token', token);
+    if (APPS_SCRIPT_SECRET) {
+      url.searchParams.set('secret', APPS_SCRIPT_SECRET);
+    }
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -128,6 +136,7 @@ export async function updateOrderStatusInSheets(
       },
       body: JSON.stringify({
         action: 'updateStatus',
+        secret: APPS_SCRIPT_SECRET || undefined,
         data: {
           update_token: updateToken,
           status: newStatus,

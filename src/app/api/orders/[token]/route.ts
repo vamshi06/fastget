@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrderFromSheets } from '@/lib/sheets';
+import { getOrderByStatusToken } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
@@ -15,7 +15,7 @@ export async function GET(
       );
     }
 
-    const order = await getOrderFromSheets(token);
+    const order = await getOrderByStatusToken(token);
     
     if (!order) {
       return NextResponse.json(

@@ -6,7 +6,7 @@ import {
   formatPhoneNumber,
   validateOrderForm 
 } from '@/lib/utils';
-import { createOrderInSheets } from '@/lib/sheets';
+import { createOrder } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,11 +61,11 @@ export async function POST(request: NextRequest) {
       updateToken,
     };
 
-    // Save to Google Sheets
-    const success = await createOrderInSheets(order);
+    // Save to database
+    const success = await createOrder(order);
     
     if (!success) {
-      console.error('Failed to save order to Sheets');
+      console.error('Failed to save order to database');
       return NextResponse.json(
         { error: 'We could not place the order right now. Please try again.' },
         { status: 502 }
