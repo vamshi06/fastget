@@ -1,0 +1,186 @@
+# Design: Fastget - Building Materials Quick Commerce for Mumbai Sites
+
+**Status:** APPROVED  
+**Generated:** 2026-04-26  
+**Source:** /office-hours
+
+---
+
+## Problem Statement
+
+Fastget is a restarted startup for urgent interior-work and building-material delivery in Mumbai. The first version previously ran for a few days, received 3-5 orders per day from Meta ads, had roughly Rs. 200 average order value, and used cash on delivery.
+
+The restart should copy the HomeRun-style catalog commerce pattern, but position Fastget around Mumbai site urgency: when a skilled labourer or contractor is missing ply, hinges, screws, plumbing fittings, or similar material, Fastget helps them keep work moving without leaving the site.
+
+The first operating corridor is Andheri, Goregaon, and Malad. The 30-minute promise should begin conservatively inside the densest part of that corridor, then expand as supplier and delivery reliability improves.
+
+---
+
+## Demand Evidence
+
+- Fastget already received real orders from cold Meta ads during the first run
+- Order volume was about 3-5 orders per day
+- Average order value was about Rs. 200
+- Customers paid cash on delivery
+- Customers ordered materials related to interior work on demand so they could get them delivered quickly to the site
+- Customers explicitly wanted pay after delivery and scheduled delivery
+- Customers compared the alternative to ordering through Porter, which means the problem is not only delivery. Fastget must solve procurement plus delivery.
+
+---
+
+## Status Quo
+
+The current workaround is local shop plus worker time plus transport:
+
+1. A plumber, carpenter, or other skilled worker realizes a needed item is missing
+2. They leave the job site or send someone to a local shop
+3. They buy the material directly, or coordinate a Porter-style pickup and delivery
+4. Work pauses or slows while the missing material is sourced
+
+This is the real competitor. Not just HomeRun, Moglix, Infra.Market, or Porter. The behaviour to beat is the trusted local-store habit.
+
+---
+
+## Target User & Narrowest Wedge
+
+The first user is a skilled labourer or small contractor working on-site in Mumbai, especially carpentry, plumbing, and interior finishing work.
+
+Their urgent jobs include:
+
+- **Carpentry:** hinges, channels, screws, ply, adhesives
+- **Plumbing:** CPVC fittings, elbows, connectors, basic sanitary fittings
+- **Interior finishing:** small hardware and replacement materials that stop work when missing
+
+The narrowest wedge is urgent delivery of fast-moving site materials in the Andheri-Goregaon-Malad corridor, with pay on delivery, scheduled delivery, and a catalog checkout that writes orders into a manual Google Form backend at launch.
+
+---
+
+## Constraints
+
+- Fastget should look like a real catalog storefront, similar to HomeRun, not only a WhatsApp lead form
+- The first backend can be manual: checkout submits to a Google Form or equivalent ops sheet
+- Customers must be able to choose pay on delivery
+- Customers must receive an approximate delivery time after checkout
+- Maps-based live tracking is not required for the MVP
+- Delivery agents must be able to mark the order as successful
+- Customer order status must reflect agent updates
+- Unit economics are tight because prior AOV was around Rs. 200. Convenience fee, margin, batching, supplier terms, or higher-AOV SKUs must be tested
+
+---
+
+## Premises
+
+1. Fastget's first customer is the skilled labourer or small contractor working on-site, not the homeowner
+2. The core pain is site delay: leaving work to buy urgent materials wastes paid labour time
+3. The first geography should be the Andheri-Goregaon-Malad corridor, but the 30-minute promise may need to start with one tighter zone inside it
+4. Fastget beats local shop plus Porter only if it handles procurement plus delivery: right item, availability, quality, pay on delivery, and scheduled delivery
+5. The landing page should sell keeping work moving more than cheap materials
+6. The restart should begin with a narrow urgent catalog: ply, hinges, screws, basic plumbing and carpentry items, not every building material
+7. The future-fit thesis is that labour time gets more expensive, so workers and contractors can less afford store trips during active site work
+
+---
+
+## Landscape Awareness
+
+**HomeRun** shows the closest public reference pattern: category-first building-material quick commerce, serviceability check, delivery-time promise, COD/pay-on-delivery, bulk pricing, product cards, trust badges, and testimonials.
+
+**Infra.Market** and **Moglix** show the broader India construction and industrial procurement market: large catalogs, direct-to-site delivery, B2B buying, bulk pricing, and supplier networks. They are not focused on urgent 30-minute labourer-first site stoppage.
+
+**Porter** is the strongest behavioural substitute. It solves intra-city transport, but not item discovery, supplier availability, quality verification, payment collection, scheduled procurement, or post-order status.
+
+**Eureka:** the conventional model separates procurement and transport. Fastget's wedge is combining both for the on-site worker: the right material, sourced locally, delivered fast, paid after delivery, with status visible to the customer.
+
+---
+
+## Selected Approach
+
+**Approach A: HomeRun-Style Catalog with guardrails**
+
+Proceed with the catalog commerce pattern, but with two critical guardrails:
+
+1. Copy the catalog commerce pattern, not the generic positioning. Fastget should not say only "building materials delivered fast." It should say "site material delivered before work stops."
+2. Keep the backend manual for launch. Checkout should submit to a Google Form or ops sheet, show pay on delivery, assign an approximate ETA, and expose a customer order-status page that updates when the delivery agent marks success.
+
+---
+
+## MVP Customer Flow
+
+1. Customer lands on Fastget
+2. Customer searches or browses urgent categories
+3. Customer adds items to cart
+4. Customer checks out with name, phone, site address, landmark, needed-now or scheduled time, and pay on delivery
+5. Checkout writes the order into a Google Form or linked Google Sheet for ops
+6. Ops confirms material availability and assigns an approximate ETA
+7. Customer sees an order status page: order received, ETA assigned, out for delivery, delivered
+8. Delivery agent marks delivered/successful after handoff
+9. Customer order status updates to delivered
+
+---
+
+## Open Questions
+
+- What exact 30-minute launch zone inside Andheri-Goregaon-Malad can Fastget reliably cover first?
+- Which 30-50 SKUs caused the most urgent orders in the first run?
+- What convenience fee or margin is needed to make a Rs. 200 AOV order profitable?
+- How will item substitution work if the exact product is unavailable?
+- Who bears payment collection risk for pay on delivery?
+- Should scheduled delivery be a separate CTA or a checkout field?
+
+---
+
+## Success Criteria
+
+### For the restart pilot:
+
+- 50 completed orders in the first 2 weeks
+- At least 10 repeat customers or repeat site addresses
+- Median quoted ETA within 15 minutes of actual delivery time
+- At least 70% of orders delivered without customer support intervention
+- Gross margin plus delivery/convenience fee covers delivery cost on the median order
+- At least 5 customers say they would have otherwise left the site or sent someone to a shop
+
+### For the landing page:
+
+- A worker or contractor understands within 5 seconds that Fastget delivers urgent site materials
+- Pay on delivery is visible before checkout
+- Approximate delivery time is visible after checkout
+- The page includes Andheri, Goregaon, and Malad service-area messaging
+- The page includes top urgent categories, not a broad unbounded catalog
+
+---
+
+## Distribution Plan
+
+Fastget should be distributed as a public web service first, with mobile-friendly checkout. Do not require users to install an app for the restart.
+
+### Initial launch channels:
+
+- Meta ads targeted around Andheri, Goregaon, and Malad
+- Direct outreach to contractors, carpenters, plumbers, and site supervisors from prior order data
+- QR code or short link shared with suppliers and site workers
+
+### Build and deployment:
+
+- Static/web app frontend deployed to a simple host such as Vercel, Netlify, or equivalent
+- Checkout submits to Google Forms or Google Sheets for MVP ops
+- Delivery-agent status can begin as an authenticated lightweight internal page or protected form that updates the order record
+- Later migration path: replace Google Forms with a proper order database, admin dashboard, inventory/serviceability engine, and driver app
+
+---
+
+## Dependencies
+
+- Product photos or clean placeholders for the first urgent SKUs
+- Price list for the launch catalog
+- Supplier list for Andheri, Goregaon, and Malad
+- Manual ops process for availability confirmation and ETA assignment
+- Delivery-agent process for marking successful delivery
+- Customer status-page mechanism tied to the order record
+
+---
+
+## The Assignment
+
+Before building a large catalog, run a 7-day restart pilot with 30-50 urgent SKUs and a manual Google Form backend. Track every order with: item, site area, customer role, ETA promised, actual delivery time, payment collected, delivery cost, gross margin, and whether the customer would have otherwise left the site.
+
+The goal is not order count alone. The goal is to prove repeat urgent demand and delivery economics in one tight Mumbai corridor.
