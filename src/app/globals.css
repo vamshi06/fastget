@@ -36,6 +36,8 @@ select {
 input::placeholder,
 textarea::placeholder {
   color: rgb(107, 114, 128); /* text-gray-500 */
+}
+
 /* Admin Panel Animations */
 @keyframes fadeInUp {
   from {
