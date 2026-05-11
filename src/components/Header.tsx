@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 import {
   useRouter,
@@ -80,12 +81,15 @@ export function Header() {
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-3"
+            className="flex items-center gap-2"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-md">
-
-              <Package className="w-5 h-5 text-white" />
-            </div>
+            <Image
+              src="/fastget-logo.png"
+              alt="Fastget Logo"
+              width={40}
+              height={40}
+              className="w-10 h-10"
+            />
 
             <div className="flex flex-col leading-none">
 
@@ -94,7 +98,7 @@ export function Header() {
               </span>
 
               <span className="text-[11px] text-blue-600 font-medium">
-                Quick Materials
+                Delivery in minutes
               </span>
             </div>
           </Link>
