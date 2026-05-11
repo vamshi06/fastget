@@ -36,7 +36,7 @@ const statusColors: Record<OrderStatus, string> = {
 
 export default function OrderStatusPage() {
   const params = useParams();
-  const token = params.token as string;
+  const token = (params.token as string).toLowerCase();
   
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ export default function OrderStatusPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Order #{order.id.slice(-8).toUpperCase()}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Order #{order.statusToken.toUpperCase()}</h1>
               <p className="text-gray-500 mt-1">
                 Placed on {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
               </p>

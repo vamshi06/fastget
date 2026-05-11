@@ -1,6 +1,23 @@
 import { neon } from '@neondatabase/serverless';
 import { Order, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types';
 
+/**
+ * Neon Postgres database client and order CRUD operations
+ * 
+ * This module handles all database interactions for orders:
+ * - Schema initialization with create table and indexes
+ * - Order creation with automatic token generation
+ * - Order retrieval by status or update tokens
+ * - Status updates with PIN auth and transition validation
+ * - Query utilities for admin/ops dashboards
+ * 
+ * Environment:
+ * - DATABASE_URL or fastget_DATABASE_URL: Neon connection string (required)
+ * - AGENT_PIN: 4-digit PIN for agent authentication (required for status updates)
+ * 
+ * @module lib/db
+ */
+
 // Support both plain DATABASE_URL and Vercel-prefixed version (fastget_DATABASE_URL)
 const databaseUrl = process.env.DATABASE_URL || process.env.fastget_DATABASE_URL;
 if (!databaseUrl) {
@@ -9,6 +26,12 @@ if (!databaseUrl) {
 
 const sql = neon(databaseUrl);
 
+/**
+ * Database row format for orders
+ * Matches Neon Postgres table structure with snake_case columns
+ * 
+ * @internal Use Order type for API contract, this is for internal DB mapping
+ */
 export interface DbOrder {
   id: string;
   created_at: Date;
@@ -29,6 +52,16 @@ export interface DbOrder {
   update_token: string;
 }
 
+// PIN constant for agent verification (4-digit) - loaded at module init
+const AGENT_PIN = process.env.AGENT_PIN;
+
+/**
+ * Initialize the orders table schema in Neon Postgres
+ * Creates table with all required columns and indexes
+ * Safe to call multiple times (uses CREATE TABLE IF NOT EXISTS)
+ * 
+ * @throws {Error} If table creation fails
+ */
 export async function initializeDatabase(): Promise<void> {
   try {
     await sql`
@@ -66,6 +99,13 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
+/**
+ * Create a new order in the database
+ * Inserts the complete order with items, tokens, and status
+ * 
+ * @param {Order} order - The order object to insert (must include id, statusToken, updateToken)
+ * @returns {Promise<boolean>} true on success, false on failure (logged)
+ */
 export async function createOrder(order: Order): Promise<boolean> {
   try {
     await sql`
@@ -88,6 +128,13 @@ export async function createOrder(order: Order): Promise<boolean> {
   }
 }
 
+/**
+ * Retrieve an order by its status token (customer-facing)
+ * Used for customer order tracking page
+ * 
+ * @param {string} token - The status_token from order creation response
+ * @returns {Promise<Order | null>} The Order object or null if not found
+ */
 export async function getOrderByStatusToken(token: string): Promise<Order | null> {
   try {
     const result = await sql`
@@ -105,6 +152,13 @@ export async function getOrderByStatusToken(token: string): Promise<Order | null
   }
 }
 
+/**
+ * Retrieve an order by its update token (agent-facing)
+ * Used for agent status update page
+ * 
+ * @param {string} token - The update_token from order creation response
+ * @returns {Promise<Order | null>} The Order object or null if not found
+ */
 export async function getOrderByUpdateToken(token: string): Promise<Order | null> {
   try {
     const result = await sql`
@@ -122,9 +176,30 @@ export async function getOrderByUpdateToken(token: string): Promise<Order | null
   }
 }
 
-// PIN constant for agent verification (4-digit)
-const AGENT_PIN = process.env.AGENT_PIN;
-
+/**
+ * Update an order's status with PIN authentication and transition validation
+ * Enforces valid state transitions (e.g., received → eta_assigned → out_for_delivery → delivered)
+ * Protects against race conditions by checking current status in WHERE clause
+ * 
+ * @param {string} updateToken - The update_token from order creation response
+ * @param {OrderStatus} newStatus - The target status (must be valid from VALID_STATUS_TRANSITIONS)
+ * @param {string} pin - The agent PIN for authentication (compared against AGENT_PIN env var)
+ * @param {string} [eta] - Optional ETA string to display to customer (e.g., "2 hours")
+ * @returns {Promise<{success: boolean, error?: string}>} Success flag and error message if failed
+ * 
+ * @example
+ * const result = await updateOrderStatus(
+ *   'update-token-123',
+ *   'eta_assigned',
+ *   '1234',
+ *   '30 minutes'
+ * );
+ * if (result.success) {
+ *   console.log('Status updated');
+ * } else {
+ *   console.error(result.error);
+ * }
+ */
 export async function updateOrderStatus(
   updateToken: string,
   newStatus: OrderStatus,
@@ -188,6 +263,13 @@ export async function updateOrderStatus(
   }
 }
 
+/**
+ * Get recent orders (for admin/ops dashboards)
+ * Returns orders sorted by created_at in descending order
+ * 
+ * @param {number} [limit=50] - Maximum number of orders to return
+ * @returns {Promise<Order[]>} Array of orders (empty array on error)
+ */
 export async function getRecentOrders(limit: number = 50): Promise<Order[]> {
   try {
     const result = await sql`
@@ -203,6 +285,13 @@ export async function getRecentOrders(limit: number = 50): Promise<Order[]> {
   }
 }
 
+/**
+ * Get orders filtered by status (for status-specific views)
+ * Returns orders in descending order by created_at
+ * 
+ * @param {OrderStatus} status - The status to filter by (e.g., 'received', 'out_for_delivery')
+ * @returns {Promise<Order[]>} Array of matching orders (empty array on error)
+ */
 export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
   try {
     const result = await sql`
@@ -218,6 +307,13 @@ export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
   }
 }
 
+/**
+ * Convert database row format to API Order object
+ * Maps snake_case columns to camelCase properties
+ * Handles timestamp conversion to ISO strings
+ * 
+ * @private
+ */
 function dbOrderToOrder(dbOrder: DbOrder): Order {
   return {
     id: dbOrder.id,

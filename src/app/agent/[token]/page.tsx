@@ -16,7 +16,7 @@ import {
 
 export default function AgentUpdatePage() {
   const params = useParams();
-  const token = params.token as string;
+  const token = (params.token as string).toLowerCase();
 
   const [pin, setPin] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | ''>('');

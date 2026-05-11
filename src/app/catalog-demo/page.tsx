@@ -1,3 +1,5 @@
+'use client';
+
 import { ProductFilterBar, FilterState } from '@/components/ProductFilterBar';
 import { useState } from 'react';
 

@@ -25,3 +25,15 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* Ensure form inputs have visible text */
+input,
+textarea,
+select {
+  color: rgb(17, 24, 39); /* text-gray-900 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgb(107, 114, 128); /* text-gray-500 */
+}
