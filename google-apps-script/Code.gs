@@ -1,6 +1,4 @@
 const ORDERS_SHEET_NAME = 'Orders';
-const PRODUCTS_SHEET_NAME = 'Products';
-
 const ORDER_HEADERS = [
   'id',
   'created_at',
@@ -19,18 +17,6 @@ const ORDER_HEADERS = [
   'eta',
   'status_token',
   'update_token',
-];
-
-const PRODUCT_HEADERS = [
-  'id',
-  'name',
-  'description',
-  'price',
-  'unit',
-  'category',
-  'image_url',
-  'stock_status',
-  'created_at',
 ];
 
 const VALID_STATUS_TRANSITIONS = {
@@ -55,10 +41,6 @@ function doPost(e) {
       return json_(updateStatus_(payload.data));
     }
 
-    if (payload.action === 'createProduct') {
-      return json_({ success: true, data: createProduct_(payload.data) });
-    }
-
     return json_({ success: false, error: 'Unknown action' });
   } catch (error) {
     console.error(error);
@@ -75,16 +57,6 @@ function doGet(e) {
     if (action === 'getOrder') {
       const order = getOrderByStatusToken_(e.parameter.token);
       return json_({ success: Boolean(order), data: order });
-    }
-
-    if (action === 'getAllOrders') {
-      const orders = getAllOrders_();
-      return json_({ success: true, data: orders });
-    }
-
-    if (action === 'getAllProducts') {
-      const products = getAllProducts_();
-      return json_({ success: true, data: products });
     }
 
     return json_({ success: false, error: 'Unknown action' });
@@ -118,11 +90,6 @@ function getOrderByStatusToken_(token) {
   const sheet = getOrdersSheet_();
   const rows = getRows_(sheet);
   return rows.find((row) => row.status_token === token) || null;
-}
-
-function getAllOrders_() {
-  const sheet = getOrdersSheet_();
-  return getRows_(sheet);
 }
 
 function updateStatus_(data) {
@@ -226,47 +193,6 @@ function validateAgentPin_(pin) {
   if (String(pin) !== configuredPin) {
     throw new Error('Invalid PIN');
   }
-}
-
-function getProductsSheet_() {
-  const props = PropertiesService.getScriptProperties();
-  const spreadsheetId = props.getProperty('SPREADSHEET_ID');
-  const spreadsheet = spreadsheetId
-    ? SpreadsheetApp.openById(spreadsheetId)
-    : SpreadsheetApp.getActiveSpreadsheet();
-
-  if (!spreadsheet) {
-    throw new Error('Spreadsheet is not configured');
-  }
-
-  return spreadsheet.getSheetByName(PRODUCTS_SHEET_NAME) || spreadsheet.insertSheet(PRODUCTS_SHEET_NAME);
-}
-
-function createProduct_(data) {
-  if (!data || !data.id || !data.name || !data.price) {
-    throw new Error('Invalid product payload: id, name, and price are required');
-  }
-
-  const sheet = getProductsSheet_();
-  const headers = ensureHeaders_(sheet, PRODUCT_HEADERS);
-  
-  const row = headers.map((header) => {
-    if (header === 'created_at' && !data.created_at) {
-      return new Date().toISOString();
-    }
-    return data[header] ?? '';
-  });
-  
-  sheet.appendRow(row);
-  return {
-    id: data.id,
-    name: data.name,
-  };
-}
-
-function getAllProducts_() {
-  const sheet = getProductsSheet_();
-  return getRows_(sheet);
 }
 
 function validateSecret_(actualSecret) {

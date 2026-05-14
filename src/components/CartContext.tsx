@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from 'react';
 import { CartItem, Product } from '@/types';
+import { track } from '@/lib/analytics';
+
 
 interface CartState {
   items: CartItem[];
@@ -126,20 +128,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [isLoaded, state]);
 
   const addItem = useCallback((product: Product, quantity: number) => {
+    track('Cart Item Added', {
+      sku: product.id,
+      quantity,
+      price: product.price,
+    });
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
   }, []);
 
   const removeItem = useCallback((productId: string) => {
+    track('Cart Item Removed', { sku: productId });
     dispatch({ type: 'REMOVE_ITEM', payload: { productId } });
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
+    track('Cart Item Quantity Updated', {
+      sku: productId,
+      quantity,
+    });
     dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
   }, []);
 
   const clearCart = useCallback(() => {
+    track('Cart Cleared');
     dispatch({ type: 'CLEAR_CART' });
   }, []);
+
 
   const getItemCount = useCallback(() => {
     return state.items.reduce((sum, item) => sum + item.quantity, 0);

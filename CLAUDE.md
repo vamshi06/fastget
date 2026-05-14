@@ -44,13 +44,7 @@ Available gstack skills in this project:
 
 ## Database Strategy
 
-**Current:** Neon Postgres (Production)
-**Legacy:** Google Sheets via Apps Script (Deprecated - Not in use)
+**Current:** Google Sheets via Apps Script
+**Future:** PostgreSQL migration (see TODOS.md)
 
-All orders are stored in Neon Postgres. The database layer lives in `src/lib/db.ts`.
-
-### Neon Setup
-- **Database:** PostgreSQL 17.8 on AWS ap-southeast-1
-- **Schema:** `orders` table with 17 columns
-- **Connection:** @neondatabase/serverless SDK
-- **Environment:** `fastget_DATABASE_URL` in .env.local and Vercel
+The Google Sheets integration lives in `src/lib/sheets.ts`.

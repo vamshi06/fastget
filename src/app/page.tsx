@@ -6,15 +6,20 @@ import { SearchBar } from '@/components/SearchBar';
 import { categories } from '@/data/products';
 import { ArrowRight, Clock, Shield, MapPin, Truck } from 'lucide-react';
 import Link from 'next/link';
+import { track } from '@/lib/analytics';
+
 
 export default function Home() {
   const router = useRouter();
 
   const handleSearch = (query: string) => {
-    if (query.trim()) {
-      router.push(`/catalog?q=${encodeURIComponent(query)}`);
+    const normalized = query.replace(/\s+/g, ' ').trim();
+    if (normalized) {
+      track('Search Submitted', { query: normalized });
+      router.push(`/catalog?q=${encodeURIComponent(normalized)}`);
     }
   };
+
 
   return (
     <div className="min-h-screen">
