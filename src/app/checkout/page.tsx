@@ -225,9 +225,11 @@ export default function CheckoutPage() {
 
                   {formData.deliveryType === 'scheduled' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Preferred Delivery Time *
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <span className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Preferred Delivery Time *
+                        </span>
                       </label>
                       <input
                         type="datetime-local"

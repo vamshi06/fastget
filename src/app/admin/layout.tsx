@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="bg-white border-b border-blue-100 shadow-sm sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href={`/admin${token ? `?token=${token}` : ''}`} className="group">
+            <Link href={(token ? `/admin?token=${token}` : '/admin') as any} className="group">
               {/* <Image
                             src="/fastget-logo.png"
                             alt="Fastget Logo"
@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
             <nav className="flex gap-6">
               <Link
-                href={`/admin${token ? `?token=${token}` : ''}`}
+                href={(token ? `/admin?token=${token}` : '/admin') as any}
                 className={`font-medium transition-all duration-200 relative group ${
                   isDashboard
                     ? 'text-blue-600'
@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 />
               </Link>
               <Link
-                href={`/admin/orders${token ? `?token=${token}` : ''}`}
+                href={(token ? `/admin/orders?token=${token}` : '/admin/orders') as any}
                 className={`font-medium transition-all duration-200 relative group ${
                   isOrders
                     ? 'text-blue-600'
@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 />
               </Link>
               <Link
-                href={`/admin/products${token ? `?token=${token}` : ''}`}
+                href={(token ? `/admin/products?token=${token}` : '/admin/products') as any}
                 className={`font-medium transition-all duration-200 relative group ${
                   isProducts
                     ? 'text-blue-600'

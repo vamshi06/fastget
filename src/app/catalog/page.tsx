@@ -216,7 +216,7 @@ function CatalogPageContent() {
                 </span>{' '}
                 results for{' '}
                 <span className="font-medium text-blue-700">
-                  "{searchQuery}"
+                  &quot;{searchQuery}&quot;
                 </span>
               </p>
             ) : activeCategoryName ? (

@@ -11,7 +11,12 @@ export function formatPhoneNumber(phone: string): string {
 }
 
 export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  // Use native crypto.randomUUID when available (Node 18+, all modern browsers)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
@@ -19,6 +24,13 @@ export function generateUUID(): string {
 }
 
 export function generateToken(): string {
+  // Use cryptographically-secure randomness when available
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => (b % 36).toString(36)).join('');
+  }
+  // Fallback
   return Array.from({ length: 16 }, () =>
     Math.floor(Math.random() * 36).toString(36)
   ).join('');
@@ -100,7 +112,7 @@ export function formatTime(dateString: string): string {
   });
 }
 
-export function estimateDeliveryTime(area?: string): string {
+export function estimateDeliveryTime(): string {
   const now = new Date();
   const minMinutes = 30;
   const maxMinutes = 60;

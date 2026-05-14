@@ -1,4 +1,4 @@
-import { getAllOrdersFromSheets } from '@/lib/sheets';
+import { getRecentOrders } from '@/lib/db';
 import Link from 'next/link';
 import { Order, OrderStatus } from '@/types';
 
@@ -11,7 +11,8 @@ interface MetricCard {
 }
 
 async function getMetrics() {
-  const orders = await getAllOrdersFromSheets();
+  // Use Neon/Postgres as the single source of truth — not Google Sheets
+  const orders = await getRecentOrders(500);
 
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
@@ -40,7 +41,7 @@ export default async function AdminDashboard() {
     },
     {
       label: 'Total Revenue',
-      value: `₹${totalRevenue.toFixed(2)}`,
+      value: `₹${(totalRevenue / 100).toFixed(2)}`,
       color: 'text-green-600',
       bgGradient: 'from-green-50 to-green-100 border-green-200',
       delay: '100',
@@ -86,7 +87,7 @@ export default async function AdminDashboard() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {metrics.map((metric, index) => (
+        {metrics.map((metric) => (
           <div
             key={metric.label}
             style={{
@@ -111,7 +112,7 @@ export default async function AdminDashboard() {
 
       {/* Quick Actions */}
       <div
-        className="bg-white rounded-xl border border-blue-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500"
+        className="bg-white rounded-xl border border-blue-200 p-8 shadow-sm hover:shadow-md transition-all duration-300"
         style={{
           animation: `fadeInUp 0.6s ease-out 600ms forwards`,
           opacity: 0,
@@ -144,34 +145,37 @@ export default async function AdminDashboard() {
         }}
       >
         <h3 className="text-xl font-bold text-gray-900 mb-6">Order Status Breakdown</h3>
-        <div className="space-y-4">
-          {Object.entries(statusCounts).map(([status, count], index) => (
-            <div
-              key={status}
-              className="flex items-center justify-between group"
-              style={{
-                animation: `fadeInLeft 0.5s ease-out ${100 + index * 50}ms forwards`,
-                opacity: 0,
-              }}
-            >
-              <span className="text-gray-700 font-medium capitalize group-hover:text-blue-600 transition-colors">
-                {status.replace(/_/g, ' ')}
-              </span>
-              <div className="flex items-center gap-4 flex-1 ml-4">
-                <div className="w-40 bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-700 ease-out"
-                    style={{
-                      width: `${totalOrders > 0 ? (count / totalOrders) * 100 : 0}%`,
-                      animation: `expandWidth 0.8s ease-out ${100 + index * 50}ms forwards`,
-                    }}
-                  />
+        {Object.keys(statusCounts).length === 0 ? (
+          <p className="text-gray-500">No orders yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(statusCounts).map(([status, count], index) => (
+              <div
+                key={status}
+                className="flex items-center justify-between group"
+                style={{
+                  animation: `fadeInLeft 0.5s ease-out ${100 + index * 50}ms forwards`,
+                  opacity: 0,
+                }}
+              >
+                <span className="text-gray-700 font-medium capitalize group-hover:text-blue-600 transition-colors">
+                  {status.replace(/_/g, ' ')}
+                </span>
+                <div className="flex items-center gap-4 flex-1 ml-4">
+                  <div className="w-40 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${totalOrders > 0 ? (count / totalOrders) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-gray-900 font-bold w-12 text-right">{count}</span>
                 </div>
-                <span className="text-gray-900 font-bold w-12 text-right">{count}</span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getUnpooledConnection } from '@/lib/db';
+
+/**
+ * GET /api/orders/pending
+ *
+ * Return list of orders filtered by status (default: 'received').
+ * Used for agent dashboard to see which orders need attention.
+ *
+ * Query params:
+ * - status (optional): Filter by status (default: 'received')
+ * - limit (optional): Number of results (default: 20, max: 100)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const statusFilter = searchParams.get('status') || 'received';
+    const limitParam = parseInt(searchParams.get('limit') || '20', 10);
+    const limit = isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 100);
+
+    // Validate status is one of allowed values
+    const validStatuses = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(statusFilter)) {
+      return NextResponse.json(
+        { error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Use unpooled connection to read fresh data from primary
+    const sqlConn = getUnpooledConnection();
+
+    // Get total count for the status
+    const countResult = await sqlConn`
+      SELECT COUNT(*)::integer AS total
+      FROM orders
+      WHERE status = ${statusFilter}
+    `;
+    // Neon returns COUNT as bigint string — cast to number safely
+    const totalCount = Number(countResult[0]?.total ?? 0);
+
+    // Fetch orders with the specified status
+    const orders = await sqlConn`
+      SELECT
+        id,
+        created_at,
+        customer_name,
+        customer_phone,
+        site_address,
+        landmark,
+        delivery_type,
+        scheduled_time,
+        items,
+        subtotal,
+        convenience_fee,
+        total,
+        payment_method,
+        status,
+        eta,
+        update_token,
+        status_token
+      FROM orders
+      WHERE status = ${statusFilter}
+      ORDER BY created_at ASC
+      LIMIT ${limit}
+    `;
+
+    const formattedOrders = orders.map((order: any) => ({
+      id: order.id,
+      createdAt: order.created_at,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      siteAddress: order.site_address,
+      landmark: order.landmark,
+      deliveryType: order.delivery_type,
+      scheduledTime: order.scheduled_time,
+      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      subtotal: order.subtotal,
+      convenienceFee: order.convenience_fee,
+      total: order.total,
+      paymentMethod: order.payment_method,
+      status: order.status,
+      eta: order.eta,
+      updateToken: order.update_token,
+      statusToken: order.status_token,
+    }));
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: totalCount,
+        status: statusFilter,
+        orders: formattedOrders,
+      },
+      {
+        status: 200,
+        headers: { 'Cache-Control': 'no-store' },
+      }
+    );
+  } catch (error) {
+    console.error('Error fetching pending orders:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

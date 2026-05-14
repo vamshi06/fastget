@@ -47,7 +47,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <p className="text-gray-600 text-lg">Order ID: <span className="font-mono font-semibold text-gray-900">{order.id}</span></p>
         </div>
         <Link
-          href={`/admin/orders${token ? `?token=${token}` : ''}`}
+          href={(token ? `/admin/orders?token=${token}` : '/admin/orders') as any}
           className="group px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-300 font-semibold transition-all duration-200 hover:shadow-md active:scale-95"
         >
           ← Back

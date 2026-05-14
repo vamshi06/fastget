@@ -37,9 +37,9 @@
 
 ### Order Management
 
-- [ ] Neon-backed order creation
-- [ ] Neon-backed customer status tracking
-- [ ] Neon-backed agent status updates
+- [x] Neon-backed order creation
+- [x] Neon-backed customer status tracking
+- [x] Neon-backed agent status updates
 - [ ] Customer notifications (email/SMS)
 - [ ] Payment integration
 
@@ -65,7 +65,7 @@
 - [x] Next.js scaffolding
 - [x] Neon database connected in Vercel
 - [x] Basic order CRUD on Neon
-- [ ] API route tests for order create/read/update
+- [x] API route tests for order create/read/update
 
 ### Future
 

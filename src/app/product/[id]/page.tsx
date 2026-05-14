@@ -22,6 +22,17 @@ export default function ProductDetailPage() {
 
   const { state, addItem, updateQuantity, removeItem } = useCart();
 
+  const cartItem = product
+    ? state.items.find((item) => item.product.id === product.id)
+    : undefined;
+
+  const cartQuantity = cartItem?.quantity || 0;
+  const [quantity, setQuantity] = useState(cartQuantity || 1);
+
+  useEffect(() => {
+    setQuantity(cartQuantity || 1);
+  }, [cartQuantity]);
+
   if (!product) {
     return (
       <div className="min-h-screen bg-gray-50 py-16">
@@ -49,18 +60,6 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-
-  const cartItem = state.items.find(
-    (item) => item.product.id === product.id
-  );
-
-  const cartQuantity = cartItem?.quantity || 0;
-
-  const [quantity, setQuantity] = useState(cartQuantity || 1);
-
-  useEffect(() => {
-    setQuantity(cartQuantity || 1);
-  }, [cartQuantity]);
 
   const handleCartAction = () => {
     if (cartQuantity === 0) {
