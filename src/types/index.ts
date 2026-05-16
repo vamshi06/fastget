@@ -36,7 +36,7 @@ export type OrderStatus =
   | 'cancelled';
 
 export type DeliveryType = 'urgent' | 'scheduled';
-export type PaymentMethod = 'cod' | 'upi';
+export type PaymentMethod = 'cod';
 
 export interface OrderItem {
   sku: string;

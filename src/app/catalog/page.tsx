@@ -7,8 +7,6 @@ import { SearchBar } from '@/components/SearchBar';
 import { products, categories, searchProducts, getProductsByCategory } from '@/data/products';
 import { Product, CategoryId } from '@/types';
 import { Package, SlidersHorizontal } from 'lucide-react';
-import { track } from '@/lib/analytics';
-
 
 function CatalogPageContent() {
   const searchParams = useSearchParams();
@@ -24,31 +22,18 @@ function CatalogPageContent() {
       const results = searchProducts(initialQuery);
       setDisplayedProducts(results);
       setSearchQuery(initialQuery);
-
-      track('Catalog Searched', {
-        query: initialQuery,
-        resultsCount: results.length,
-      });
     } else if (initialCategory) {
       const results = getProductsByCategory(initialCategory);
       setDisplayedProducts(results);
       setActiveCategory(initialCategory as CategoryId);
-
-      track('Catalog Category Browsed', {
-        categoryId: initialCategory,
-        resultsCount: results.length,
-      });
     }
   }, [initialQuery, initialCategory]);
 
-
   const handleSearch = (query: string) => {
-    const normalized = query.replace(/\s+/g, ' ').trim();
-    setSearchQuery(normalized);
+    setSearchQuery(query);
     setActiveCategory('');
-
-    if (normalized) {
-      setDisplayedProducts(searchProducts(normalized));
+    if (query.trim()) {
+      setDisplayedProducts(searchProducts(query));
     } else {
       setDisplayedProducts(products);
     }

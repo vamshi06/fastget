@@ -232,7 +232,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     subtotal: dbOrder.subtotal,
     convenienceFee: dbOrder.convenience_fee,
     total: dbOrder.total,
-    paymentMethod: dbOrder.payment_method as any,
+    paymentMethod: dbOrder.payment_method as 'cod',
     status: dbOrder.status,
     eta: dbOrder.eta || undefined,
     statusToken: dbOrder.status_token,

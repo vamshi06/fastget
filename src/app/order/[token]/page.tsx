@@ -17,8 +17,6 @@ import {
   AlertCircle,
   ChevronLeft
 } from 'lucide-react';
-import { track } from '@/lib/analytics';
-
 
 const statusIcons: Record<OrderStatus, React.ComponentType<{ className?: string }>> = {
   received: Package,
@@ -50,23 +48,11 @@ export default function OrderStatusPage() {
         const response = await fetch(`/api/orders/${token}`);
         const data = await response.json();
 
-        track('Order Viewed', {
-          statusToken: token,
-          orderId: data?.order?.id,
-        });
-
-
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch order');
         }
 
         setOrder(data.order);
-        if (data?.order?.status) {
-          track('Order Status Loaded', {
-            status: data.order.status,
-          });
-        }
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load order');
       } finally {
@@ -223,7 +209,7 @@ export default function OrderStatusPage() {
             <div className="space-y-3">
               <div className="flex justify-between text-gray-600">
                 <span>Payment Method</span>
-                <span className="font-medium text-gray-900">{order.paymentMethod === 'upi' ? 'UPI' : 'Cash on Delivery'}</span>
+                <span className="font-medium text-gray-900">Cash on Delivery</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>

@@ -4,12 +4,8 @@ import './globals.css';
 import { CartProvider } from '@/components/CartContext';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import AnalyticsProvider from '@/app/analytics/AnalyticsProvider';
-
-
 
 const inter = Inter({ subsets: ['latin'] });
-
 
 export const metadata: Metadata = {
   title: 'Fastget - Building Materials Delivered in 30-60 Minutes',
@@ -25,14 +21,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <CartProvider>
-          <AnalyticsProvider />
           <Header />
           <main className="flex-grow">
             {children}
           </main>
           <Footer />
         </CartProvider>
-
       </body>
     </html>
   );

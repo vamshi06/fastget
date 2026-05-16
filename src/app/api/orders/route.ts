@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       subtotal,
       convenienceFee,
       total,
-      paymentMethod: body.paymentMethod || 'cod',
+      paymentMethod: 'cod',
       status: 'received' as OrderStatus,
       statusToken,
       updateToken,
