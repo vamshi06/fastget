@@ -182,3 +182,112 @@ function sheetsRowToOrder(row: SheetsOrderRow): Order {
     updateToken: row.update_token,
   };
 }
+
+export async function getAllOrdersFromSheets(): Promise<Order[]> {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn('GOOGLE_SCRIPT_URL not configured; returning empty array');
+    return [];
+  }
+
+  try {
+    const url = new URL(GOOGLE_SCRIPT_URL);
+    url.searchParams.set('action', 'getAllOrders');
+    if (APPS_SCRIPT_SECRET) {
+      url.searchParams.set('secret', APPS_SCRIPT_SECRET);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success || !Array.isArray(result.data)) {
+      return [];
+    }
+
+    return result.data.map(sheetsRowToOrder);
+  } catch (error) {
+    console.error('Failed to get all orders from Sheets:', error);
+    return [];
+  }
+}
+
+export async function getAllProductsFromSheets(): Promise<any[]> {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn('GOOGLE_SCRIPT_URL not configured; returning empty array');
+    return [];
+  }
+
+  try {
+    const url = new URL(GOOGLE_SCRIPT_URL);
+    url.searchParams.set('action', 'getAllProducts');
+    if (APPS_SCRIPT_SECRET) {
+      url.searchParams.set('secret', APPS_SCRIPT_SECRET);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success || !Array.isArray(result.data)) {
+      return [];
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Failed to get all products from Sheets:', error);
+    return [];
+  }
+}
+
+export async function createProductInSheets(product: any): Promise<boolean> {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.error('GOOGLE_SCRIPT_URL is not configured; product was not saved');
+    return false;
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+        ...(APPS_SCRIPT_SECRET && { 'X-Secret': APPS_SCRIPT_SECRET }),
+      },
+      body: JSON.stringify({
+        action: 'createProduct',
+        secret: APPS_SCRIPT_SECRET || undefined,
+        data: product,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.success === true;
+  } catch (error) {
+    console.error('Failed to create product in Sheets:', error);
+    return false;
+  }
+}

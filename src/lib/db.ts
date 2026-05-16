@@ -3,11 +3,20 @@ import { Order, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types
 
 // Support both plain DATABASE_URL and Vercel-prefixed version (fastget_DATABASE_URL)
 const databaseUrl = process.env.DATABASE_URL || process.env.fastget_DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is required but not set (checked DATABASE_URL, fastget_DATABASE_URL)');
-}
 
-const sql = neon(databaseUrl);
+// Initialize sql connection - will be null if DATABASE_URL not set
+let sql: any = null;
+
+if (databaseUrl) {
+  sql = neon(databaseUrl);
+} else if (process.env.NODE_ENV === 'production') {
+  throw new Error('DATABASE_URL environment variable is required but not set (checked DATABASE_URL, fastget_DATABASE_URL)');
+} else {
+  // In development/build, create a dummy sql function that will error at runtime if called
+  sql = (() => {
+    throw new Error('DATABASE_URL not configured. Set DATABASE_URL or fastget_DATABASE_URL environment variable.');
+  }) as any;
+}
 
 export interface DbOrder {
   id: string;
@@ -216,6 +225,27 @@ export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
     console.error('Failed to get orders by status:', error);
     return [];
   }
+}
+
+export async function getAllOrders(): Promise<Order[]> {
+  try {
+    const result = await sql`
+      SELECT * FROM orders 
+      ORDER BY created_at DESC
+    `;
+    
+    return (result as DbOrder[]).map(dbOrderToOrder);
+  } catch (error) {
+    console.error('Failed to get all orders:', error);
+    return [];
+  }
+}
+
+export function getUnpooledConnection() {
+  // Return the sql connection function (neon handles pooling internally)
+  // For unpooled connections in Neon, we'd need a separate connection
+  // For now, return the pooled sql function which works for most use cases
+  return sql;
 }
 
 function dbOrderToOrder(dbOrder: DbOrder): Order {

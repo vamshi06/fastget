@@ -13,6 +13,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "lucide-react": "^0.460.0",
     "next": "^14.2.0",
+    "posthog-js": "^1.373.5",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "vercel": "^52.0.0"
