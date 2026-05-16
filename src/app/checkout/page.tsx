@@ -1,16 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
 import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package } from 'lucide-react';
 import Link from 'next/link';
-import { track } from '@/lib/analytics';
 
 export default function CheckoutPage() {
-
   const router = useRouter();
   const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +20,6 @@ export default function CheckoutPage() {
     landmark: '',
     deliveryType: 'urgent' as 'urgent' | 'scheduled',
     scheduledTime: '',
-    paymentMethod: 'cod' as 'cod' | 'upi',
   });
 
   if (isLoaded && state.items.length === 0) {
@@ -44,19 +40,8 @@ export default function CheckoutPage() {
     );
   }
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (state.items.length > 0) {
-      track('Checkout Started', {
-        itemCount: state.items.reduce((s, i) => s + i.quantity, 0),
-        subtotal: getSubtotal(),
-      });
-    }
-  }, [isLoaded, state.items, getSubtotal]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setError(null);
 
     const validationError = validateOrderForm(formData);
@@ -89,24 +74,10 @@ export default function CheckoutPage() {
       }
 
       const data = await response.json();
-
-      track('Order Placed', {
-        orderId: data.orderId,
-        statusToken: data.statusToken,
-        total: getTotal(),
-        deliveryType: formData.deliveryType,
-        paymentMethod: formData.paymentMethod,
-      });
-
       clearCart();
       router.push(`/order/${data.statusToken}`);
-
     } catch (err) {
-      track('Checkout Failed', {
-        message: err instanceof Error ? err.message : 'Something went wrong',
-      });
       setError(err instanceof Error ? err.message : 'Something went wrong');
-
     } finally {
       setIsSubmitting(false);
     }
@@ -254,9 +225,11 @@ export default function CheckoutPage() {
 
                   {formData.deliveryType === 'scheduled' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Preferred Delivery Time *
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <span className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Preferred Delivery Time *
+                        </span>
                       </label>
                       <input
                         type="datetime-local"
@@ -315,7 +288,7 @@ export default function CheckoutPage() {
 
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-800 font-medium mb-1">Payment Method</p>
-                <p className="text-green-700">{formData.paymentMethod === 'upi' ? 'UPI' : 'Cash on Delivery'}</p>
+                <p className="text-green-700">Cash on Delivery</p>
               </div>
 
               {formData.deliveryType === 'urgent' && (
