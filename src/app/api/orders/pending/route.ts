@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUnpooledConnection } from '@/lib/db';
 
+// Force dynamic rendering to allow search params
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/orders/pending
  *

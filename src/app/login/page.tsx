@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useUser } from '@/components/UserContext';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setCurrentUser } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -34,26 +36,36 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Simulate authentication - in production, call your backend
-      const users = JSON.parse(localStorage.getItem('fastget_users') || '[]');
-      const user = users.find((u: { email: string; password: string }) => u.email === email);
+      // Call the login API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-      if (!user || user.password !== password) {
-        setError('Invalid email or password');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Invalid email or password');
         setIsLoading(false);
         return;
       }
 
-      // Store current user session
-      localStorage.setItem('fastget_currentUser', JSON.stringify({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      }));
+      // Update user context and redirect to home
+      setCurrentUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+      });
 
       router.push('/');
     } catch (err) {
-      setError('An error occurred during login');
+      setError('An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }

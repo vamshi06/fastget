@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useUser } from '@/components/UserContext';
 import { User, Mail, Lock, Phone, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { setCurrentUser } = useUser();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -64,37 +66,39 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // Check if user already exists
-      const users = JSON.parse(localStorage.getItem('fastget_users') || '[]');
-      if (users.some((u: { email: string }) => u.email === formData.email)) {
-        setError('An account with this email already exists');
+      // Call the signup API endpoint
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Signup failed');
         setIsLoading(false);
         return;
       }
 
-      // Create new user
-      const newUser = {
-        id: `user_${Date.now()}`,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        createdAt: new Date().toISOString(),
-      };
+      // Update user context and redirect to home
+      setCurrentUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+      });
 
-      users.push(newUser);
-      localStorage.setItem('fastget_users', JSON.stringify(users));
-
-      // Log the user in
-      localStorage.setItem('fastget_currentUser', JSON.stringify({
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-      }));
-
+      // Redirect to home page
       router.push('/');
     } catch (err) {
-      setError('An error occurred during signup');
+      setError('An error occurred during signup. Please try again.');
     } finally {
       setIsLoading(false);
     }

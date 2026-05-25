@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\Akanksha\\\\FastGet\\\\FastGet Vamshi\\\\interns\\\\fastget\\\\UI\" -Recurse -Force)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Recurse \"d:\\\\Akanksha\\\\FastGet\\\\FastGet Vamshi\\\\interns\\\\fastget\\\\UI\" -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

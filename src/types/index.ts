@@ -97,3 +97,80 @@ export const VALID_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   delivered: [],
   cancelled: [],
 };
+
+// ============================================================================
+// Phase 1: User Management
+// ============================================================================
+
+export type UserRole = 'customer' | 'agent' | 'admin';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash?: string;
+  phone: string;
+  role: UserRole;
+  preferredAddressId?: string;
+  lastOrderAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AddressType = 'home' | 'work' | 'other';
+
+export interface UserAddress {
+  id: string;
+  userId: string;
+  type: AddressType;
+  street: string;
+  landmark?: string;
+  city: string;
+  phone: string;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+// ============================================================================
+// Phase 2: Product Catalog
+// ============================================================================
+
+export interface CategoryDB {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface ProductDB {
+  id: string;
+  name: string;
+  description?: string;
+  categoryId?: string;
+  price: number; // in paise (1 rupee = 100 paise)
+  status: 'active' | 'inactive' | 'discontinued';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  sku: string;
+  priceOverride?: number; // in paise, overrides product base price if set
+  stockQuantity: number;
+  attributes: Record<string, string>; // e.g., { "size": "M", "color": "red" }
+  createdAt: string;
+}
+
+// ============================================================================
+// Phase 4: User Preferences
+// ============================================================================
+
+export interface Wishlist {
+  id: string;
+  userId: string;
+  variantId: string;
+  addedAt: string;
+}

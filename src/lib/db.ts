@@ -102,7 +102,8 @@ export async function initializeDatabase(): Promise<void> {
         status VARCHAR(50) NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled')),
         eta TEXT,
         status_token VARCHAR(32) UNIQUE NOT NULL,
-        update_token VARCHAR(32) UNIQUE NOT NULL
+        update_token VARCHAR(32) UNIQUE NOT NULL,
+        user_id UUID
       )
     `;
 
@@ -112,9 +113,265 @@ export async function initializeDatabase(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)`;
 
-    console.log('Database initialized successfully');
+    console.log('Orders table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Failed to initialize orders table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize users table for Phase 1 user management.
+ * Supports customer, agent, and admin roles.
+ */
+export async function initializeUsersTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL DEFAULT 'User',
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255),
+        phone VARCHAR(20) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'agent', 'admin')),
+        preferred_address_id UUID,
+        last_order_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Ensure existing databases get the new name column
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) NOT NULL DEFAULT 'User'`;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`;
+
+    console.log('Users table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize users table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize user_addresses table for storing multiple addresses per user.
+ * Supports home, work, and other address types.
+ */
+export async function initializeUserAddressesTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('home', 'work', 'other')),
+        street TEXT NOT NULL,
+        landmark TEXT,
+        city VARCHAR(100) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        is_primary BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_user_addresses_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_is_primary ON user_addresses(user_id, is_primary)`;
+
+    console.log('User addresses table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize user addresses table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize categories table for product organization.
+ */
+export async function initializeCategoriesTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS categories (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)`;
+
+    console.log('Categories table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize categories table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize products table for catalog management.
+ * Price is in paise (1 rupee = 100 paise).
+ */
+export async function initializeProductsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS products (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        category_id UUID,
+        price INTEGER NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'discontinued')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_products_category_id
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_products_status ON products(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC)`;
+
+    console.log('Products table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize products table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize product_variants table for SKUs and variant tracking.
+ * Attributes stored as JSONB for flexibility (e.g., {"size": "M", "color": "red"}).
+ * Price override allows variants to have different prices from base product.
+ * Stock quantity tracks inventory per variant.
+ */
+export async function initializeProductVariantsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS product_variants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id UUID NOT NULL,
+        sku VARCHAR(255) NOT NULL UNIQUE, 
+        price_override INTEGER,
+        stock_quantity INTEGER DEFAULT 0,
+        attributes JSONB DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_product_variants_product_id
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON product_variants(product_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(sku)`;
+
+    console.log('Product variants table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize product variants table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize wishlists table for user favorites.
+ */
+export async function initializeWishlistsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS wishlists (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        variant_id UUID NOT NULL,
+        added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_wishlists_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        CONSTRAINT fk_wishlists_variant_id
+          FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+        CONSTRAINT uk_wishlists_user_variant
+          UNIQUE (user_id, variant_id)
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_wishlists_user_id ON wishlists(user_id)`;
+
+    console.log('Wishlists table initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize wishlists table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add user_id foreign key to existing orders table.
+ * Safe to call multiple times (uses ALTER TABLE IF EXISTS).
+ */
+export async function addUserIdToOrders(): Promise<void> {
+  const sql = getClient();
+  try {
+    // Check if column already exists
+    const result = await sql`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'orders' AND column_name = 'user_id'
+    `;
+
+    if (result.length === 0) {
+      // Column doesn't exist, add it
+      await sql`
+        ALTER TABLE orders
+        ADD COLUMN user_id UUID,
+        ADD CONSTRAINT fk_orders_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      `;
+      
+      // Add index for faster lookups
+      await sql`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`;
+      
+      console.log('Added user_id column to orders table');
+    } else {
+      console.log('user_id column already exists on orders table');
+    }
+  } catch (error) {
+    console.error('Failed to add user_id to orders table:', error);
+    throw error;
+  }
+}
+
+/**
+ * Initialize all tables for Phase 1 and Phase 2.
+ * Safe to call multiple times.
+ */
+export async function initializeAllTables(): Promise<void> {
+  try {
+    console.log('Starting database initialization...');
+    
+    // Phase 1: User Management
+    await initializeUsersTable();
+    await initializeUserAddressesTable();
+    
+    // Phase 2: Product Catalog
+    await initializeCategoriesTable();
+    await initializeProductsTable();
+    await initializeProductVariantsTable();
+    
+    // Phase 4: User Preferences
+    await initializeWishlistsTable();
+    
+    // Orders table (with user_id support)
+    await initializeDatabase();
+    await addUserIdToOrders();
+    
+    console.log('✅ All tables initialized successfully!');
+  } catch (error) {
+    console.error('❌ Failed to initialize all tables:', error);
     throw error;
   }
 }
@@ -141,9 +398,45 @@ export async function createOrder(order: Order): Promise<boolean> {
         ${order.eta || null}, ${order.statusToken}, ${order.updateToken}
       )
     `;
+    console.log(`✓ Order created successfully: ${order.id}`);
     return true;
   } catch (error) {
-    console.error('Failed to create order:', error);
+    console.error('Failed to create order:', {
+      orderId: order.id,
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      } : error
+    });
+    
+    // If table doesn't exist, try to initialize it once
+    if (error instanceof Error && error.message.includes('relation "orders" does not exist')) {
+      console.log('Table missing. Attempting to initialize database...');
+      try {
+        await initializeDatabase();
+        console.log('Database initialized. Retrying order creation...');
+        // Retry the insert
+        await sql`
+          INSERT INTO orders (
+            id, created_at, customer_name, customer_phone, site_address, landmark,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            payment_method, status, eta, status_token, update_token
+          ) VALUES (
+            ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
+            ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
+            ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
+            ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
+            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}
+          )
+        `;
+        return true;
+      } catch (initError) {
+        console.error('Failed to initialize database and retry:', initError);
+        return false;
+      }
+    }
+    
     return false;
   }
 }
