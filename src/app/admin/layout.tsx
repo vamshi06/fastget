@@ -1,119 +1,52 @@
-'use client';
-
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useState } from 'react';
-import Image from 'next/image';
+import { BarChart3, Package, ShoppingBag } from 'lucide-react';
 
+export const metadata: Metadata = { title: 'FastGet Admin Panel' };
+
+const navItems = [
+  { href: '/admin',          label: 'Dashboard', icon: BarChart3   },
+  { href: '/admin/products', label: 'Products',  icon: Package     },
+  { href: '/admin/orders',   label: 'Orders',    icon: ShoppingBag },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const token = searchParams.get('token');
-  const [showLogout, setShowLogout] = useState(false);
-
-  const handleLogout = () => {
-    router.push('/');
-  };
-
-  const isDashboard = pathname === '/admin';
-  const isOrders = pathname.startsWith('/admin/orders');
-  const isProducts = pathname.startsWith('/admin/products');
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Admin Header */}
-      <header className="bg-white border-b border-blue-100 shadow-sm sticky top-0 z-50 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href={(token ? `/admin?token=${token}` : '/admin') as any} className="group">
-              {/* <Image
-                            src="/fastget-logo.png"
-                            alt="Fastget Logo"
-                            width={40}
-                            height={40}
-                            className="w-10 h-10"
-                          /> */}
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-blue-800 transition-all duration-200">
-                FastGet Admin
-              </h1>
-            </Link>
-            <nav className="flex gap-6">
-              <Link
-                href={(token ? `/admin?token=${token}` : '/admin') as any}
-                className={`font-medium transition-all duration-200 relative group ${
-                  isDashboard
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Dashboard
-                <span
-                  className={`absolute bottom-0 left-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300 ${
-                    isDashboard ? 'w-full' : 'w-0'
-                  }`}
-                />
-              </Link>
-              <Link
-                href={(token ? `/admin/orders?token=${token}` : '/admin/orders') as any}
-                className={`font-medium transition-all duration-200 relative group ${
-                  isOrders
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Orders
-                <span
-                  className={`absolute bottom-0 left-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300 ${
-                    isOrders ? 'w-full' : 'w-0'
-                  }`}
-                />
-              </Link>
-              <Link
-                href={(token ? `/admin/products?token=${token}` : '/admin/products') as any}
-                className={`font-medium transition-all duration-200 relative group ${
-                  isProducts
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Products
-                <span
-                  className={`absolute bottom-0 left-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300 ${
-                    isProducts ? 'w-full' : 'w-0'
-                  }`}
-                />
-              </Link>
-            </nav>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-60 bg-brand-charcoal text-white flex flex-col flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+          <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center text-white font-black text-sm">
+            F
           </div>
-          <div className="relative">
-            <button
-              onClick={() => setShowLogout(!showLogout)}
-              className="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded transition-all duration-200"
-            >
-              Logout
-            </button>
-            {showLogout && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded shadow-lg z-10 border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
-              >
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+          <div>
+            <p className="font-bold text-sm">FastGet</p>
+            <p className="text-xs text-gray-400">Admin Panel</p>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {children}
-      </main>
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href as any}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+            >
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="px-5 py-4 border-t border-white/10">
+          <Link href="/" className="text-xs text-gray-400 hover:text-white transition-colors">
+            ← Back to Store
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
     </div>
   );
 }

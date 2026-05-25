@@ -2,31 +2,34 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/components/CartContext';
+import { UserProvider } from '@/components/UserContext';
 import { ConditionalHeader } from '@/components/ConditionalHeader';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
+import { AnnouncementBar } from '@/components/AnnouncementBar';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Fastget - Building Materials Delivered in 30-60 Minutes',
-  description: 'Urgent building materials delivered to your Mumbai site. Carpentry, plumbing, hardware supplies for contractors and workers in Andheri, Goregaon, and Malad.',
+  title: 'FastGet — Construction Materials Delivered Fast in Mumbai',
+  description:
+    'Urgent building materials delivered to your Mumbai site in 30–60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
+  keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
-        <CartProvider>
-          <ConditionalHeader />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <ConditionalFooter />
-        </CartProvider>
+        <UserProvider>
+          <CartProvider>
+            <AnnouncementBar />
+            <ConditionalHeader />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <ConditionalFooter />
+          </CartProvider>
+        </UserProvider>
       </body>
     </html>
   );

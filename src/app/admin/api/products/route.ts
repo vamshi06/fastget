@@ -1,6 +1,8 @@
-import { createProductInSheets } from '@/lib/sheets';
-import { Product } from '@/types';
+import { createCategory, createProduct, createProductVariant } from '@/lib/products';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,51 +37,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.stockStatus || typeof body.stockStatus !== 'string') {
+    // Convert category to slug format
+    const categorySlug = body.category.toLowerCase().replace(/\s+/g, '-');
+    
+    // Get or create category
+    let category = await createCategory(body.category, categorySlug, body.categoryDescription || '');
+    
+    if (!category) {
       return NextResponse.json(
-        { success: false, error: 'Stock status is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate category
-    const validCategories = ['carpentry', 'plumbing', 'hardware', 'electrical', 'adhesives'];
-    if (!validCategories.includes(body.category)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid category' },
-        { status: 400 }
-      );
-    }
-
-    // Validate stock status
-    const validStockStatuses = ['in_stock', 'low', 'out'];
-    if (!validStockStatuses.includes(body.stockStatus)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid stock status' },
-        { status: 400 }
-      );
-    }
-
-    // Create product object
-    const product: Product = {
-      id: body.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: body.name.trim(),
-      description: body.description.trim(),
-      price: body.price,
-      unit: body.unit || 'pc',
-      category: body.category,
-      imageUrl: body.imageUrl && typeof body.imageUrl === 'string' ? body.imageUrl.trim() : undefined,
-      stockStatus: body.stockStatus,
-    };
-
-    // Create product in Google Sheets
-    const success = await createProductInSheets(product);
-
-    if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to save product to database' },
+        { success: false, error: 'Failed to create category' },
         { status: 500 }
       );
+    }
+
+    // Convert price to paise (multiply by 100 if in rupees)
+    const priceInPaise = Math.round(body.price * 100);
+
+    // Create product in Neon database
+    const product = await createProduct(
+      body.name.trim(),
+      priceInPaise,
+      body.description.trim(),
+      category.id
+    );
+
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create product in database' },
+        { status: 500 }
+      );
+    }
+
+    // Create variant if SKU provided (optional)
+    if (body.sku && body.sku.trim()) {
+      const stock = body.stock || 0;
+      const variant = await createProductVariant(
+        product.id,
+        body.sku.trim(),
+        stock,
+        body.attributes || {}
+      );
+      
+      if (!variant) {
+        console.warn('Failed to create variant, but product was created');
+      }
     }
 
     return NextResponse.json(
@@ -88,7 +89,9 @@ export async function POST(request: NextRequest) {
         data: {
           id: product.id,
           name: product.name,
-          message: 'Product created successfully',
+          categoryId: category.id,
+          price: product.price,
+          message: 'Product created successfully in Neon database',
         },
       },
       { status: 201 }

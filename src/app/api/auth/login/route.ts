@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticateUser } from '@/lib/users';
+
+/**
+ * POST /api/auth/login
+ *
+ * Authenticate a user with email and password.
+ * Accepts: email, password
+ * Returns: user object with id, name, email, and role
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Validation
+    if (!body.email || typeof body.email !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Email is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.password || typeof body.password !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Password is required' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize email
+    const email = body.email.toLowerCase().trim();
+
+    // Authenticate user
+    const user = await authenticateUser(email, body.password);
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    // Return user data without password hash
+    return NextResponse.json(
+      {
+        success: true,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        message: 'Login successful',
+      },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Error during login:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

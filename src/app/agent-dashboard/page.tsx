@@ -52,7 +52,7 @@ export default function AgentDashboard() {
     } catch (err) {
       console.error('Failed to fetch status counts:', err);
     }
-  }, []);
+  }, [statuses]);
 
   useEffect(() => {
     fetchStatusCounts();

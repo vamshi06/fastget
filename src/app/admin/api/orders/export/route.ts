@@ -1,6 +1,9 @@
-import { getAllOrdersFromSheets } from '@/lib/sheets';
+import { getRecentOrders, getOrdersByStatus } from '@/lib/db';
 import { Order, OrderStatus } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic rendering to allow search params
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +13,16 @@ export async function GET(request: NextRequest) {
     const dateFromFilter = request.nextUrl.searchParams.get('dateFrom') || '';
     const dateToFilter = request.nextUrl.searchParams.get('dateTo') || '';
 
-    // Fetch all orders
-    let orders = await getAllOrdersFromSheets();
-
-    // Apply filters (same logic as frontend)
+    // Fetch orders from Neon database
+    let orders: Order[];
+    
     if (statusFilter !== 'all') {
-      orders = orders.filter((order) => order.status === statusFilter);
+      orders = await getOrdersByStatus(statusFilter as OrderStatus);
+    } else {
+      orders = await getRecentOrders(10000); // Get up to 10000 recent orders
     }
 
+    // Apply filters
     if (nameFilter) {
       const searchTerm = nameFilter.toLowerCase();
       orders = orders.filter((order) => {
@@ -50,7 +55,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Failed to generate CSV:', error);
+    console.error('Failed to generate CSV from Neon database:', error);
     return NextResponse.json({ error: 'Failed to generate CSV' }, { status: 500 });
   }
 }
