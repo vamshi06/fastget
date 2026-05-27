@@ -13,7 +13,7 @@ export default async function OrdersPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-brand-charcoal">Orders</h1>
-        <p className="text-gray-500 text-sm">{orders.length} orders total</p>
+        <p className="text-brand-slate text-sm">{orders.length} orders total</p>
       </div>
 
       <OrdersListClient orders={orders} token={token} />

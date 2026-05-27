@@ -32,7 +32,7 @@ export default function InitDBPage() {
         <button
           onClick={handleInitialize}
           disabled={loading}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Initializing...' : 'Initialize Database'}
         </button>

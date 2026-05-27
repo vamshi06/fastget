@@ -4,18 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { User, Mail, Lock, Phone, ArrowRight, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Phone, ArrowRight, AlertCircle, Zap } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
   const { setCurrentUser } = useUser();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,205 +22,118 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate name
     const nameRegex = /^[a-zA-Z\s]{3,}$/;
-    if (!formData.name.trim()) {
-      setError('Full name is required');
-      return;
-    }
-    if (!nameRegex.test(formData.name.trim())) {
-      setError('Name must be at least 3 characters and contain only letters and spaces');
-      return;
-    }
-
-    // Validate email
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    // Validate phone
+    if (!formData.name.trim()) { setError('Full name is required'); return; }
+    if (!nameRegex.test(formData.name.trim())) { setError('Name must be at least 3 characters and contain only letters'); return; }
+    if (!formData.email.includes('@')) { setError('Please enter a valid email address'); return; }
     const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
-      setError('Please enter a valid 10-digit phone number');
-      return;
-    }
-
-    // Validate password
-    if (formData.password.length < 7) {
-      setError('Password must be at least 7 characters');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) { setError('Please enter a valid 10-digit phone number'); return; }
+    if (formData.password.length < 7) { setError('Password must be at least 7 characters'); return; }
+    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
 
     setIsLoading(true);
-
     try {
-      // Call the signup API endpoint
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: formData.name, email: formData.email, phone: formData.phone, password: formData.password }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Signup failed');
-        setIsLoading(false);
-        return;
-      }
-
-      // Update user context and redirect to home
-      setCurrentUser({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-      });
-
-      // Redirect to home page
+      if (!response.ok) { setError(data.error || 'Signup failed'); return; }
+      setCurrentUser({ id: data.id, name: data.name, email: data.email });
       router.push('/');
-    } catch (err) {
+    } catch {
       setError('An error occurred during signup. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const inputCls = `w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-brand-charcoal bg-brand-fog
+                    focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
+                    transition-all duration-200`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center py-8">
-      <div className="w-full max-w-md px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-600 mt-2">Join Fastget for quick deliveries</p>
+    <div
+      className="min-h-screen flex items-center justify-center py-8 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #1C1C1E 0%, #2A2A2C 50%, #1C1C1E 100%)' }}
+    >
+      <div className="absolute inset-0 bg-motion-lines pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 pointer-events-none"
+        style={{ background: 'radial-gradient(circle at 80% 10%, rgba(245,166,35,0.10) 0%, transparent 65%)' }} />
+      <div className="absolute top-0 left-0 w-1 h-full pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, #F5A623, transparent 60%)' }} />
+
+      <div className="w-full max-w-md px-4 relative z-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-2xl font-black text-white tracking-tight">
+              Fast<span className="text-brand-primary">Get</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-8" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.35)' }}>
+          <div className="mb-7">
+            <h1 className="text-2xl font-black text-brand-charcoal">Create Account</h1>
+            <p className="text-brand-slate text-sm mt-1">Join FastGet for quick deliveries</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  placeholder="John Doe"
-                />
+            {[
+              { label: 'Full Name', name: 'name', type: 'text', Icon: User, placeholder: 'John Doe' },
+              { label: 'Email Address', name: 'email', type: 'email', Icon: Mail, placeholder: 'your@email.com' },
+              { label: 'Phone Number', name: 'phone', type: 'tel', Icon: Phone, placeholder: '10-digit mobile number' },
+              { label: 'Password', name: 'password', type: 'password', Icon: Lock, placeholder: '••••••••' },
+              { label: 'Confirm Password', name: 'confirmPassword', type: 'password', Icon: Lock, placeholder: '••••••••' },
+            ].map(({ label, name, type, Icon, placeholder }) => (
+              <div key={name}>
+                <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                  {label}
+                </label>
+                <div className="relative">
+                  <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
+                  <input
+                    type={type}
+                    name={name}
+                    value={(formData as any)[name]}
+                    onChange={handleChange}
+                    className={inputCls}
+                    placeholder={placeholder}
+                  />
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  placeholder="your@email.com"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  placeholder="10-digit mobile number"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
+            ))}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="btn-primary w-full py-3 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-              {!isLoading && <ArrowRight className="w-5 h-5" />}
+              {isLoading ? 'Creating Account…' : 'Create Account'}
+              {!isLoading && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm">
-            <p className="text-gray-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 font-semibold hover:underline">
-                Log in
-              </Link>
-            </p>
-          </div>
+          <p className="mt-5 text-center text-sm text-brand-slate">
+            Already have an account?{' '}
+            <Link href="/login" className="text-brand-primary font-semibold hover:text-brand-dark transition-colors">
+              Log in
+            </Link>
+          </p>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
+          <div className="mt-6 pt-5 border-t border-neutral-100">
+            <p className="text-xs text-brand-steel text-center">
               By signing up, you agree to our Terms of Service and Privacy Policy
             </p>
           </div>

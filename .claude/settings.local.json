@@ -7,7 +7,12 @@
       "Bash(Select-Object FullName)",
       "Bash(Format-Table -AutoSize)",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Akanksha\\\\FastGet\\\\FastGet Vamshi\\\\interns\\\\fastget\" -Recurse -Force)",
+      "Bash(xargs grep -l \"cart\\\\|Cart\")",
+      "Bash(node -e ' *)",
+      "Bash(powershell -Command \"Get-Content .env.local | Select-String 'DATABASE'\")",
+      "Bash(npx tsx -e ' *)"
     ]
   }
 }

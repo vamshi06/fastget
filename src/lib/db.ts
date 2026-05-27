@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Order, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types';
+import { logger } from '@/lib/logger';
 
 /**
  * Neon Postgres database client and order CRUD operations
@@ -113,9 +114,9 @@ export async function initializeDatabase(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)`;
 
-    console.log('Orders table initialized successfully');
+    logger.info('DB', 'Orders table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize orders table:', error);
+    logger.error('DB', 'Failed to initialize orders table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -149,9 +150,9 @@ export async function initializeUsersTable(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`;
 
-    console.log('Users table initialized successfully');
+    logger.info('DB', 'Users table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize users table:', error);
+    logger.error('DB', 'Failed to initialize users table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -182,9 +183,9 @@ export async function initializeUserAddressesTable(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_is_primary ON user_addresses(user_id, is_primary)`;
 
-    console.log('User addresses table initialized successfully');
+    logger.info('DB', 'User addresses table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize user addresses table:', error);
+    logger.error('DB', 'Failed to initialize user addresses table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -207,9 +208,9 @@ export async function initializeCategoriesTable(): Promise<void> {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)`;
 
-    console.log('Categories table initialized successfully');
+    logger.info('DB', 'Categories table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize categories table:', error);
+    logger.error('DB', 'Failed to initialize categories table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -240,9 +241,9 @@ export async function initializeProductsTable(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_products_status ON products(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC)`;
 
-    console.log('Products table initialized successfully');
+    logger.info('DB', 'Products table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize products table:', error);
+    logger.error('DB', 'Failed to initialize products table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -273,9 +274,9 @@ export async function initializeProductVariantsTable(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON product_variants(product_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(sku)`;
 
-    console.log('Product variants table initialized successfully');
+    logger.info('DB', 'Product variants table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize product variants table:', error);
+    logger.error('DB', 'Failed to initialize product variants table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -303,9 +304,9 @@ export async function initializeWishlistsTable(): Promise<void> {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_wishlists_user_id ON wishlists(user_id)`;
 
-    console.log('Wishlists table initialized successfully');
+    logger.info('DB', 'Wishlists table initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize wishlists table:', error);
+    logger.error('DB', 'Failed to initialize wishlists table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -335,12 +336,12 @@ export async function addUserIdToOrders(): Promise<void> {
       // Add index for faster lookups
       await sql`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`;
       
-      console.log('Added user_id column to orders table');
+      logger.info('DB', 'Added user_id column to orders table');
     } else {
-      console.log('user_id column already exists on orders table');
+      logger.debug('DB', 'user_id column already exists on orders table');
     }
   } catch (error) {
-    console.error('Failed to add user_id to orders table:', error);
+    logger.error('DB', 'Failed to add user_id to orders table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -351,7 +352,7 @@ export async function addUserIdToOrders(): Promise<void> {
  */
 export async function initializeAllTables(): Promise<void> {
   try {
-    console.log('Starting database initialization...');
+    logger.info('DB', 'Starting database initialization...');
     
     // Phase 1: User Management
     await initializeUsersTable();
@@ -369,9 +370,9 @@ export async function initializeAllTables(): Promise<void> {
     await initializeDatabase();
     await addUserIdToOrders();
     
-    console.log('✅ All tables initialized successfully!');
+    logger.info('DB', 'All tables initialized successfully');
   } catch (error) {
-    console.error('❌ Failed to initialize all tables:', error);
+    logger.error('DB', 'Failed to initialize all tables', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -398,24 +399,20 @@ export async function createOrder(order: Order): Promise<boolean> {
         ${order.eta || null}, ${order.statusToken}, ${order.updateToken}
       )
     `;
-    console.log(`✓ Order created successfully: ${order.id}`);
+    logger.info('DB', 'Order created successfully', { orderId: order.id });
     return true;
   } catch (error) {
-    console.error('Failed to create order:', {
+    logger.error('DB', 'Failed to create order', {
       orderId: order.id,
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : error
+      error: error instanceof Error ? error.message : String(error),
     });
-    
+
     // If table doesn't exist, try to initialize it once
     if (error instanceof Error && error.message.includes('relation "orders" does not exist')) {
-      console.log('Table missing. Attempting to initialize database...');
+      logger.warn('DB', 'Orders table missing — attempting auto-init');
       try {
         await initializeDatabase();
-        console.log('Database initialized. Retrying order creation...');
+        logger.info('DB', 'DB auto-init succeeded, retrying order creation');
         // Retry the insert
         await sql`
           INSERT INTO orders (
@@ -432,7 +429,7 @@ export async function createOrder(order: Order): Promise<boolean> {
         `;
         return true;
       } catch (initError) {
-        console.error('Failed to initialize database and retry:', initError);
+        logger.error('DB', 'Failed to initialize database and retry order creation', { error: initError instanceof Error ? initError.message : String(initError) });
         return false;
       }
     }
@@ -462,7 +459,7 @@ export async function getOrderByStatusToken(token: string): Promise<Order | null
 
     return dbOrderToOrder(result[0] as DbOrder);
   } catch (error) {
-    console.error('Failed to get order by status token:', error);
+    logger.error('DB', 'Failed to get order by status token', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -489,7 +486,7 @@ export async function getOrderByUpdateToken(token: string): Promise<Order | null
     const dbRow = result[0] as DbOrder;
     return dbOrderToOrder(dbRow);
   } catch (error) {
-    console.error('Failed to get order by update token:', error);
+    logger.error('DB', 'Failed to get order by update token', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -512,7 +509,7 @@ export async function updateOrderStatus(
   try {
     // Verify PIN is configured
     if (!AGENT_PIN) {
-      console.error('AGENT_PIN not configured');
+      logger.error('DB', 'AGENT_PIN env var not configured — status updates blocked');
       return { success: false, error: 'Authentication not configured' };
     }
 
@@ -566,7 +563,7 @@ export async function updateOrderStatus(
 
     return { success: true, orderId: currentOrder.id };
   } catch (error) {
-    console.error('Failed to update order status:', error);
+    logger.error('DB', 'Failed to update order status', { error: error instanceof Error ? error.message : String(error) });
     return { success: false, error: 'Database error' };
   }
 }
@@ -588,7 +585,7 @@ export async function getRecentOrders(limit: number = 50): Promise<Order[]> {
 
     return (result as DbOrder[]).map(dbOrderToOrder);
   } catch (error) {
-    console.error('Failed to get recent orders:', error);
+    logger.error('DB', 'Failed to get recent orders', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -610,7 +607,7 @@ export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
 
     return (result as DbOrder[]).map(dbOrderToOrder);
   } catch (error) {
-    console.error('Failed to get orders by status:', error);
+    logger.error('DB', 'Failed to get orders by status', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }

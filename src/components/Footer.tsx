@@ -1,61 +1,88 @@
 import Link from 'next/link';
-import { Phone, MapPin, Mail } from 'lucide-react';
+import { Phone, MapPin, Mail, Zap } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 text-white py-12 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-3 gap-8">
+    <footer className="bg-brand-charcoal text-white mt-auto relative overflow-hidden">
+      {/* Subtle industrial lines overlay */}
+      <div className="absolute inset-0 bg-motion-lines pointer-events-none opacity-60" />
+
+      {/* Orange top accent */}
+      <div className="w-full h-0.5" style={{ background: 'linear-gradient(90deg, #F5A623, #DC8A0E 40%, transparent)' }} />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+        <div className="grid md:grid-cols-3 gap-10">
+
+          {/* Brand column */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Fastget</h3>
-            <p className="text-gray-400 text-sm">
-              Urgent building materials delivered to your site in 30-60 minutes.
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-brand-primary">
+                <Zap className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xl font-black tracking-tight">
+                Fast<span className="text-brand-primary">Get</span>
+              </span>
+            </div>
+            <p className="text-neutral-400 text-sm leading-relaxed">
+              Urgent building materials delivered to your site in 30–60 minutes.
               Serving Andheri, Goregaon, and Malad.
             </p>
+            <div className="mt-5 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)', color: '#F5A623' }}
+              >
+                ⚡ 30–60 min delivery
+              </span>
+            </div>
           </div>
-          
+
+          {/* Quick links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/catalog" className="text-gray-400 hover:text-white text-sm">
-                  Browse Products
-                </Link>
-              </li>
-              <li>
-                <Link href="/order" className="text-gray-400 hover:text-white text-sm">
-                  Track Your Order
-                </Link>
-              </li>
-              <li>
-                <Link href="/cart" className="text-gray-400 hover:text-white text-sm">
-                  Shopping Cart
-                </Link>
-              </li>
+            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Quick Links</h3>
+            <ul className="space-y-3">
+              {[
+                { href: '/catalog', label: 'Browse Products' },
+                { href: '/order',   label: 'Track Your Order' },
+                { href: '/cart',    label: 'Shopping Cart' },
+              ].map(({ href, label }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-sm text-neutral-400 hover:text-brand-primary transition-colors duration-150 flex items-center gap-1.5 group"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-brand-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
-          
+
+          {/* Contact */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact</h3>
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2 text-gray-400 text-sm">
-                <Phone className="w-4 h-4" />
-                <span>Support: Coming Soon</span>
-              </li>
-              <li className="flex items-center gap-2 text-gray-400 text-sm">
-                <MapPin className="w-4 h-4" />
-                <span>Mumbai, Maharashtra</span>
-              </li>
-              <li className="flex items-center gap-2 text-gray-400 text-sm">
-                <Mail className="w-4 h-4" />
-                <span>support@fastget.in</span>
-              </li>
+            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Contact</h3>
+            <ul className="space-y-3">
+              {[
+                { icon: Phone,  text: 'Support: Coming Soon' },
+                { icon: MapPin, text: 'Mumbai, Maharashtra' },
+                { icon: Mail,   text: 'support@fastget.in' },
+              ].map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-2.5 text-sm text-neutral-400">
+                  <Icon className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                  <span>{text}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
-        
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
-          © {new Date().getFullYear()} Fastget. All rights reserved.
+
+        {/* Bottom bar */}
+        <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
+          <span>© {new Date().getFullYear()} FastGet. All rights reserved.</span>
+          <span className="flex items-center gap-1.5">
+            Built for Mumbai's construction sites
+            <span className="text-brand-primary">⚡</span>
+          </span>
         </div>
       </div>
     </footer>

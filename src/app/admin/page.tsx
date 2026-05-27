@@ -34,7 +34,7 @@ export default async function AdminDashboard() {
       value: totalOrders.toLocaleString(),
       sub: 'All time',
       icon: ShoppingBag,
-      color: 'bg-blue-50 text-blue-600',
+      color: 'bg-primary-50 text-brand-primary',
     },
     {
       label: 'Total Revenue',
@@ -48,21 +48,21 @@ export default async function AdminDashboard() {
       value: (statusCounts.delivered || 0).toLocaleString(),
       sub: 'Successfully fulfilled',
       icon: CheckCircle2,
-      color: 'bg-emerald-50 text-emerald-600',
+      color: 'bg-green-50 text-green-600',
     },
     {
       label: 'In Transit',
       value: (statusCounts.out_for_delivery || 0).toLocaleString(),
       sub: 'Out for delivery',
       icon: Truck,
-      color: 'bg-orange-50 text-orange-600',
+      color: 'bg-primary-50 text-brand-primary',
     },
     {
       label: 'Pending',
       value: ((statusCounts.received || 0) + (statusCounts.eta_assigned || 0)).toLocaleString(),
       sub: 'Awaiting dispatch',
       icon: Clock,
-      color: 'bg-purple-50 text-purple-600',
+      color: 'bg-amber-50 text-amber-600',
     },
     {
       label: 'Cancelled',
@@ -77,7 +77,7 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-black text-brand-charcoal">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">FastGet Admin — Overview</p>
+        <p className="text-brand-slate text-sm mt-1">FastGet Admin — Overview</p>
       </div>
 
       {/* Stat Cards */}
@@ -85,13 +85,13 @@ export default async function AdminDashboard() {
         {statCards.map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-500">{label}</span>
+              <span className="text-sm font-medium text-brand-slate">{label}</span>
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
                 <Icon className="w-4 h-4" />
               </div>
             </div>
             <p className="text-2xl font-black text-brand-charcoal">{value}</p>
-            <p className="text-xs text-gray-400 mt-1">{sub}</p>
+            <p className="text-xs text-brand-steel mt-1">{sub}</p>
           </div>
         ))}
       </div>
@@ -122,7 +122,7 @@ export default async function AdminDashboard() {
       <div className="card p-6">
         <h2 className="font-bold text-brand-charcoal mb-4">Order Status Breakdown</h2>
         {Object.keys(statusCounts).length === 0 ? (
-          <p className="text-gray-500 text-sm">No orders yet.</p>
+          <p className="text-brand-slate text-sm">No orders yet.</p>
         ) : (
           <div className="space-y-4">
             {Object.entries(statusCounts).map(([status, count]) => {
@@ -131,9 +131,9 @@ export default async function AdminDashboard() {
                 <div key={status}>
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="font-semibold capitalize">{status.replace(/_/g, ' ')}</span>
-                    <span className="text-gray-500">{count} orders · {pct}%</span>
+                    <span className="text-brand-slate">{count} orders · {pct}%</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-brand-primary rounded-full transition-all duration-500"
                       style={{ width: `${pct}%` }}
