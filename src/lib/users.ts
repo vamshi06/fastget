@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 import { User, UserAddress, AddressType, UserRole } from '@/types';
+import { logger } from '@/lib/logger';
 
 /**
  * User management CRUD operations
@@ -71,7 +72,7 @@ export async function hashPassword(plaintext: string): Promise<string> {
   try {
     return await bcrypt.hash(plaintext, BCRYPT_ROUNDS);
   } catch (error) {
-    console.error('Failed to hash password:', error);
+    logger.error('Users', 'bcrypt hash failed', { error: error instanceof Error ? error.message : String(error) });
     throw new Error('Password hashing failed');
   }
 }
@@ -86,7 +87,7 @@ export async function verifyPassword(plaintext: string, hash: string): Promise<b
   try {
     return await bcrypt.compare(plaintext, hash);
   } catch (error) {
-    console.error('Failed to verify password:', error);
+    logger.error('Users', 'bcrypt verify failed', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -120,7 +121,7 @@ export async function createUser(
     if (result.length === 0) return null;
     return dbUserToUser(result[0] as DbUser);
   } catch (error) {
-    console.error('Failed to create user:', error);
+    logger.error('Users', 'Failed to create user', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -140,7 +141,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     if (result.length === 0) return null;
     return dbUserToUser(result[0] as DbUser);
   } catch (error) {
-    console.error('Failed to get user by email:', error);
+    logger.error('Users', 'Failed to get user by email', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -158,7 +159,7 @@ export async function getUserById(userId: string): Promise<User | null> {
     if (result.length === 0) return null;
     return dbUserToUser(result[0] as DbUser);
   } catch (error) {
-    console.error('Failed to get user by ID:', error);
+    logger.error('Users', 'Failed to get user by ID', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -184,7 +185,7 @@ export async function updateUserPassword(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update user password:', error);
+    logger.error('Users', 'Failed to update user password', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -215,7 +216,7 @@ export async function authenticateUser(
 
     return user;
   } catch (error) {
-    console.error('Failed to authenticate user:', error);
+    logger.error('Users', 'Failed to authenticate user', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -238,7 +239,7 @@ export async function updatePreferredAddress(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update preferred address:', error);
+    logger.error('Users', 'Failed to update preferred address', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -258,7 +259,7 @@ export async function updateLastOrderTime(userId: string): Promise<boolean> {
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update last order time:', error);
+    logger.error('Users', 'Failed to update last order time', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -295,7 +296,7 @@ export async function createUserAddress(
     if (result.length === 0) return null;
     return dbAddressToUserAddress(result[0] as DbUserAddress);
   } catch (error) {
-    console.error('Failed to create user address:', error);
+    logger.error('Users', 'Failed to create user address', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -314,7 +315,7 @@ export async function getUserAddresses(userId: string): Promise<UserAddress[]> {
 
     return (result as DbUserAddress[]).map(dbAddressToUserAddress);
   } catch (error) {
-    console.error('Failed to get user addresses:', error);
+    logger.error('Users', 'Failed to get user addresses', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -334,7 +335,7 @@ export async function getPrimaryAddress(userId: string): Promise<UserAddress | n
     if (result.length === 0) return null;
     return dbAddressToUserAddress(result[0] as DbUserAddress);
   } catch (error) {
-    console.error('Failed to get primary address:', error);
+    logger.error('Users', 'Failed to get primary address', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -398,7 +399,7 @@ export async function updateUserAddress(
     if (result.length === 0) return null;
     return dbAddressToUserAddress(result[0] as DbUserAddress);
   } catch (error) {
-    console.error('Failed to update user address:', error);
+    logger.error('Users', 'Failed to update user address', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -417,7 +418,7 @@ export async function deleteUserAddress(addressId: string): Promise<boolean> {
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to delete user address:', error);
+    logger.error('Users', 'Failed to delete user address', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -456,12 +457,12 @@ export async function deleteUser(userId: string): Promise<boolean> {
     const deleted = verify.length === 0;
     
     if (!deleted) {
-      console.warn('User deletion verification failed - record still exists in database');
+      logger.warn('Users', 'User deletion verification failed — record still exists after delete', { userId });
     }
 
     return deleted;
   } catch (error) {
-    console.error('Failed to delete user:', error);
+    logger.error('Users', 'Failed to delete user', { userId, error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

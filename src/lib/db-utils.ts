@@ -7,6 +7,7 @@
  */
 
 import { neon } from '@neondatabase/serverless';
+import { logger } from '@/lib/logger';
 
 const databaseUrl = process.env.DATABASE_URL || process.env.fastget_DATABASE_URL;
 
@@ -50,7 +51,7 @@ export async function verifyRecordExists(table: string, id: string): Promise<boo
     const result = await sql([`SELECT 1 FROM ${table} WHERE id = `, ` LIMIT 1`] as any, id);
     return result.length > 0;
   } catch (error) {
-    console.error(`Error verifying record in ${table}:`, error);
+    logger.error('DB-Utils', `Error verifying record in ${table}`, { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -83,7 +84,7 @@ export async function withTransaction<T>(
     try {
       await sql`ROLLBACK`;
     } catch (rollbackError) {
-      console.error('Error rolling back transaction:', rollbackError);
+      logger.error('DB-Utils', 'Transaction rollback failed', { error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError) });
     }
     throw error;
   }
@@ -116,7 +117,7 @@ export async function checkUncommittedTransactions() {
     
     return result;
   } catch (error) {
-    console.error('Error checking uncommitted transactions:', error);
+    logger.error('DB-Utils', 'Error checking uncommitted transactions', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -143,7 +144,7 @@ export async function getConnectionPoolStats() {
     
     return result[0];
   } catch (error) {
-    console.error('Error getting connection pool stats:', error);
+    logger.error('DB-Utils', 'Error getting connection pool stats', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -186,9 +187,9 @@ export async function clearPreparedStatements() {
   
   try {
     await sql`DEALLOCATE ALL`;
-    console.log('✓ Cleared prepared statements');
+    logger.debug('DB-Utils', 'Cleared prepared statements');
   } catch (error) {
-    console.error('Error clearing prepared statements:', error);
+    logger.error('DB-Utils', 'Error clearing prepared statements', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -211,10 +212,10 @@ export async function terminateIdleConnections(maxIdleSeconds: number = 300) {
         AND pid != pg_backend_pid()
     `;
     
-    console.log(`✓ Terminated ${result.length} idle connection(s)`);
+    logger.info('DB-Utils', `Terminated ${result.length} idle connection(s)`);
     return result.length;
   } catch (error) {
-    console.error('Error terminating idle connections:', error);
+    logger.error('DB-Utils', 'Error terminating idle connections', { error: error instanceof Error ? error.message : String(error) });
     return 0;
   }
 }

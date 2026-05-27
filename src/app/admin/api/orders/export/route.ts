@@ -1,11 +1,13 @@
 import { getRecentOrders, getOrdersByStatus } from '@/lib/db';
 import { Order, OrderStatus } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Force dynamic rendering to allow search params
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const start = Date.now();
   try {
     // Get filter parameters
     const statusFilter = request.nextUrl.searchParams.get('status') || 'all';
@@ -13,13 +15,15 @@ export async function GET(request: NextRequest) {
     const dateFromFilter = request.nextUrl.searchParams.get('dateFrom') || '';
     const dateToFilter = request.nextUrl.searchParams.get('dateTo') || '';
 
+    logger.info('API', 'GET /admin/api/orders/export', { statusFilter, nameFilter: nameFilter || undefined });
+
     // Fetch orders from Neon database
     let orders: Order[];
-    
+
     if (statusFilter !== 'all') {
       orders = await getOrdersByStatus(statusFilter as OrderStatus);
     } else {
-      orders = await getRecentOrders(10000); // Get up to 10000 recent orders
+      orders = await getRecentOrders(10000);
     }
 
     // Apply filters
@@ -46,6 +50,9 @@ export async function GET(request: NextRequest) {
     // Generate CSV
     const csv = generateCSV(orders);
 
+    logger.info('Admin', 'Orders CSV exported', { count: orders.length, statusFilter });
+    logger.api('GET', '/admin/api/orders/export', 200, Date.now() - start);
+
     // Return CSV with proper headers
     return new NextResponse(csv, {
       status: 200,
@@ -55,7 +62,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Failed to generate CSV from Neon database:', error);
+    logger.error('API', 'GET /admin/api/orders/export — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.api('GET', '/admin/api/orders/export', 500, Date.now() - start);
     return NextResponse.json({ error: 'Failed to generate CSV' }, { status: 500 });
   }
 }

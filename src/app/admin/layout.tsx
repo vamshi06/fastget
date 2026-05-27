@@ -12,7 +12,7 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-brand-fog">
       {/* Sidebar */}
       <aside className="w-60 bg-brand-charcoal text-white flex flex-col flex-shrink-0">
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">

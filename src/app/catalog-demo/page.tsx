@@ -54,8 +54,8 @@ export default function CatalogPage() {
                 <h3 className="font-semibold text-gray-900 mb-2">Product Name</h3>
                 <p className="text-sm text-gray-600 mb-3">Product description</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-blue-600">₹999</span>
-                  <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                  <span className="text-lg font-bold text-brand-primary">₹999</span>
+                  <button className="px-3 py-1 bg-brand-primary text-white text-sm rounded hover:bg-brand-dark">
                     Add
                   </button>
                 </div>

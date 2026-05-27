@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, hashPassword } from '@/lib/users';
+import { createUser } from '@/lib/users';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/auth/signup
@@ -9,11 +10,15 @@ import { createUser, hashPassword } from '@/lib/users';
  * Returns: user object with id, name, and email
  */
 export async function POST(request: NextRequest) {
+  const start = Date.now();
+  logger.info('API', 'POST /api/auth/signup');
   try {
     const body = await request.json();
 
     // Validation
     if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
+      logger.warn('API', 'POST /api/auth/signup — missing name');
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Name is required' },
         { status: 400 }
@@ -21,6 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!body.email || typeof body.email !== 'string') {
+      logger.warn('API', 'POST /api/auth/signup — missing email');
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Email is required' },
         { status: 400 }
@@ -28,6 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!body.password || typeof body.password !== 'string' || body.password.length < 6) {
+      logger.warn('API', 'POST /api/auth/signup — invalid password');
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Password must be at least 6 characters' },
         { status: 400 }
@@ -35,6 +44,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!body.phone || typeof body.phone !== 'string') {
+      logger.warn('API', 'POST /api/auth/signup — missing phone');
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Phone number is required' },
         { status: 400 }
@@ -54,11 +65,16 @@ export async function POST(request: NextRequest) {
     );
 
     if (!user) {
+      logger.warn('API', 'POST /api/auth/signup — user creation failed (email may exist)', { email });
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Failed to create user (email may already exist)' },
         { status: 400 }
       );
     }
+
+    logger.info('Auth', 'User registered', { userId: user.id });
+    logger.api('POST', '/api/auth/signup', 201, Date.now() - start);
 
     // Don't return password hash to client
     return NextResponse.json(
@@ -79,7 +95,8 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error during signup:', error);
+    logger.error('API', 'POST /api/auth/signup — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.api('POST', '/api/auth/signup', 500, Date.now() - start);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

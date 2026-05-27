@@ -1,5 +1,6 @@
 import { initializeDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/init-db
@@ -7,14 +8,18 @@ import { NextResponse } from 'next/server';
  * Safe to call multiple times.
  */
 export async function GET() {
+  const start = Date.now();
+  logger.info('API', 'GET /api/init-db');
   try {
-    console.log('Initializing database schema...');
     await initializeDatabase();
+    logger.info('DB', 'Database schema initialized');
+    logger.api('GET', '/api/init-db', 200, Date.now() - start);
     return NextResponse.json({ success: true, message: 'Database initialized' });
   } catch (error) {
-    console.error('Database initialization failed:', error);
+    logger.error('API', 'GET /api/init-db — initialization failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.api('GET', '/api/init-db', 500, Date.now() - start);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to initialize database',
         details: error instanceof Error ? error.message : String(error)
       },

@@ -24,15 +24,12 @@ export default function CheckoutPage() {
 
   if (isLoaded && state.items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-16">
+      <div className="min-h-screen bg-brand-fog py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
-          <p className="text-gray-600 mb-8">Add products to your cart before checking out</p>
-          <Link
-            href="/catalog"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
+          <Package className="w-16 h-16 text-brand-steel mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">Your cart is empty</h1>
+          <p className="text-brand-slate mb-8">Add products to your cart before checking out</p>
+          <Link href="/catalog" className="btn-primary inline-flex px-6 py-3">
             Browse Products
           </Link>
         </div>
@@ -83,57 +80,59 @@ export default function CheckoutPage() {
     }
   };
 
+  const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all duration-200';
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-brand-fog py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 mb-8">
-          <Link href="/cart" className="text-blue-600 hover:underline">Cart</Link>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-900 font-medium">Checkout</span>
+          <Link href="/cart" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">Cart</Link>
+          <ChevronRight className="w-4 h-4 text-brand-steel" />
+          <span className="text-brand-charcoal font-medium text-sm">Checkout</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <h1 className="text-2xl font-black text-brand-charcoal mb-8">Checkout</h1>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-800">{error}</p>
+            <p className="text-red-800 text-sm">{error}</p>
           </div>
         )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="card p-6 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-brand-primary" />
                   Contact Information
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Full Name *
                     </label>
                     <input
                       type="text"
                       value={formData.customerName}
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      className={inputCls}
                       placeholder="Enter your name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Phone Number *
                     </label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
                       <input
                         type="tel"
                         value={formData.customerPhone}
                         onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className={`${inputCls} pl-10`}
                         placeholder="10-digit mobile number"
                       />
                     </div>
@@ -141,51 +140,51 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-blue-600" />
+              <div className="border-t border-neutral-100 pt-6">
+                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-brand-primary" />
                   Delivery Address
                 </h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Site Address *
                     </label>
                     <textarea
                       value={formData.siteAddress}
                       onChange={(e) => setFormData({ ...formData, siteAddress: e.target.value })}
                       rows={3}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                      className={`${inputCls} resize-none`}
                       placeholder="Building name, street address, area, landmark"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Landmark (Optional)
                     </label>
                     <input
                       type="text"
                       value={formData.landmark}
                       onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      className={inputCls}
                       placeholder="Nearby landmark for easier navigation"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
+              <div className="border-t border-neutral-100 pt-6">
+                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-brand-primary" />
                   Delivery Options
                 </h2>
                 <div className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <label
-                      className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
                         formData.deliveryType === 'urgent'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-brand-primary bg-primary-50'
+                          : 'border-neutral-200 hover:border-neutral-300'
                       }`}
                     >
                       <input
@@ -194,18 +193,18 @@ export default function CheckoutPage() {
                         value="urgent"
                         checked={formData.deliveryType === 'urgent'}
                         onChange={(e) => setFormData({ ...formData, deliveryType: e.target.value as 'urgent' })}
-                        className="w-4 h-4 text-blue-600"
+                        className="w-4 h-4 accent-brand-primary"
                       />
                       <div>
-                        <p className="font-medium text-gray-900">Urgent (30-60 min)</p>
-                        <p className="text-sm text-gray-500">Deliver as soon as possible</p>
+                        <p className="font-semibold text-brand-charcoal text-sm">Urgent (30-60 min)</p>
+                        <p className="text-xs text-brand-slate">Deliver as soon as possible</p>
                       </div>
                     </label>
                     <label
-                      className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
                         formData.deliveryType === 'scheduled'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-brand-primary bg-primary-50'
+                          : 'border-neutral-200 hover:border-neutral-300'
                       }`}
                     >
                       <input
@@ -214,18 +213,18 @@ export default function CheckoutPage() {
                         value="scheduled"
                         checked={formData.deliveryType === 'scheduled'}
                         onChange={(e) => setFormData({ ...formData, deliveryType: e.target.value as 'scheduled' })}
-                        className="w-4 h-4 text-blue-600"
+                        className="w-4 h-4 accent-brand-primary"
                       />
                       <div>
-                        <p className="font-medium text-gray-900">Scheduled</p>
-                        <p className="text-sm text-gray-500">Choose a delivery time</p>
+                        <p className="font-semibold text-brand-charcoal text-sm">Scheduled</p>
+                        <p className="text-xs text-brand-slate">Choose a delivery time</p>
                       </div>
                     </label>
                   </div>
 
                   {formData.deliveryType === 'scheduled' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           Preferred Delivery Time *
@@ -235,7 +234,7 @@ export default function CheckoutPage() {
                         type="datetime-local"
                         value={formData.scheduledTime}
                         onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className={inputCls}
                       />
                     </div>
                   )}
@@ -245,7 +244,7 @@ export default function CheckoutPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Placing Order...' : 'Place Order'}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
@@ -255,46 +254,46 @@ export default function CheckoutPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
+            <div className="card p-6 sticky top-24">
+              <h2 className="text-lg font-bold text-brand-charcoal mb-4">Order Summary</h2>
 
-              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto scrollbar-thin">
                 {state.items.map((item) => (
                   <div key={item.product.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600">
+                    <span className="text-brand-slate">
                       {item.product.name} × {item.quantity}
                     </span>
-                    <span className="font-medium">{formatCurrency(item.product.price * item.quantity)}</span>
+                    <span className="font-medium text-brand-charcoal">{formatCurrency(item.product.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-200 pt-4 space-y-3">
-                <div className="flex justify-between text-gray-600">
+              <div className="border-t border-neutral-100 pt-4 space-y-3">
+                <div className="flex justify-between text-sm text-brand-slate">
                   <span>Subtotal</span>
-                  <span>{formatCurrency(getSubtotal())}</span>
+                  <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-sm text-brand-slate">
                   <span>Convenience Fee (10%)</span>
-                  <span>{formatCurrency(getConvenienceFee())}</span>
+                  <span className="font-medium text-brand-charcoal">{formatCurrency(getConvenienceFee())}</span>
                 </div>
-                <div className="border-t border-gray-200 pt-3">
-                  <div className="flex justify-between text-lg font-bold text-gray-900">
+                <div className="border-t border-neutral-100 pt-3">
+                  <div className="flex justify-between font-black text-brand-charcoal">
                     <span>Total</span>
-                    <span>{formatCurrency(getTotal())}</span>
+                    <span className="text-xl">{formatCurrency(getTotal())}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800 font-medium mb-1">Payment Method</p>
-                <p className="text-green-700">Cash on Delivery</p>
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <p className="text-sm text-green-800 font-semibold mb-1">Payment Method</p>
+                <p className="text-sm text-green-700">Cash on Delivery</p>
               </div>
 
               {formData.deliveryType === 'urgent' && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800 font-medium mb-1">Estimated Delivery</p>
-                  <p className="text-blue-700">{estimateDeliveryTime()}</p>
+                <div className="mt-4 p-4 bg-primary-50 border border-primary-200 rounded-xl">
+                  <p className="text-sm text-primary-700 font-semibold mb-1">Estimated Delivery</p>
+                  <p className="text-sm text-primary-600">{estimateDeliveryTime()}</p>
                 </div>
               )}
             </div>

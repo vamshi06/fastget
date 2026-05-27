@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { CategoryDB, ProductDB, ProductVariant } from '@/types';
+import { logger } from '@/lib/logger';
 
 /**
  * Product catalog CRUD operations
@@ -84,7 +85,7 @@ export async function createCategory(
     if (result.length === 0) return null;
     return dbCategoryToCategory(result[0] as DbCategory);
   } catch (error) {
-    console.error('Failed to create category:', error);
+    logger.error('Products', 'Failed to create category', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -102,7 +103,7 @@ export async function getCategoryBySlug(slug: string): Promise<CategoryDB | null
     if (result.length === 0) return null;
     return dbCategoryToCategory(result[0] as DbCategory);
   } catch (error) {
-    console.error('Failed to get category by slug:', error);
+    logger.error('Products', 'Failed to get category by slug', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -119,7 +120,7 @@ export async function getAllCategories(): Promise<CategoryDB[]> {
 
     return (result as DbCategory[]).map(dbCategoryToCategory);
   } catch (error) {
-    console.error('Failed to get all categories:', error);
+    logger.error('Products', 'Failed to get all categories', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -149,7 +150,7 @@ export async function createProduct(
     if (result.length === 0) return null;
     return dbProductToProduct(result[0] as DbProduct);
   } catch (error) {
-    console.error('Failed to create product:', error);
+    logger.error('Products', 'Failed to create product', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -167,7 +168,7 @@ export async function getProductById(productId: string): Promise<ProductDB | nul
     if (result.length === 0) return null;
     return dbProductToProduct(result[0] as DbProduct);
   } catch (error) {
-    console.error('Failed to get product by ID:', error);
+    logger.error('Products', 'Failed to get product by ID', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -195,7 +196,7 @@ export async function getActiveProducts(categoryId?: string): Promise<ProductDB[
 
     return (result as DbProduct[]).map(dbProductToProduct);
   } catch (error) {
-    console.error('Failed to get active products:', error);
+    logger.error('Products', 'Failed to get active products', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -218,7 +219,7 @@ export async function updateProductStatus(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update product status:', error);
+    logger.error('Products', 'Failed to update product status', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -241,7 +242,7 @@ export async function updateProductPrice(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update product price:', error);
+    logger.error('Products', 'Failed to update product price', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -271,7 +272,7 @@ export async function createProductVariant(
     if (result.length === 0) return null;
     return dbVariantToVariant(result[0] as DbProductVariant);
   } catch (error) {
-    console.error('Failed to create product variant:', error);
+    logger.error('Products', 'Failed to create product variant', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -289,7 +290,7 @@ export async function getVariantBySku(sku: string): Promise<ProductVariant | nul
     if (result.length === 0) return null;
     return dbVariantToVariant(result[0] as DbProductVariant);
   } catch (error) {
-    console.error('Failed to get variant by SKU:', error);
+    logger.error('Products', 'Failed to get variant by SKU', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -308,7 +309,7 @@ export async function getProductVariants(productId: string): Promise<ProductVari
 
     return (result as DbProductVariant[]).map(dbVariantToVariant);
   } catch (error) {
-    console.error('Failed to get product variants:', error);
+    logger.error('Products', 'Failed to get product variants', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -331,7 +332,7 @@ export async function updateVariantStock(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update variant stock:', error);
+    logger.error('Products', 'Failed to update variant stock', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -354,7 +355,7 @@ export async function updateVariantPrice(
 
     return result.length > 0;
   } catch (error) {
-    console.error('Failed to update variant price:', error);
+    logger.error('Products', 'Failed to update variant price', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -376,7 +377,7 @@ export async function getEffectivePrice(variantId: string): Promise<number | nul
     if (result.length === 0) return null;
     return (result[0] as any).effective_price;
   } catch (error) {
-    console.error('Failed to get effective price:', error);
+    logger.error('Products', 'Failed to get effective price', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -405,7 +406,7 @@ export async function checkStockAvailability(
 
     return availability;
   } catch (error) {
-    console.error('Failed to check stock availability:', error);
+    logger.error('Products', 'Failed to check stock availability', { error: error instanceof Error ? error.message : String(error) });
     return new Map();
   }
 }

@@ -2,35 +2,42 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCart } from './CartContext';
 import { useUser } from './UserContext';
 import {
-  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown,
+  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown, MapPin,
 } from 'lucide-react';
+import { useLocationSplash, SERVICE_AREAS } from './LocationSplashContext';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const NAV_CATEGORIES = [
-  { id: 'carpentry',  name: 'Carpentry',  icon: '🔨' },
-  { id: 'plumbing',   name: 'Plumbing',   icon: '🔧' },
-  { id: 'hardware',   name: 'Hardware',   icon: '⚙️' },
-  { id: 'electrical', name: 'Electrical', icon: '⚡' },
-  { id: 'adhesives',  name: 'Adhesives',  icon: '🧴' },
+  { id: 'carpentry',  name: 'Carpentry'  },
+  { id: 'plumbing',   name: 'Plumbing'   },
+  { id: 'hardware',   name: 'Hardware'   },
+  { id: 'electrical', name: 'Electrical' },
+  { id: 'adhesives',  name: 'Adhesives'  },
 ];
 
 export function Header() {
   const { getItemCount } = useCart();
   const { currentUser, logout } = useUser();
+  const { selectedLocation, openSplash } = useLocationSplash();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
+
+  const isCategoryActive = (categoryId: string) =>
+    pathname === '/catalog' && currentCategory === categoryId;
 
   const itemCount = getItemCount();
 
-  const [scrolled, setScrolled]         = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [mobileOpen, setMobileOpen]     = useState(false);
-  const [searchQuery, setSearchQuery]   = useState('');
+  const [scrolled,      setScrolled]      = useState(false);
+  const [showDropdown,  setShowDropdown]  = useState(false);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,14 +47,12 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
     }
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    if (showDropdown) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
@@ -70,14 +75,14 @@ export function Header() {
     const confirmed = window.confirm('Are you sure you want to delete your account? This cannot be undone.');
     if (!confirmed) return;
 
-    const response = await fetch('/api/auth/delete', {
+    const res = await fetch('/api/auth/delete', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUser.id }),
     });
 
-    const result = await response.json();
-    if (!response.ok) {
+    if (!res.ok) {
+      const result = await res.json();
       console.error('Account deletion failed:', result.error);
       return;
     }
@@ -88,14 +93,15 @@ export function Header() {
   };
 
   return (
-    <header className={cn('navbar transition-shadow duration-200', scrolled && 'shadow-md')}>
+    <header className={cn('navbar transition-all duration-200', scrolled && 'shadow-md')}>
+
       {/* ── Main Nav Row ── */}
       <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 h-14">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="relative w-9 h-9 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+            <div className="relative w-8 h-8 flex-shrink-0">
               <Image
                 src="/fastget-logo-clear.png"
                 alt="FastGet Logo"
@@ -103,34 +109,62 @@ export function Header() {
                 className="object-contain"
               />
             </div>
-            <span className="text-xl font-black text-brand-charcoal tracking-tight hidden sm:block">
+            <span className="text-[1.15rem] font-black text-brand-charcoal tracking-tight hidden sm:block">
               Fast<span className="text-brand-primary">Get</span>
             </span>
           </Link>
 
-          {/* Search Bar */}
+          {/* Location selector — desktop */}
+          <button
+            onClick={openSplash}
+            aria-label="Change delivery location"
+            className={cn(
+              'hidden md:flex items-center gap-2 px-3 py-2 rounded-xl shrink-0',
+              'border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50',
+              'transition-all duration-150 group',
+            )}
+          >
+            <MapPin className="w-3.5 h-3.5 text-brand-primary flex-shrink-0" />
+            <div className="text-left">
+              <p className="text-[0.65rem] text-brand-steel leading-none mb-0.5 uppercase tracking-wide font-medium">
+                Deliver to
+              </p>
+              <p className="text-xs font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors leading-none">
+                {selectedLocation
+                  ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
+                  : 'Select area'
+                }
+              </p>
+            </div>
+            <ChevronDown className="w-3 h-3 text-brand-steel flex-shrink-0" />
+          </button>
+
+          {/* Search Bar — desktop */}
           <form onSubmit={handleSearch} className="flex-1 min-w-0 hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search for plywood, hinges, fittings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
+                           placeholder:text-brand-steel
+                           focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
+                           transition-all duration-200"
               />
             </div>
           </form>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 ml-auto md:ml-0 shrink-0">
+          <div className="flex items-center gap-1.5 ml-auto md:ml-0 shrink-0">
 
             {/* Cart */}
             <Link
               href="/cart"
               className={cn(
                 'relative btn-ghost',
-                pathname === '/cart' && 'bg-orange-50 text-brand-primary',
+                pathname === '/cart' && 'bg-primary-50 text-brand-primary',
               )}
             >
               <ShoppingCart className="w-5 h-5" />
@@ -147,35 +181,35 @@ export function Header() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-neutral-100 transition-all duration-200"
                   aria-expanded={showDropdown}
                   aria-haspopup="true"
                 >
-                  <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center shadow-brand">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <span className="hidden sm:inline text-sm font-medium text-brand-charcoal truncate max-w-[120px]">
                     {currentUser.name}
                   </span>
-                  <ChevronDown className="w-3 h-3 text-gray-400 hidden sm:block" />
+                  <ChevronDown className={cn('w-3 h-3 text-brand-steel hidden sm:block transition-transform duration-150', showDropdown && 'rotate-180')} />
                 </button>
 
                 {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50">
-                    <div className="px-5 py-4 bg-orange-50 border-b border-gray-100">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden z-50 animate-fade-in">
+                    <div className="px-5 py-4 bg-primary-50 border-b border-neutral-100">
                       <p className="text-sm font-semibold text-brand-charcoal">{currentUser.name}</p>
-                      <p className="text-xs text-gray-500 mt-1 truncate">{currentUser.email}</p>
+                      <p className="text-xs text-brand-slate mt-0.5 truncate">{currentUser.email}</p>
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-gray-50 transition-all duration-200"
+                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 transition-all duration-200"
                     >
                       <LogOut className="w-4 h-4 text-brand-primary" />
                       Sign Out
                     </button>
                     <button
                       onClick={handleDeleteAccount}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-red-600 border-t border-gray-100 hover:bg-red-50 transition-all duration-200"
+                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-red-600 border-t border-neutral-100 hover:bg-red-50 transition-all duration-200"
                     >
                       Delete Account
                     </button>
@@ -187,18 +221,15 @@ export function Header() {
                 <Link
                   href="/login"
                   className={cn(
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
+                    'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150',
                     pathname === '/login'
-                      ? 'bg-orange-50 text-brand-primary'
-                      : 'text-brand-charcoal hover:bg-gray-100',
+                      ? 'bg-primary-50 text-brand-primary'
+                      : 'text-brand-charcoal hover:bg-neutral-100',
                   )}
                 >
                   Log In
                 </Link>
-                <Link
-                  href="/signup"
-                  className="btn-primary"
-                >
+                <Link href="/signup" className="btn-primary">
                   Sign Up
                 </Link>
               </div>
@@ -216,13 +247,15 @@ export function Header() {
         </div>
 
         {/* ── Category Nav Row (desktop) ── */}
-        <nav className="hidden md:flex items-center gap-1 py-1 border-t border-gray-100 overflow-x-auto hide-scrollbar">
+        <nav className="hidden md:flex items-center gap-0.5 py-1 border-t border-neutral-100 overflow-x-auto hide-scrollbar">
           <Link
             href="/"
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150',
-              'hover:bg-orange-50 hover:text-brand-primary',
-              pathname === '/' ? 'bg-orange-50 text-brand-primary' : 'text-gray-700',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150',
+              'hover:bg-primary-50 hover:text-brand-primary',
+              pathname === '/'
+                ? 'bg-primary-50 text-brand-primary font-semibold'
+                : 'text-brand-graphite font-medium',
             )}
           >
             Home
@@ -232,20 +265,24 @@ export function Header() {
               key={cat.id}
               href={`/catalog?category=${cat.id}`}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150',
-                'hover:bg-orange-50 hover:text-brand-primary text-gray-700',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150',
+                'hover:bg-primary-50 hover:text-brand-primary',
+                isCategoryActive(cat.id)
+                  ? 'bg-primary-50 text-brand-primary font-semibold'
+                  : 'text-brand-graphite font-medium',
               )}
             >
-              <span>{cat.icon}</span>
-              <span>{cat.name}</span>
+              {cat.name}
             </Link>
           ))}
           <Link
             href="/order"
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150',
-              'hover:bg-orange-50 hover:text-brand-primary',
-              pathname === '/order' ? 'bg-orange-50 text-brand-primary' : 'text-gray-700',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150',
+              'hover:bg-primary-50 hover:text-brand-primary',
+              pathname === '/order' || pathname.startsWith('/order/')
+                ? 'bg-primary-50 text-brand-primary font-semibold'
+                : 'text-brand-graphite font-medium',
             )}
           >
             Track Order
@@ -255,17 +292,42 @@ export function Header() {
 
       {/* ── Mobile Menu ── */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4 animate-slide-up">
+        <div className="md:hidden border-t border-neutral-100 bg-white px-4 py-4 space-y-4 animate-slide-up">
+          {/* Mobile location button */}
+          <button
+            onClick={() => { openSplash(); setMobileOpen(false); }}
+            aria-label="Change delivery location"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50 transition-all duration-150 group"
+          >
+            <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-4 h-4 text-brand-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-[0.65rem] text-brand-steel uppercase tracking-wide font-medium leading-none mb-0.5">
+                Deliver to
+              </p>
+              <p className="text-sm font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors leading-none">
+                {selectedLocation
+                  ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
+                  : 'Select delivery area'
+                }
+              </p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-brand-steel flex-shrink-0" />
+          </button>
+
           {/* Mobile search */}
           <form onSubmit={handleSearch}>
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search materials..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="w-full pl-10 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
+                           focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
+                           transition-all duration-200"
               />
             </div>
           </form>
@@ -277,29 +339,30 @@ export function Header() {
                 key={cat.id}
                 href={`/catalog?category=${cat.id}`}
                 onClick={() => setMobileOpen(false)}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gray-50 hover:bg-orange-50 text-center transition-colors"
+                className={cn(
+                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all duration-150',
+                  isCategoryActive(cat.id)
+                    ? 'bg-primary-50 border-brand-primary'
+                    : 'bg-brand-fog hover:bg-primary-50 hover:border-brand-primary border-transparent',
+                )}
               >
-                <span className="text-2xl">{cat.icon}</span>
-                <span className="text-xs font-medium text-brand-charcoal leading-tight">{cat.name}</span>
+                <span className={cn(
+                  'text-xs font-semibold leading-tight',
+                  isCategoryActive(cat.id) ? 'text-brand-primary' : 'text-brand-graphite',
+                )}>
+                  {cat.name}
+                </span>
               </Link>
             ))}
           </div>
 
-          {/* Mobile auth links */}
+          {/* Mobile auth */}
           {!currentUser && (
-            <div className="flex gap-2 pt-2 border-t border-gray-100">
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex-1 btn-secondary text-center"
-              >
+            <div className="flex gap-2 pt-2 border-t border-neutral-100">
+              <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 btn-secondary text-center">
                 Log In
               </Link>
-              <Link
-                href="/signup"
-                onClick={() => setMobileOpen(false)}
-                className="flex-1 btn-primary text-center"
-              >
+              <Link href="/signup" onClick={() => setMobileOpen(false)} className="flex-1 btn-primary text-center">
                 Sign Up
               </Link>
             </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUnpooledConnection } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Force dynamic rendering to allow search params
 export const dynamic = 'force-dynamic';
@@ -15,15 +16,20 @@ export const dynamic = 'force-dynamic';
  * - limit (optional): Number of results (default: 20, max: 100)
  */
 export async function GET(request: NextRequest) {
+  const start = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const statusFilter = searchParams.get('status') || 'received';
     const limitParam = parseInt(searchParams.get('limit') || '20', 10);
     const limit = isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 100);
 
+    logger.info('API', 'GET /api/orders/pending', { statusFilter, limit });
+
     // Validate status is one of allowed values
     const validStatuses = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
     if (!validStatuses.includes(statusFilter)) {
+      logger.warn('API', 'GET /api/orders/pending — invalid status filter', { statusFilter });
+      logger.api('GET', '/api/orders/pending', 400, Date.now() - start);
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
         { status: 400 }
@@ -88,6 +94,9 @@ export async function GET(request: NextRequest) {
       statusToken: order.status_token,
     }));
 
+    logger.debug('API', 'GET /api/orders/pending — orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount });
+    logger.api('GET', '/api/orders/pending', 200, Date.now() - start);
+
     return NextResponse.json(
       {
         success: true,
@@ -101,7 +110,8 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error fetching pending orders:', error);
+    logger.error('API', 'GET /api/orders/pending — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.api('GET', '/api/orders/pending', 500, Date.now() - start);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActiveProducts, getAllCategories } from '@/lib/products';
+import { getActiveProducts } from '@/lib/products';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/products?category=[slug]&limit=[number]
@@ -12,10 +13,13 @@ import { getActiveProducts, getAllCategories } from '@/lib/products';
  * Returns: Array of products with id, name, price, category info
  */
 export async function GET(request: NextRequest) {
+  const start = Date.now();
   try {
     const categorySlug = request.nextUrl.searchParams.get('category');
     const limitParam = request.nextUrl.searchParams.get('limit');
     const limit = limitParam ? Math.min(parseInt(limitParam), 1000) : 100;
+
+    logger.info('API', 'GET /api/products', { categorySlug, limit });
 
     let products = await getActiveProducts();
 
@@ -27,6 +31,9 @@ export async function GET(request: NextRequest) {
     // Limit results
     products = products.slice(0, limit);
 
+    logger.debug('API', 'GET /api/products — fetched', { count: products.length });
+    logger.api('GET', '/api/products', 200, Date.now() - start);
+
     return NextResponse.json(
       {
         success: true,
@@ -37,11 +44,12 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 200,
-        headers: { 'Cache-Control': 'public, max-age=300' }, // Cache for 5 minutes
+        headers: { 'Cache-Control': 'public, max-age=300' },
       }
     );
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error('API', 'GET /api/products — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.api('GET', '/api/products', 500, Date.now() - start);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch products' },
       { status: 500 }

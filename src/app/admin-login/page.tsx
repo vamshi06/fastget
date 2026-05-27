@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Lock, Zap, AlertCircle } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -13,8 +14,6 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    // Redirect to admin with token as query param
     if (token) {
       router.push(`/admin?token=${encodeURIComponent(token)}`);
     } else {
@@ -24,50 +23,74 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-lg shadow-xl p-8 space-y-6">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #1C1C1E 0%, #2A2A2C 50%, #1C1C1E 100%)' }}
+    >
+      <div className="absolute inset-0 bg-motion-lines pointer-events-none" />
+      <div className="absolute top-0 left-0 w-1 h-full pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, #F5A623, transparent 60%)' }} />
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-2xl font-black text-white tracking-tight">
+              Fast<span className="text-brand-primary">Get</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-8 space-y-6" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.35)' }}>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">FastGet Admin</h1>
-            <p className="text-gray-600 mt-2">Secure admin access</p>
+            <h1 className="text-2xl font-black text-brand-charcoal">Admin Access</h1>
+            <p className="text-brand-slate text-sm mt-1">Secure admin panel — enter your token</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="token" className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                 Admin Token
               </label>
-              <input
-                id="token"
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Enter your admin token"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
+                <input
+                  id="token"
+                  type="password"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Enter your admin token"
+                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-brand-charcoal bg-brand-fog
+                             focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
+                             transition-all duration-200"
+                />
+              </div>
+              <p className="text-xs text-brand-steel mt-1.5">
                 Set the ADMIN_TOKEN environment variable
               </p>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                {error}
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Logging in…' : 'Login'}
             </button>
           </form>
 
-          <p className="text-xs text-gray-500 text-center">
-            This is a secure admin panel. Use your admin token to log in.
+          <p className="text-xs text-brand-steel text-center">
+            This is a secure admin panel. Unauthorized access is prohibited.
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Order, OrderItem, OrderStatus, Product, CategoryId } from '@/types';
+import { logger } from '@/lib/logger';
 
 const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || '';
 const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET || '';
@@ -37,7 +38,7 @@ interface SheetsProductRow {
 
 export async function createOrderInSheets(order: Order): Promise<boolean> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.error('GOOGLE_SCRIPT_URL is not configured; order was not saved');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — order not saved to Sheets');
     return false;
   }
 
@@ -83,14 +84,14 @@ export async function createOrderInSheets(order: Order): Promise<boolean> {
     const result = await response.json();
     return result.success === true;
   } catch (error) {
-    console.error('Failed to create order in Sheets:', error);
+    logger.error('Sheets', 'Failed to create order in Sheets', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
 
 export async function getOrderFromSheets(token: string): Promise<Order | null> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('GOOGLE_SCRIPT_URL not configured');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — skipping Sheets order fetch');
     return null;
   }
 
@@ -122,14 +123,14 @@ export async function getOrderFromSheets(token: string): Promise<Order | null> {
 
     return sheetsRowToOrder(result.data);
   } catch (error) {
-    console.error('Failed to get order from Sheets:', error);
+    logger.error('Sheets', 'Failed to get order from Sheets', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
 
 export async function getAllOrdersFromSheets(): Promise<Order[]> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('GOOGLE_SCRIPT_URL not configured');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — skipping Sheets orders fetch');
     return [];
   }
 
@@ -160,7 +161,7 @@ export async function getAllOrdersFromSheets(): Promise<Order[]> {
 
     return result.data.map(sheetsRowToOrder);
   } catch (error) {
-    console.error('Failed to fetch all orders from Sheets:', error);
+    logger.error('Sheets', 'Failed to fetch all orders from Sheets', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -172,7 +173,7 @@ export async function updateOrderStatusInSheets(
   eta?: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('GOOGLE_SCRIPT_URL not configured');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — cannot update status in Sheets');
     return { success: false, error: 'Service temporarily unavailable' };
   }
 
@@ -206,7 +207,7 @@ export async function updateOrderStatusInSheets(
       error: result.error,
     };
   } catch (error) {
-    console.error('Failed to update order status:', error);
+    logger.error('Sheets', 'Failed to update order status in Sheets', { error: error instanceof Error ? error.message : String(error) });
     return { success: false, error: 'Service temporarily unavailable' };
   }
 }
@@ -235,7 +236,7 @@ function sheetsRowToOrder(row: SheetsOrderRow): Order {
 
 export async function getAllProductsFromSheets(): Promise<Product[]> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.warn('GOOGLE_SCRIPT_URL not configured');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — skipping Sheets products fetch');
     return [];
   }
 
@@ -266,14 +267,14 @@ export async function getAllProductsFromSheets(): Promise<Product[]> {
 
     return result.data.map(sheetsRowToProduct);
   } catch (error) {
-    console.error('Failed to fetch all products from Sheets:', error);
+    logger.error('Sheets', 'Failed to fetch all products from Sheets', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
 
 export async function createProductInSheets(product: Product): Promise<boolean> {
   if (!GOOGLE_SCRIPT_URL) {
-    console.error('GOOGLE_SCRIPT_URL is not configured');
+    logger.warn('Sheets', 'GOOGLE_SCRIPT_URL not configured — product not saved to Sheets');
     return false;
   }
 
@@ -311,7 +312,7 @@ export async function createProductInSheets(product: Product): Promise<boolean> 
     const result = await response.json();
     return result.success === true;
   } catch (error) {
-    console.error('Failed to create product in Sheets:', error);
+    logger.error('Sheets', 'Failed to create product in Sheets', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

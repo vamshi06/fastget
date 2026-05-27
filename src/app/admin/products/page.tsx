@@ -33,7 +33,7 @@ export default async function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-brand-charcoal">Products</h1>
-          <p className="text-gray-500 text-sm">{products.length} products in catalog</p>
+          <p className="text-brand-slate text-sm">{products.length} products in catalog</p>
         </div>
         <Link href="/admin/products/new" className="btn-primary">
           <Plus className="w-4 h-4" />
@@ -44,7 +44,7 @@ export default async function ProductsPage() {
       {/* Products Table */}
       {products.length === 0 ? (
         <div className="card p-12 text-center">
-          <p className="text-gray-400 font-medium mb-4">No products yet</p>
+          <p className="text-brand-steel font-medium mb-4">No products yet</p>
           <Link href="/admin/products/new" className="btn-primary">
             <Plus className="w-4 h-4" /> Create First Product
           </Link>
@@ -52,24 +52,24 @@ export default async function ProductsPage() {
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-brand-fog border-b border-gray-100">
               <tr>
                 {['Product', 'Category', 'Price', 'Stock Status', 'Actions'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-brand-slate uppercase">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-neutral-100">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={product.id} className="hover:bg-brand-fog transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-brand-charcoal line-clamp-1">{product.name}</p>
-                    <p className="text-xs text-gray-400 line-clamp-1 mt-0.5">{product.description}</p>
+                    <p className="text-xs text-brand-steel line-clamp-1 mt-0.5">{product.description}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="badge bg-blue-100 text-blue-700">
+                    <span className="badge bg-primary-100 text-primary-700">
                       {CATEGORY_LABELS[product.category] ?? product.category}
                     </span>
                   </td>
@@ -77,7 +77,7 @@ export default async function ProductsPage() {
                     ₹{product.price}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={STOCK_BADGE[product.stockStatus] ?? 'badge bg-gray-100 text-gray-600'}>
+                    <span className={STOCK_BADGE[product.stockStatus] ?? 'badge bg-neutral-100 text-brand-slate'}>
                       {STOCK_LABEL[product.stockStatus] ?? product.stockStatus}
                     </span>
                   </td>
@@ -101,17 +101,17 @@ export default async function ProductsPage() {
       {products.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card p-5">
-            <p className="text-sm text-gray-500">Total Products</p>
+            <p className="text-sm text-brand-slate">Total Products</p>
             <p className="text-2xl font-black text-brand-charcoal mt-1">{products.length}</p>
           </div>
           <div className="card p-5">
-            <p className="text-sm text-gray-500">In Stock</p>
+            <p className="text-sm text-brand-slate">In Stock</p>
             <p className="text-2xl font-black text-green-600 mt-1">
               {products.filter((p) => p.stockStatus === 'in_stock').length}
             </p>
           </div>
           <div className="card p-5">
-            <p className="text-sm text-gray-500">Low / Out of Stock</p>
+            <p className="text-sm text-brand-slate">Low / Out of Stock</p>
             <p className="text-2xl font-black text-red-600 mt-1">
               {products.filter((p) => p.stockStatus !== 'in_stock').length}
             </p>
