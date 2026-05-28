@@ -82,6 +82,8 @@ export interface CatalogParams {
   search?:       string;
   limit?:        number;
   offset?:       number;
+  minPrice?:     number; // in rupees (inclusive)
+  maxPrice?:     number; // in rupees (inclusive)
 }
 
 export interface CatalogResult {
@@ -227,7 +229,7 @@ export async function getProductsFromCategoryTables(
   params: CatalogParams = {},
 ): Promise<CatalogResult> {
   const sqlClient = getUnpooledClient();
-  const { categorySlug, search, limit = 500, offset = 0 } = params;
+  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice } = params;
 
   try {
     // Resolve which table/view to query
@@ -252,6 +254,16 @@ export async function getProductsFromCategoryTables(
       whereClauses.push(
         `(name ILIKE $${n - 2} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
       );
+    }
+
+    // Price filter: category tables store price in paise (1 rupee = 100 paise)
+    if (minPrice !== undefined && minPrice > 0) {
+      filterArgs.push(minPrice * 100);
+      whereClauses.push(`price >= $${filterArgs.length}`);
+    }
+    if (maxPrice !== undefined) {
+      filterArgs.push(maxPrice * 100);
+      whereClauses.push(`price <= $${filterArgs.length}`);
     }
 
     const whereStr   = whereClauses.join(' AND ');

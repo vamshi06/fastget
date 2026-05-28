@@ -20,22 +20,24 @@ export async function GET(request: NextRequest) {
   const start = Date.now();
   try {
     const sp       = request.nextUrl.searchParams;
-    const category = sp.get('category') || undefined;
-    const search   = sp.get('q')        || undefined;
-    const limit    = Math.min(parseInt(sp.get('limit')  ?? '500', 10), 500);
+    const category = sp.get('category')  || undefined;
+    const search   = sp.get('q')         || undefined;
+    const limit    = Math.min(parseInt(sp.get('limit')  ?? '24',  10), 500);
     const offset   = Math.max(parseInt(sp.get('offset') ?? '0',   10), 0);
+    const minPrice = sp.get('min_price') ? parseFloat(sp.get('min_price')!) : undefined;
+    const maxPrice = sp.get('max_price') ? parseFloat(sp.get('max_price')!) : undefined;
 
-    logger.info('API', 'GET /api/products', { category, search, limit, offset });
+    logger.info('API', 'GET /api/products', { category, search, limit, offset, minPrice, maxPrice });
 
     if (process.env.DEBUG_CATALOG === '1') {
       console.debug('[api/products] selected category:', category ?? '(all)');
-      console.debug('[api/products] applied filters:', { search, limit, offset });
+      console.debug('[api/products] applied filters:', { search, limit, offset, minPrice, maxPrice });
     }
 
     // Use category tables by default; fall back to legacy products table
     const useLegacy = process.env.LEGACY_PRODUCTS_TABLE === '1';
     const fetchFn   = useLegacy ? getProductCatalog : getProductsFromCategoryTables;
-    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset });
+    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset, minPrice, maxPrice });
 
     if (process.env.DEBUG_CATALOG === '1') {
       console.debug('[api/products] returned count:', products.length, '/ total in DB:', total);
