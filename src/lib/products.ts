@@ -1,6 +1,417 @@
 import { neon } from '@neondatabase/serverless';
-import { CategoryDB, ProductDB, ProductVariant } from '@/types';
+import { CategoryDB, CategoryId, Product, ProductDB, ProductVariant } from '@/types';
 import { logger } from '@/lib/logger';
+
+// ── Shared catalogue query fragment ──────────────────────────────────────────
+
+const CATALOG_SELECT = `
+  SELECT
+    p.id                           AS db_id,
+    COALESCE(p.product_code, p.id::text) AS product_code,
+    p.name,
+    COALESCE(p.brand, '')          AS brand,
+    COALESCE(p.description, '')    AS description,
+    COALESCE(p.image_url, '')      AS image_url,
+    COALESCE(p.uom, '')            AS product_uom,
+    c.id                           AS category_id,
+    COALESCE(c.name, '')           AS category_name,
+    COALESCE(c.slug, '')           AS category_slug,
+    pv.id                          AS variant_id,
+    COALESCE(pv.sku, '')           AS sku,
+    COALESCE(pv.price_override, p.price) AS effective_price_paise,
+    pv.mrp_price                   AS mrp_price_paise,
+    COALESCE(pv.moq, 1)            AS moq,
+    COALESCE(pv.attributes, '{}')  AS attributes,
+    COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS available_stock,
+    (SELECT COUNT(*) FROM product_variants pv2 WHERE pv2.product_id = p.id) AS variant_count
+  FROM products p
+  LEFT JOIN categories c ON p.category_id = c.id
+  LEFT JOIN LATERAL (
+    SELECT * FROM product_variants
+    WHERE product_id = p.id
+    ORDER BY created_at ASC
+    LIMIT 1
+  ) pv ON TRUE
+  LEFT JOIN inventory inv ON inv.variant_id = pv.id
+`;
+
+// ── Row → Product mapper ──────────────────────────────────────────────────────
+
+function catalogRowToProduct(row: any): Product {
+  const effectivePaise = Number(row.effective_price_paise) || 0;
+  const mrpPaise       = Number(row.mrp_price_paise)       || 0;
+  const stock          = Number(row.available_stock)        || 0;
+  const attrs          = typeof row.attributes === 'object' ? row.attributes : {};
+
+  // Strip brand prefix from product name for cleaner display ("CenturyPly Plywood" → "Plywood")
+  const brand       = row.brand as string || '';
+  const rawName     = row.name  as string || '';
+  const brandPrefix = brand ? brand + ' ' : '';
+  const displayName = brand && rawName.startsWith(brandPrefix)
+    ? rawName.slice(brandPrefix.length)
+    : rawName;
+
+  // Use product_code as the canonical id exposed to the frontend.
+  // product_code is the stable SKU from the Google Sheet (e.g. "PLY-CP-04").
+  // Falls back to the DB UUID for any legacy rows without a product_code.
+  const productCode = (row.product_code as string) || (row.db_id as string);
+
+  return {
+    id:           productCode,
+    productCode:  productCode,
+    name:         displayName,
+    brand:        brand || undefined,
+    description:  row.description || '',
+    price:        Math.round(effectivePaise / 100),
+    mrpPrice:     mrpPaise > 0 ? Math.round(mrpPaise / 100) : undefined,
+    unit:         attrs.uom || row.product_uom || 'piece',
+    category:     (row.category_slug || 'carpentry') as CategoryId,
+    imageUrl:     row.image_url || undefined,
+    stockStatus:  stock > 10 ? 'in_stock' : stock > 0 ? 'low' : 'in_stock',
+    sku:          row.sku || undefined,
+    variantId:    row.variant_id || undefined,
+    moq:          Number(row.moq) || 1,
+    variantCount: Number(row.variant_count) || 1,
+  };
+}
+
+// ── Public catalogue interfaces ───────────────────────────────────────────────
+
+export interface CatalogParams {
+  categorySlug?: string;
+  search?:       string;
+  limit?:        number;
+  offset?:       number;
+}
+
+export interface CatalogResult {
+  products: Product[];
+  total:    number;
+}
+
+/**
+ * Fetch products with their primary variant + inventory in one query.
+ * Supports optional category slug filter, free-text search, and pagination.
+ */
+export async function getProductCatalog(params: CatalogParams = {}): Promise<CatalogResult> {
+  const sql = getUnpooledClient();
+  const { categorySlug, search, limit = 500, offset = 0 } = params;
+
+  try {
+    const wheres: string[] = ["p.status = 'active'"];
+    const args: unknown[]  = [];
+
+    if (categorySlug) {
+      args.push(categorySlug);
+      wheres.push(`c.slug = $${args.length}`);
+    }
+
+    if (search && search.trim()) {
+      const pat = `%${search.trim()}%`;
+      args.push(pat, pat, pat);
+      const n = args.length;
+      wheres.push(`(p.name ILIKE $${n - 2} OR p.brand ILIKE $${n - 1} OR COALESCE(p.description,'') ILIKE $${n})`);
+    }
+
+    const whereClause = wheres.join(' AND ');
+
+    // Count query
+    args.push(limit, offset);
+    const limitIdx  = args.length - 1;
+    const offsetIdx = args.length;
+
+    const rowsQuery = `
+      ${CATALOG_SELECT}
+      WHERE ${whereClause}
+      ORDER BY c.name ASC, p.name ASC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE ${whereClause}
+    `;
+
+    // Run both in parallel; count uses only the filter args (not limit/offset)
+    const filterArgs = args.slice(0, args.length - 2);
+    const [rows, countRows] = await Promise.all([
+      sql.query(rowsQuery, args as any[]),
+      sql.query(countQuery, filterArgs as any[]),
+    ]);
+
+    const products = (rows as any[]).map(catalogRowToProduct);
+    const total    = Number((countRows as any[])[0]?.total ?? 0);
+
+    return { products, total };
+  } catch (error) {
+    logger.error('Products', 'getProductCatalog failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { products: [], total: 0 };
+  }
+}
+
+// ── Category-table constants ──────────────────────────────────────────────────
+
+/** Maps every user-facing category slug to its DB table name. */
+export const CATEGORY_SLUG_TO_TABLE: Record<string, string> = {
+  'carpentry':           'carpentry',
+  'paints_and_polish':   'paints_and_polish',
+  'paints':              'paints_and_polish',
+  'plumbing':            'plumbing',
+  'civil_materials':     'civil_materials',
+  'civil-materials':     'civil_materials',
+  'electrical':          'electrical',
+  'flooring_and_ceilings': 'flooring_and_ceilings',
+  'flooring-ceilings':   'flooring_and_ceilings',
+  'glass_and_aluminium': 'glass_and_aluminium',
+  'glass-aluminium':     'glass_and_aluminium',
+  'tools_and_machines':  'tools_and_machines',
+  'tools-machines':      'tools_and_machines',
+};
+
+const VALID_CATEGORY_TABLES = new Set([
+  'carpentry', 'paints_and_polish', 'plumbing', 'civil_materials',
+  'electrical', 'flooring_and_ceilings', 'glass_and_aluminium', 'tools_and_machines',
+  'products_catalog_view',
+]);
+
+// ── Category-table row → Product mapper ──────────────────────────────────────
+
+function categoryTableRowToProduct(row: any): Product {
+  const priceVal = Number(row.price)     || 0;
+  const mrpVal   = Number(row.mrp_price) || 0;
+  const brand    = (row.brand as string) || '';
+  const rawName  = (row.name  as string) || '';
+  const productCode = (row.product_code as string);
+
+  const displayName = brand && rawName.startsWith(brand + ' ')
+    ? rawName.slice(brand.length + 1)
+    : rawName;
+
+  // Reconstruct attributes for variant size display
+  const attrs: Record<string, string> = {};
+  if (row.size)   attrs.size   = row.size;
+  if (row.colour) attrs.colour = row.colour;
+  if (row.uom)    attrs.uom    = row.uom;
+  if (row.remarks) attrs.remarks = row.remarks;
+
+  return {
+    id:           productCode,
+    productCode:  productCode,
+    name:         displayName,
+    brand:        brand || undefined,
+    description:  row.description || '',
+    price:        Math.round(priceVal / 100),
+    mrpPrice:     mrpVal > 0 ? Math.round(mrpVal / 100) : undefined,
+    unit:         row.uom || 'piece',
+    category:     (row.category_slug || 'carpentry') as CategoryId,
+    imageUrl:     row.image_url || undefined,
+    stockStatus:  'in_stock',
+    sku:          productCode,
+    variantId:    row.variant_id || undefined,
+    moq:          Number(row.moq) || 1,
+    variantCount: 1,
+  };
+}
+
+/**
+ * Fetch products directly from category tables / UNION view.
+ * Uses the same CatalogParams interface as getProductCatalog.
+ * Queries the specific category table when categorySlug is provided,
+ * otherwise queries the products_catalog_view UNION for all categories.
+ */
+export async function getProductsFromCategoryTables(
+  params: CatalogParams = {},
+): Promise<CatalogResult> {
+  const sqlClient = getUnpooledClient();
+  const { categorySlug, search, limit = 500, offset = 0 } = params;
+
+  try {
+    // Resolve which table/view to query
+    const tableName = categorySlug
+      ? (CATEGORY_SLUG_TO_TABLE[categorySlug] ?? null)
+      : 'products_catalog_view';
+
+    if (!tableName || !VALID_CATEGORY_TABLES.has(tableName)) {
+      // Unknown category slug — fall back to empty result (not an error)
+      logger.warn('Products', `getProductsFromCategoryTables: unknown slug "${categorySlug}"`);
+      return { products: [], total: 0 };
+    }
+
+    const filterArgs: unknown[] = [];
+    const whereClauses: string[] = ['TRUE'];
+
+    // Search filter: name, brand, description
+    if (search?.trim()) {
+      const pat = `%${search.trim()}%`;
+      filterArgs.push(pat, pat, pat);
+      const n = filterArgs.length;
+      whereClauses.push(
+        `(name ILIKE $${n - 2} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
+      );
+    }
+
+    const whereStr   = whereClauses.join(' AND ');
+    const rowsArgs   = [...filterArgs, limit, offset];
+    const countArgs  = [...filterArgs];
+    const limitIdx   = rowsArgs.length - 1;
+    const offsetIdx  = rowsArgs.length;
+    const rowsQuery  = `SELECT * FROM ${tableName} WHERE ${whereStr} ORDER BY brand ASC, name ASC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+    const countQuery = `SELECT COUNT(*) AS total FROM ${tableName} WHERE ${whereStr}`;
+
+    // Debug logging (set DEBUG_CATALOG=1 to enable)
+    if (process.env.DEBUG_CATALOG === '1') {
+      console.debug('[catalog] table:', tableName);
+      console.debug('[catalog] query:', rowsQuery);
+      console.debug('[catalog] args:', rowsArgs);
+      console.debug('[catalog] filters:', whereClauses);
+    }
+
+    const [rows, countRows] = await Promise.all([
+      sqlClient.query(rowsQuery, rowsArgs as any[]),
+      sqlClient.query(countQuery, countArgs as any[]),
+    ]);
+
+    const products = (rows as any[]).map(categoryTableRowToProduct);
+    const total    = Number((countRows as any[])[0]?.total ?? 0);
+
+    if (process.env.DEBUG_CATALOG === '1') {
+      console.debug('[catalog] returned:', products.length, 'of total', total);
+    }
+
+    return { products, total };
+  } catch (error) {
+    logger.error('Products', 'getProductsFromCategoryTables failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { products: [], total: 0 };
+  }
+}
+
+/**
+ * Fetch a single product with ALL its variants and inventory data.
+ */
+export interface VariantWithStock {
+  id:            string;
+  sku:           string;
+  attributes:    Record<string, string>;
+  priceRupees:   number;
+  mrpRupees?:    number;
+  moq:           number;
+  stockQuantity: number;
+}
+
+export interface ProductDetail extends Product {
+  variants: VariantWithStock[];
+}
+
+/**
+ * Lookup by product_code (the stable SKU from the sheet) OR by UUID.
+ * product_code is tried first; falls back to UUID for backward compat.
+ */
+export async function getProductWithVariants(identifier: string): Promise<ProductDetail | null> {
+  const sql = getUnpooledClient();
+  try {
+    const PRODUCT_SELECT = `
+      SELECT
+        p.id                           AS db_id,
+        COALESCE(p.product_code, p.id::text) AS product_code,
+        p.name,
+        COALESCE(p.brand,'')           AS brand,
+        COALESCE(p.description,'')     AS description,
+        p.price                        AS base_price_paise,
+        COALESCE(p.image_url,'')       AS image_url,
+        COALESCE(p.uom,'')             AS product_uom,
+        COALESCE(c.slug,'')            AS category_slug
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+    `;
+
+    // Try product_code first, then UUID, so both URL formats work
+    let productRows = await sql.query(
+      `${PRODUCT_SELECT} WHERE p.product_code = $1 AND p.status = 'active' LIMIT 1`,
+      [identifier],
+    ) as any[];
+
+    if (!productRows.length) {
+      productRows = await sql.query(
+        `${PRODUCT_SELECT} WHERE p.id::text = $1 AND p.status = 'active' LIMIT 1`,
+        [identifier],
+      ) as any[];
+    }
+
+    if (!productRows.length) return null;
+
+    const pr       = productRows[0];
+    const dbId     = pr.db_id as string;
+
+    const variantRows = await sql`
+      SELECT
+        pv.id, pv.sku,
+        COALESCE(pv.price_override, p.price) AS effective_price_paise,
+        pv.mrp_price AS mrp_price_paise,
+        COALESCE(pv.moq, 1) AS moq,
+        COALESCE(pv.attributes, '{}') AS attributes,
+        COALESCE(inv.stock_quantity, 0)    AS stock_quantity,
+        COALESCE(inv.reserved_quantity, 0) AS reserved_quantity
+      FROM product_variants pv
+      JOIN products p ON p.id = pv.product_id
+      LEFT JOIN inventory inv ON inv.variant_id = pv.id
+      WHERE pv.product_id = ${dbId}
+      ORDER BY pv.created_at ASC
+    `;
+
+    const variants: VariantWithStock[] = (variantRows as any[]).map(v => ({
+      id:            v.id,
+      sku:           v.sku,
+      attributes:    typeof v.attributes === 'object' ? v.attributes : {},
+      priceRupees:   Math.round(Number(v.effective_price_paise) / 100),
+      mrpRupees:     v.mrp_price_paise ? Math.round(Number(v.mrp_price_paise) / 100) : undefined,
+      moq:           Number(v.moq) || 1,
+      stockQuantity: Math.max(0, Number(v.stock_quantity) - Number(v.reserved_quantity)),
+    }));
+
+    const firstVariant = variants[0];
+    const attrs = firstVariant?.attributes ?? {};
+
+    const prBrand      = (pr.brand as string) || '';
+    const prRawName    = (pr.name  as string) || '';
+    const prDisplayName = prBrand && prRawName.startsWith(prBrand + ' ')
+      ? prRawName.slice(prBrand.length + 1)
+      : prRawName;
+
+    const productCode = (pr.product_code as string) || dbId;
+
+    const product: ProductDetail = {
+      id:           productCode,
+      productCode:  productCode,
+      name:         prDisplayName,
+      brand:        prBrand || undefined,
+      description:  pr.description || '',
+      price:        firstVariant?.priceRupees ?? Math.round(Number(pr.base_price_paise) / 100),
+      mrpPrice:     firstVariant?.mrpRupees,
+      unit:         attrs.uom || pr.product_uom || 'piece',
+      category:     (pr.category_slug || 'carpentry') as CategoryId,
+      imageUrl:     pr.image_url || undefined,
+      stockStatus:  'in_stock',
+      sku:          firstVariant?.sku,
+      variantId:    firstVariant?.id,
+      moq:          firstVariant?.moq ?? 1,
+      variantCount: variants.length,
+      variants,
+    };
+
+    return product;
+  } catch (error) {
+    logger.error('Products', 'getProductWithVariants failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
 
 /**
  * Product catalog CRUD operations

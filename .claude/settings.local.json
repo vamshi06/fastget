@@ -12,7 +12,11 @@
       "Bash(xargs grep -l \"cart\\\\|Cart\")",
       "Bash(node -e ' *)",
       "Bash(powershell -Command \"Get-Content .env.local | Select-String 'DATABASE'\")",
-      "Bash(npx tsx -e ' *)"
+      "Bash(npx tsx -e ' *)",
+      "WebFetch(domain:docs.google.com)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Akanksha\\\\FastGet\\\\FastGet Vamshi\\\\interns\\\\fastget\\\\src\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Akanksha\\\\FastGet\\\\FastGet Vamshi\\\\interns\\\\fastget\" -Recurse -Filter \"*.ts\" -o File)",
+      "Bash(Select-Object -First 20)"
     ]
   }
 }

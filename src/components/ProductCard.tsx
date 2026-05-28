@@ -5,7 +5,7 @@ import { Product } from '@/types';
 import { useCart } from './CartContext';
 import { useToast } from './ToastContext';
 import { formatCurrency } from '@/lib/utils';
-import { Plus, Minus, Package, Loader2 } from 'lucide-react';
+import { Plus, Minus, Package, Loader2, Tag } from 'lucide-react';
 import Link from 'next/link';
 
 interface ProductCardProps {
@@ -19,6 +19,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const cartItem = state.items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
+
+  const hasMrp    = product.mrpPrice && product.mrpPrice > product.price;
+  const discount  = hasMrp
+    ? Math.round(((product.mrpPrice! - product.price) / product.mrpPrice!) * 100)
+    : 0;
 
   const handleIncrement = () => {
     if (quantity === 0) {
@@ -55,8 +60,10 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link href={`/product/${product.id}`}>
       <div className="product-card h-full flex flex-col">
-        {/* Image area */}
-        <div className="h-40 flex items-center justify-center overflow-hidden flex-shrink-0 relative"
+
+        {/* Image */}
+        <div
+          className="h-40 flex items-center justify-center overflow-hidden flex-shrink-0 relative"
           style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
         >
           {product.imageUrl ? (
@@ -72,7 +79,14 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Stock indicator */}
+          {/* Discount badge */}
+          {discount > 0 && (
+            <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+              {discount}% off
+            </span>
+          )}
+
+          {/* Out of stock overlay */}
           {product.stockStatus === 'out' && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
               <span className="text-xs font-semibold text-neutral-500 bg-white px-2.5 py-1 rounded-full border border-neutral-200">
@@ -84,6 +98,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Content */}
         <div className="p-4 flex flex-col flex-grow">
+          {/* Brand */}
+          {product.brand && (
+            <p className="text-[11px] font-semibold text-brand-primary uppercase tracking-wide mb-0.5">
+              {product.brand}
+            </p>
+          )}
+
           <h3 className="font-semibold text-brand-charcoal text-sm mb-1 line-clamp-2 leading-snug">
             {product.name}
           </h3>
@@ -93,11 +114,26 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Price row */}
           <div className="flex items-baseline justify-between mb-3">
-            <span className="text-lg font-black text-brand-charcoal">
-              {formatCurrency(product.price)}
-            </span>
-            <span className="text-xs text-brand-steel">per {product.unit}</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-brand-charcoal">
+                {formatCurrency(product.price)}
+              </span>
+              {hasMrp && (
+                <span className="text-xs text-brand-steel line-through">
+                  {formatCurrency(product.mrpPrice!)}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-brand-steel">/{product.unit}</span>
           </div>
+
+          {/* MOQ badge if > 1 */}
+          {product.moq && product.moq > 1 && (
+            <p className="flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mb-2">
+              <Tag className="w-3 h-3 flex-shrink-0" />
+              Min. order: {product.moq} {product.unit}
+            </p>
+          )}
 
           {/* Cart control */}
           <div onClick={(e) => e.preventDefault()}>
