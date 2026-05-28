@@ -20,14 +20,14 @@ import { Package, SlidersHorizontal, ChevronDown, X, Loader2 } from 'lucide-reac
 
 // One entry per category table — no sub-categories.
 const DB_CATEGORIES = [
-  { slug: 'carpentry',         name: 'Carpentry'         },
-  { slug: 'paints',            name: 'Paints & Polish'   },
-  { slug: 'plumbing',          name: 'Plumbing'          },
-  { slug: 'civil-materials',   name: 'Civil & Tiles'     },
-  { slug: 'electrical',        name: 'Electrical'        },
+  { slug: 'tools-machines',    name: 'Tools & Machines'   },
+  { slug: 'carpentry',         name: 'Carpentry'          },
+  { slug: 'paints',            name: 'Paints & Polish'    },
+  { slug: 'plumbing',          name: 'Plumbing'           },
+  { slug: 'civil-materials',   name: 'Civil Materials'    },
+  { slug: 'electrical',        name: 'Electrical'         },
   { slug: 'flooring-ceilings', name: 'Flooring & Ceilings' },
-  { slug: 'glass-aluminium',   name: 'Glass & Aluminium' },
-  { slug: 'tools-machines',    name: 'Tools & Machines'  },
+  { slug: 'glass-aluminium',   name: 'Glass & Aluminium'  },
 ] as const;
 
 // Skeleton card for loading state
