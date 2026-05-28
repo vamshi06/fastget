@@ -13,11 +13,14 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const NAV_CATEGORIES = [
-  { id: 'carpentry',         name: 'Carpentry'  },
-  { id: 'plumbing',          name: 'Plumbing'   },
-  { id: 'electrical',        name: 'Electrical' },
-  { id: 'civil-materials',   name: 'Civil'      },
-  { id: 'tools-machines',    name: 'Tools'      },
+  { id: 'tools-machines',    name: 'Tools & Machines'   },
+  { id: 'carpentry',         name: 'Carpentry'          },
+  { id: 'paints',            name: 'Paints & Polish'    },
+  { id: 'plumbing',          name: 'Plumbing'           },
+  { id: 'civil-materials',   name: 'Civil Materials'    },
+  { id: 'electrical',        name: 'Electrical'         },
+  { id: 'flooring-ceilings', name: 'Flooring & Ceilings' },
+  { id: 'glass-aluminium',   name: 'Glass & Aluminium'  },
 ];
 
 export function Header() {

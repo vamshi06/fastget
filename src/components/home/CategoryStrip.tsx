@@ -56,14 +56,14 @@ const CATEGORY_SVG: Record<string, React.ReactNode> = {
 
 // One entry per category table
 const CATEGORIES = [
-  { slug: 'carpentry',         name: 'Carpentry'         },
-  { slug: 'paints',            name: 'Paints & Polish'   },
-  { slug: 'plumbing',          name: 'Plumbing'          },
-  { slug: 'civil-materials',   name: 'Civil & Tiles'     },
-  { slug: 'electrical',        name: 'Electrical'        },
-  { slug: 'flooring-ceilings', name: 'Flooring'          },
-  { slug: 'glass-aluminium',   name: 'Glass & Aluminium' },
-  { slug: 'tools-machines',    name: 'Tools & Machines'  },
+  { slug: 'tools-machines',    name: 'Tools & Machines'   },
+  { slug: 'carpentry',         name: 'Carpentry'          },
+  { slug: 'paints',            name: 'Paints & Polish'    },
+  { slug: 'plumbing',          name: 'Plumbing'           },
+  { slug: 'civil-materials',   name: 'Civil Materials'    },
+  { slug: 'electrical',        name: 'Electrical'         },
+  { slug: 'flooring-ceilings', name: 'Flooring & Ceilings' },
+  { slug: 'glass-aluminium',   name: 'Glass & Aluminium'  },
 ];
 
 export function CategoryStrip() {
