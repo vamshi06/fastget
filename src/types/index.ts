@@ -2,18 +2,39 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: number;       // in rupees for display
   unit: string;
   category: CategoryId;
   imageUrl?: string;
   stockStatus: 'in_stock' | 'low' | 'out';
+  // Extended fields populated when fetching from the live DB
+  brand?: string;
+  productCode?: string; // stable identifier from the Google Sheet (e.g. "PLY-CP-04")
+  sku?: string;
+  variantId?: string;
+  mrpPrice?: number;   // in rupees
+  moq?: number;
+  variantCount?: number;
 }
 
-export type CategoryId = 
+export type CategoryId =
+  // Table-level slugs (canonical, one per category table)
   | 'carpentry'
+  | 'paints_and_polish'
   | 'plumbing'
-  | 'hardware'
+  | 'civil_materials'
   | 'electrical'
+  | 'flooring_and_ceilings'
+  | 'glass_and_aluminium'
+  | 'tools_and_machines'
+  // Hyphenated aliases accepted in URL params / legacy data
+  | 'paints'
+  | 'civil-materials'
+  | 'flooring-ceilings'
+  | 'glass-aluminium'
+  | 'tools-machines'
+  // Legacy mock-data values (no longer used in live app)
+  | 'hardware'
   | 'adhesives';
 
 export interface Category {

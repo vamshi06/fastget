@@ -1,37 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActiveProducts } from '@/lib/products';
+import { getProductsFromCategoryTables, getProductCatalog } from '@/lib/products';
 import { logger } from '@/lib/logger';
 
 /**
- * GET /api/products?category=[slug]&limit=[number]
+ * GET /api/products
  *
- * Retrieve all active products, optionally filtered by category.
- * Query parameters:
- *   - category (optional): Filter by category slug
- *   - limit (optional): Max results, default 100
+ * Primary source: category-specific tables (carpentry, plumbing, etc.) via
+ * the products_catalog_view UNION.
+ * Fallback: original products table (via getProductCatalog) when category
+ * tables are unavailable or LEGACY_PRODUCTS_TABLE=1 is set.
  *
- * Returns: Array of products with id, name, price, category info
+ * Query params:
+ *   category  – category slug (e.g. "carpentry", "plumbing")
+ *   q         – free-text search
+ *   limit     – max results (default 500, max 500)
+ *   offset    – pagination offset (default 0)
  */
 export async function GET(request: NextRequest) {
   const start = Date.now();
   try {
-    const categorySlug = request.nextUrl.searchParams.get('category');
-    const limitParam = request.nextUrl.searchParams.get('limit');
-    const limit = limitParam ? Math.min(parseInt(limitParam), 1000) : 100;
+    const sp       = request.nextUrl.searchParams;
+    const category = sp.get('category') || undefined;
+    const search   = sp.get('q')        || undefined;
+    const limit    = Math.min(parseInt(sp.get('limit')  ?? '500', 10), 500);
+    const offset   = Math.max(parseInt(sp.get('offset') ?? '0',   10), 0);
 
-    logger.info('API', 'GET /api/products', { categorySlug, limit });
+    logger.info('API', 'GET /api/products', { category, search, limit, offset });
 
-    let products = await getActiveProducts();
-
-    // Filter by category if provided
-    if (categorySlug) {
-      products = products.filter((p) => (p as any).categorySlug === categorySlug || p.categoryId === categorySlug);
+    if (process.env.DEBUG_CATALOG === '1') {
+      console.debug('[api/products] selected category:', category ?? '(all)');
+      console.debug('[api/products] applied filters:', { search, limit, offset });
     }
 
-    // Limit results
-    products = products.slice(0, limit);
+    // Use category tables by default; fall back to legacy products table
+    const useLegacy = process.env.LEGACY_PRODUCTS_TABLE === '1';
+    const fetchFn   = useLegacy ? getProductCatalog : getProductsFromCategoryTables;
+    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset });
 
-    logger.debug('API', 'GET /api/products — fetched', { count: products.length });
+    if (process.env.DEBUG_CATALOG === '1') {
+      console.debug('[api/products] returned count:', products.length, '/ total in DB:', total);
+    }
+
     logger.api('GET', '/api/products', 200, Date.now() - start);
 
     return NextResponse.json(
@@ -40,19 +49,20 @@ export async function GET(request: NextRequest) {
         data: {
           products,
           count: products.length,
+          total,
+          source: useLegacy ? 'products_table' : 'category_tables',
         },
       },
       {
         status: 200,
-        headers: { 'Cache-Control': 'public, max-age=300' },
-      }
+        headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
+      },
     );
   } catch (error) {
-    logger.error('API', 'GET /api/products — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'GET /api/products — unhandled error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     logger.api('GET', '/api/products', 500, Date.now() - start);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch products' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to fetch products' }, { status: 500 });
   }
 }
