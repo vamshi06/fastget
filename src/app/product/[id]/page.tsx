@@ -177,7 +177,7 @@ export default function ProductDetailPage() {
                 href={`/catalog?category=${product.category}`}
                 className="text-brand-slate hover:text-brand-primary capitalize transition-colors"
               >
-                {product.category.replace(/-/g, ' ')}
+                {product.categoryName || product.category.replace(/[-_]/g, ' ')}
               </Link>
             </>
           )}
@@ -302,9 +302,19 @@ export default function ProductDetailPage() {
 
             {/* Availability */}
             <div className="border-t border-neutral-100 pt-5">
-              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                In Stock
-              </span>
+              {product.stockStatus === 'out' ? (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-100 text-neutral-500">
+                  Out of Stock
+                </span>
+              ) : product.stockStatus === 'low' ? (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
+                  Low Stock
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                  In Stock
+                </span>
+              )}
             </div>
 
             {/* Purchase Controls */}
@@ -341,23 +351,32 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <button
-                  onClick={handleCartAction}
-                  disabled={isAdding}
-                  className={`btn-primary w-full py-4 text-base ${isAdding ? 'opacity-75 cursor-not-allowed' : ''}`}
-                >
-                  {isAdding ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {cartQuantity === 0 ? 'Adding…' : 'Updating…'}
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-5 h-5" />
-                      {cartQuantity === 0 ? 'Add to Cart' : 'Update Cart'}
-                    </>
-                  )}
-                </button>
+                {product.stockStatus === 'out' ? (
+                  <button
+                    disabled
+                    className="w-full py-4 text-base bg-neutral-100 text-neutral-400 rounded-xl cursor-not-allowed font-medium"
+                  >
+                    Out of Stock
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCartAction}
+                    disabled={isAdding}
+                    className={`btn-primary w-full py-4 text-base ${isAdding ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  >
+                    {isAdding ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        {cartQuantity === 0 ? 'Adding…' : 'Updating…'}
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5" />
+                        {cartQuantity === 0 ? 'Add to Cart' : 'Update Cart'}
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {cartQuantity > 0 && (
                   <div className="flex items-center justify-between text-sm">
