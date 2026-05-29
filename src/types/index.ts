@@ -5,6 +5,7 @@ export interface Product {
   price: number;       // in rupees for display
   unit: string;
   category: CategoryId;
+  categoryName?: string; // human-readable category name from DB
   imageUrl?: string;
   stockStatus: 'in_stock' | 'low' | 'out';
   // Extended fields populated when fetching from the live DB

@@ -59,6 +59,7 @@ export async function GET(
           // updateToken intentionally omitted
         },
       },
+      
       {
         status: 200,
         headers: { 'Cache-Control': 'no-store' },

@@ -337,7 +337,8 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
         p.price                        AS base_price_paise,
         COALESCE(p.image_url,'')       AS image_url,
         COALESCE(p.uom,'')             AS product_uom,
-        COALESCE(c.slug,'')            AS category_slug
+        COALESCE(c.slug,'')            AS category_slug,
+        COALESCE(c.name,'')            AS category_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
     `;
@@ -397,6 +398,9 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
 
     const productCode = (pr.product_code as string) || dbId;
 
+    const totalStock = firstVariant?.stockQuantity ?? 0;
+    const stockStatus = totalStock > 10 ? 'in_stock' : totalStock > 0 ? 'low' : 'out';
+
     const product: ProductDetail = {
       id:           productCode,
       productCode:  productCode,
@@ -407,8 +411,9 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       mrpPrice:     firstVariant?.mrpRupees,
       unit:         attrs.uom || pr.product_uom || 'piece',
       category:     (pr.category_slug || 'carpentry') as CategoryId,
+      categoryName: pr.category_name || undefined,
       imageUrl:     pr.image_url || undefined,
-      stockStatus:  'in_stock',
+      stockStatus,
       sku:          firstVariant?.sku,
       variantId:    firstVariant?.id,
       moq:          firstVariant?.moq ?? 1,
