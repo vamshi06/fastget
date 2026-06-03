@@ -109,6 +109,7 @@ export function Header() {
                 src="/fastget-logo-clear.png"
                 alt="FastGet Logo"
                 fill
+                sizes="32px"
                 className="object-contain"
               />
             </div>

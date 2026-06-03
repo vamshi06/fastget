@@ -132,10 +132,10 @@ function CatalogPageContent() {
       setProducts(json.data.products as Product[]);
       setTotal(json.data.total);
       setTotalPages(Math.max(1, Math.ceil(json.data.total / PAGE_SIZE)));
+      setLoading(false);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       setError('Failed to load products. Please try again.');
-    } finally {
       setLoading(false);
     }
   }, []);
