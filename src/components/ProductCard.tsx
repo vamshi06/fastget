@@ -63,14 +63,14 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Image */}
         <div
-          className="h-40 flex items-center justify-center overflow-hidden flex-shrink-0 relative"
-          style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
+          className="h-48 flex items-center justify-center overflow-hidden flex-shrink-0 relative"
+          style={{ background: '#FFFFFF' }}
         >
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain p-3"
               loading="lazy"
             />
           ) : (
@@ -108,9 +108,25 @@ export function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-semibold text-brand-charcoal text-sm mb-1 line-clamp-2 leading-snug">
             {product.name}
           </h3>
-          <p className="text-xs text-brand-slate mb-3 line-clamp-2 leading-relaxed flex-grow">
-            {product.description}
-          </p>
+          <div className="mb-3 flex-grow">
+            <div className="relative">
+              <p className="text-xs text-brand-slate line-clamp-2 leading-relaxed">
+                {product.description}
+              </p>
+              {product.description && (
+                <span
+                  className="absolute bottom-0 right-0 text-xs text-brand-primary font-medium"
+                  style={{
+                    background: 'linear-gradient(to right, transparent, white 35%)',
+                    paddingLeft: '2.5rem',
+                    lineHeight: '1.625',
+                  }}
+                >
+                  read more
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Price row */}
           <div className="flex items-baseline justify-between mb-3">
