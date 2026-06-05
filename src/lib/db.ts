@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { timingSafeEqual } from 'crypto';
 import { Order, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -513,8 +514,11 @@ export async function updateOrderStatus(
       return { success: false, error: 'Authentication not configured' };
     }
 
-    // Verify PIN
-    if (pin !== AGENT_PIN) {
+    // Verify PIN using constant-time comparison to prevent timing attacks
+    const pinMatch =
+      pin.length === AGENT_PIN.length &&
+      timingSafeEqual(Buffer.from(pin), Buffer.from(AGENT_PIN));
+    if (!pinMatch) {
       return { success: false, error: 'Invalid PIN' };
     }
 
