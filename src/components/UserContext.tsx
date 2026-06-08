@@ -12,7 +12,7 @@ interface UserContextType {
   currentUser: CurrentUser | null;
   setCurrentUser: (user: CurrentUser | null) => void;
   logout: () => void;
-  deleteAccount: (userId: string) => Promise<boolean>;
+  deleteAccount: (userId: string, password: string) => Promise<boolean>;
   isLoaded: boolean;
 }
 
@@ -49,14 +49,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('fastget_currentUser');
   }, []);
 
-  const handleDeleteAccount = useCallback(async (userId: string): Promise<boolean> => {
+  const handleDeleteAccount = useCallback(async (userId: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, password }),
       });
 
       if (!response.ok) {
