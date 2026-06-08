@@ -8,6 +8,7 @@ export interface Product {
   categoryName?: string; // human-readable category name from DB
   imageUrl?: string;
   stockStatus: 'in_stock' | 'low' | 'out';
+  stockQuantity?: number;            // actual count, populated by admin/catalog queries
   // Extended fields populated when fetching from the live DB
   brand?: string;
   productCode?: string; // stable identifier from the Google Sheet (e.g. "PLY-CP-04")

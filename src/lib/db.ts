@@ -237,9 +237,16 @@ export async function initializeProductsTable(): Promise<void> {
       )
     `;
 
+    // Add extended columns that the catalog queries reference (safe to run multiple times)
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS product_code VARCHAR(255)`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255)`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS uom VARCHAR(50)`;
+
     await sql`CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_products_status ON products(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC)`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_product_code ON products(product_code) WHERE product_code IS NOT NULL`;
 
     logger.info('DB', 'Products table initialized successfully');
   } catch (error) {
@@ -270,6 +277,10 @@ export async function initializeProductVariantsTable(): Promise<void> {
           FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
       )
     `;
+
+    // Add mrp_price and moq columns referenced by catalog queries
+    await sql`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS mrp_price INTEGER`;
+    await sql`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS moq INTEGER NOT NULL DEFAULT 1`;
 
     await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON product_variants(product_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(sku)`;
@@ -587,6 +598,26 @@ export async function getRecentOrders(limit: number = 50): Promise<Order[]> {
   } catch (error) {
     logger.error('DB', 'Failed to get recent orders', { error: error instanceof Error ? error.message : String(error) });
     return [];
+  }
+}
+
+/**
+ * Get a single order by its UUID (for admin detail view).
+ *
+ * @param {string} id - The order UUID
+ * @returns {Promise<Order | null>}
+ */
+export async function getOrderById(id: string): Promise<Order | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT * FROM orders WHERE id = ${id} LIMIT 1
+    `;
+    if (result.length === 0) return null;
+    return dbOrderToOrder(result[0] as DbOrder);
+  } catch (error) {
+    logger.error('DB', 'Failed to get order by id', { error: error instanceof Error ? error.message : String(error) });
+    return null;
   }
 }
 

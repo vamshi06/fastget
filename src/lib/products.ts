@@ -294,6 +294,28 @@ export async function getProductsFromCategoryTables(
       console.debug('[catalog] returned:', products.length, 'of total', total);
     }
 
+    // Batch-fetch stock quantities from product_variants for all products that
+    // have a variant_id. One query, no N+1 problem.
+    const variantIds = products.map(p => p.variantId).filter(Boolean) as string[];
+    if (variantIds.length > 0) {
+      try {
+        const stockRows = await sqlClient.query(
+          `SELECT id, stock_quantity FROM product_variants WHERE id = ANY($1::uuid[])`,
+          [variantIds] as any[],
+        ) as any[];
+        const stockMap = new Map(stockRows.map((r: any) => [r.id as string, Number(r.stock_quantity)]));
+        products.forEach(p => {
+          if (p.variantId) {
+            const qty = stockMap.get(p.variantId) ?? 0;
+            p.stockQuantity = qty;
+            p.stockStatus   = qty > 10 ? 'in_stock' : qty > 0 ? 'low' : 'out';
+          }
+        });
+      } catch {
+        // Stock fetch failure is non-fatal; products still returned without quantity
+      }
+    }
+
     return { products, total };
   } catch (error) {
     logger.error('Products', 'getProductsFromCategoryTables failed', {
@@ -507,6 +529,7 @@ export async function createCategory(
     const result = await sql`
       INSERT INTO categories (name, slug, description)
       VALUES (${name}, ${slug}, ${description || null})
+      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
       RETURNING *
     `;
 
@@ -516,6 +539,19 @@ export async function createCategory(
     logger.error('Products', 'Failed to create category', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
+}
+
+/**
+ * Get a category by slug, creating it if it doesn't exist.
+ */
+export async function getOrCreateCategory(
+  name: string,
+  slug: string,
+  description?: string
+): Promise<CategoryDB | null> {
+  const existing = await getCategoryBySlug(slug);
+  if (existing) return existing;
+  return createCategory(name, slug, description);
 }
 
 /**
@@ -565,13 +601,31 @@ export async function createProduct(
   name: string,
   price: number,
   description?: string,
-  categoryId?: string
+  categoryId?: string,
+  options?: {
+    brand?: string;
+    uom?: string;
+    imageUrl?: string;
+    productCode?: string;
+    status?: 'active' | 'inactive' | 'discontinued';
+  }
 ): Promise<ProductDB | null> {
   const sql = getClient();
   try {
+    const status = options?.status ?? 'active';
     const result = await sql`
-      INSERT INTO products (name, description, category_id, price, status)
-      VALUES (${name}, ${description || null}, ${categoryId || null}, ${price}, 'active')
+      INSERT INTO products (name, description, category_id, price, status, brand, uom, image_url, product_code)
+      VALUES (
+        ${name},
+        ${description || null},
+        ${categoryId || null},
+        ${price},
+        ${status},
+        ${options?.brand || null},
+        ${options?.uom || null},
+        ${options?.imageUrl || null},
+        ${options?.productCode || null}
+      )
       RETURNING *
     `;
 
@@ -687,13 +741,23 @@ export async function createProductVariant(
   sku: string,
   stockQuantity: number = 0,
   attributes: Record<string, string> = {},
-  priceOverride?: number
+  priceOverride?: number,
+  mrpPrice?: number,
+  moq: number = 1
 ): Promise<ProductVariant | null> {
   const sql = getClient();
   try {
     const result = await sql`
-      INSERT INTO product_variants (product_id, sku, stock_quantity, attributes, price_override)
-      VALUES (${productId}, ${sku}, ${stockQuantity}, ${JSON.stringify(attributes)}, ${priceOverride || null})
+      INSERT INTO product_variants (product_id, sku, stock_quantity, attributes, price_override, mrp_price, moq)
+      VALUES (
+        ${productId},
+        ${sku},
+        ${stockQuantity},
+        ${JSON.stringify(attributes)},
+        ${priceOverride || null},
+        ${mrpPrice || null},
+        ${moq}
+      )
       RETURNING *
     `;
 
@@ -784,6 +848,273 @@ export async function updateVariantPrice(
     return result.length > 0;
   } catch (error) {
     logger.error('Products', 'Failed to update variant price', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/**
+ * Update price_override, mrp_price, and moq on a product variant in one call.
+ * Only the fields present in `updates` are changed.
+ */
+export async function updateVariantFields(
+  variantId: string,
+  updates: {
+    priceOverride?: number | null; // paise
+    mrpPrice?:      number | null; // paise
+    moq?:           number;
+  },
+): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const sets: string[]  = [];
+    const vals: unknown[] = [];
+
+    const push = (col: string, val: unknown) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
+
+    if ('priceOverride' in updates) push('price_override', updates.priceOverride ?? null);
+    if ('mrpPrice'      in updates) push('mrp_price',      updates.mrpPrice      ?? null);
+    if (updates.moq     !== undefined) push('moq',         updates.moq);
+
+    if (sets.length === 0) return true;
+
+    vals.push(variantId);
+    const result = await sql.query(
+      `UPDATE product_variants SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING id`,
+      vals as any[],
+    ) as any[];
+    return result.length > 0;
+  } catch (error) {
+    logger.error('Products', 'updateVariantFields failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+// ── Admin: raw row read/write ─────────────────────────────────────────────────
+
+export interface RawProductRow {
+  product_code: string;
+  name: string;
+  brand: string | null;
+  description: string | null;
+  price: number;          // paise
+  mrp_price: number | null; // paise
+  moq: number;
+  uom: string | null;
+  size: string | null;
+  colour: string | null;
+  image_url: string | null;
+  status: string;
+  category_slug: string | null;
+  source_table: string;
+  variant_id: string | null;
+  products_id: string | null;
+}
+
+/**
+ * Fetch the raw catalog row for a product by product_code.
+ * Uses products_catalog_view so source_table is included.
+ */
+export async function getProductRawRow(productCode: string): Promise<RawProductRow | null> {
+  const sqlClient = getUnpooledClient();
+  try {
+    const result = await sqlClient.query(
+      `SELECT * FROM products_catalog_view WHERE product_code = $1 LIMIT 1`,
+      [productCode],
+    ) as any[];
+    return result.length > 0 ? (result[0] as RawProductRow) : null;
+  } catch (error) {
+    logger.error('Products', 'getProductRawRow failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Update a row in the appropriate category-specific table.
+ * Only the fields provided in `updates` are changed.
+ */
+export async function updateProductInCategoryTable(
+  tableName: string,
+  productCode: string,
+  updates: {
+    name?: string;
+    brand?: string | null;
+    description?: string | null;
+    price?: number;          // paise
+    mrpPrice?: number | null; // paise
+    moq?: number;
+    uom?: string | null;
+    imageUrl?: string | null;
+    status?: string;
+  },
+): Promise<boolean> {
+  if (!VALID_CATEGORY_TABLES.has(tableName) || tableName === 'products_catalog_view') {
+    logger.warn('Products', `updateProductInCategoryTable: invalid table "${tableName}"`);
+    return false;
+  }
+  const sqlClient = getUnpooledClient();
+  try {
+    const sets: string[]  = ['updated_at = NOW()'];
+    const vals: unknown[] = [];
+
+    const push = (col: string, val: unknown) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
+
+    if (updates.name        !== undefined) push('name',       updates.name);
+    if ('brand'       in updates)          push('brand',      updates.brand);
+    if ('description' in updates)          push('description',updates.description);
+    if (updates.price       !== undefined) push('price',      updates.price);
+    if ('mrpPrice'    in updates)          push('mrp_price',  updates.mrpPrice);
+    if (updates.moq         !== undefined) push('moq',        updates.moq);
+    if ('uom'         in updates)          push('uom',        updates.uom);
+    if ('imageUrl'    in updates)          push('image_url',  updates.imageUrl);
+    if (updates.status      !== undefined) push('status',     updates.status);
+
+    if (vals.length === 0) return true;
+
+    vals.push(productCode);
+    const q = `UPDATE ${tableName} SET ${sets.join(', ')} WHERE product_code = $${vals.length} RETURNING product_code`;
+    const result = await sqlClient.query(q, vals as any[]) as any[];
+    return result.length > 0;
+  } catch (error) {
+    logger.error('Products', `updateProductInCategoryTable "${tableName}" failed`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Update a product row in the normalised products table (for admin-created products).
+ */
+export async function updateNormalisedProduct(
+  productId: string,
+  updates: {
+    name?: string;
+    brand?: string | null;
+    description?: string | null;
+    price?: number;       // paise
+    uom?: string | null;
+    imageUrl?: string | null;
+    status?: 'active' | 'inactive' | 'discontinued';
+  },
+): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const sets: string[]  = ['updated_at = CURRENT_TIMESTAMP'];
+    const vals: unknown[] = [];
+
+    const push = (col: string, val: unknown) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
+
+    if (updates.name        !== undefined) push('name',        updates.name);
+    if ('brand'       in updates)          push('brand',       updates.brand);
+    if ('description' in updates)          push('description', updates.description);
+    if (updates.price       !== undefined) push('price',       updates.price);
+    if ('uom'         in updates)          push('uom',         updates.uom);
+    if ('imageUrl'    in updates)          push('image_url',   updates.imageUrl);
+    if (updates.status      !== undefined) push('status',      updates.status);
+
+    if (vals.length === 0) return true;
+
+    vals.push(productId);
+    const result = await sql.query(
+      `UPDATE products SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING id`,
+      vals as any[],
+    ) as any[];
+    return result.length > 0;
+  } catch (error) {
+    logger.error('Products', 'updateNormalisedProduct failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Upsert inventory stock for a variant.
+ * Creates the inventory row if it doesn't exist yet.
+ */
+export async function upsertInventoryStock(
+  variantId: string,
+  stockQuantity: number,
+): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql.query(
+      `INSERT INTO inventory (variant_id, stock_quantity, reserved_quantity)
+       VALUES ($1, $2, 0)
+       ON CONFLICT (variant_id)
+       DO UPDATE SET stock_quantity = $2, updated_at = NOW()`,
+      [variantId, stockQuantity] as any[],
+    );
+    return true;
+  } catch (error) {
+    logger.error('Products', 'upsertInventoryStock failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Insert a product row into the appropriate category-specific table so it
+ * appears in products_catalog_view and the admin product list.
+ * All category tables share the same flat schema; nullable fields are optional.
+ */
+export async function insertProductIntoCategoryTable(
+  categorySlug: string,
+  data: {
+    productCode: string;
+    name: string;
+    brand?: string;
+    description?: string;
+    price: number;       // paise
+    mrpPrice?: number;   // paise
+    moq?: number;
+    uom?: string;
+    imageUrl?: string;
+    status?: string;
+    variantId?: string;
+    productsId?: string;
+  }
+): Promise<boolean> {
+  const tableName = CATEGORY_SLUG_TO_TABLE[categorySlug] ?? null;
+  if (!tableName || !VALID_CATEGORY_TABLES.has(tableName)) {
+    logger.warn('Products', `insertProductIntoCategoryTable: unknown slug "${categorySlug}"`);
+    return false;
+  }
+
+  const sqlClient = getUnpooledClient();
+  try {
+    const q = `
+      INSERT INTO ${tableName}
+        (product_code, name, brand, description, price, mrp_price, moq, uom,
+         image_url, status, category_slug, variant_id, products_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      ON CONFLICT (product_code) DO NOTHING
+    `;
+    await sqlClient.query(q, [
+      data.productCode,
+      data.name,
+      data.brand    ?? null,
+      data.description ?? null,
+      data.price,
+      data.mrpPrice ?? null,
+      data.moq      ?? 1,
+      data.uom      ?? null,
+      data.imageUrl ?? null,
+      data.status   ?? 'active',
+      categorySlug,
+      data.variantId   ?? null,
+      data.productsId  ?? null,
+    ] as any[]);
+    return true;
+  } catch (error) {
+    logger.error('Products', `Failed to insert into category table "${tableName}"`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
