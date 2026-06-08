@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
+import { useUser } from '@/components/UserContext';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
+  const { currentUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +23,69 @@ export default function CheckoutPage() {
     deliveryType: 'urgent' as 'urgent' | 'scheduled',
     scheduledTime: '',
   });
+
+  if (isLoaded && !currentUser) {
+    const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
+    return (
+      <div className="min-h-screen bg-brand-fog flex items-center justify-center py-10 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
+            <div className="h-1 bg-brand-primary" />
+
+            {/* Card header */}
+            <div className="px-8 pt-8 pb-6 border-b border-neutral-100">
+              <div className="flex items-center justify-between mb-1">
+                <h1 className="text-2xl font-black text-brand-charcoal">Almost there!</h1>
+                {itemCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 bg-primary-50 text-brand-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary-200">
+                    <Package className="w-3.5 h-3.5" />
+                    {itemCount} item{itemCount > 1 ? 's' : ''} in cart
+                  </span>
+                )}
+              </div>
+              <p className="text-brand-slate text-sm">Sign in to complete your order and enjoy fast delivery</p>
+            </div>
+
+            {/* Benefits */}
+            <div className="px-8 py-5 space-y-3 bg-brand-fog/50">
+              {[
+                { icon: Zap, text: 'Urgent delivery in 30–60 minutes' },
+                { icon: ClipboardList, text: 'Track your order in real time' },
+                { icon: ShieldCheck, text: 'Secure account & order history' },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-brand-primary" />
+                  </div>
+                  <span className="text-sm text-brand-graphite">{text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div className="px-8 py-6 space-y-3">
+              <Link
+                href="/login?redirect=/checkout"
+                className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+              >
+                Log In to Your Account
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/signup?redirect=/checkout"
+                className="w-full py-3 flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-200 text-brand-charcoal font-semibold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
+              >
+                Create a New Account
+              </Link>
+              <p className="text-center text-xs text-brand-steel pt-1">
+                Your cart is saved — it will be waiting after you sign in
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoaded && state.items.length === 0) {
     return (

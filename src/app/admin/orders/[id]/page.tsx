@@ -1,4 +1,4 @@
-import { getAllOrdersFromSheets } from '@/lib/sheets';
+import { getOrderById } from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS } from '@/types';
@@ -11,8 +11,7 @@ interface OrderDetailPageProps {
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const orders = await getAllOrdersFromSheets();
-  const order = orders.find((o) => o.id === params.id);
+  const order = await getOrderById(params.id);
   const cookieStore = await cookies();
   const token = cookieStore.get('admin_token')?.value;
 

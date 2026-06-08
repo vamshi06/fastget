@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 200,
-        headers: { 'Cache-Control': 'public, max-age=600' },
+        headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
       }
     );
   } catch (error) {

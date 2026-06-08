@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { User, Mail, Lock, Phone, ArrowRight, AlertCircle, Zap } from 'lucide-react';
+import { User, Mail, Lock, Phone, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/';
   const { setCurrentUser } = useUser();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export default function SignupPage() {
       const data = await response.json();
       if (!response.ok) { setError(data.error || 'Signup failed'); return; }
       setCurrentUser({ id: data.id, name: data.name, email: data.email });
-      router.push('/');
+      router.push(redirect);
     } catch {
       setError('An error occurred during signup. Please try again.');
     } finally {
@@ -54,33 +56,16 @@ export default function SignupPage() {
                     transition-all duration-200`;
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center py-8 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #1C1C1E 0%, #2A2A2C 50%, #1C1C1E 100%)' }}
-    >
-      <div className="absolute inset-0 bg-motion-lines pointer-events-none" />
-      <div className="absolute top-0 right-0 w-96 h-96 pointer-events-none"
-        style={{ background: 'radial-gradient(circle at 80% 10%, rgba(245,166,35,0.10) 0%, transparent 65%)' }} />
-      <div className="absolute top-0 left-0 w-1 h-full pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, #F5A623, transparent 60%)' }} />
+    <div className="min-h-screen bg-brand-fog flex items-center justify-center py-10 px-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
+          <div className="h-1 bg-brand-primary" />
 
-      <div className="w-full max-w-md px-4 relative z-10">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+          <div className="p-8">
+            <div className="mb-7">
+              <h1 className="text-2xl font-black text-brand-charcoal">Create Account</h1>
+              <p className="text-brand-slate text-sm mt-1">Join FastGet for quick deliveries</p>
             </div>
-            <span className="text-2xl font-black text-white tracking-tight">
-              Fast<span className="text-brand-primary">Get</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-8" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.35)' }}>
-          <div className="mb-7">
-            <h1 className="text-2xl font-black text-brand-charcoal">Create Account</h1>
-            <p className="text-brand-slate text-sm mt-1">Join FastGet for quick deliveries</p>
-          </div>
 
           {error && (
             <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
@@ -127,7 +112,7 @@ export default function SignupPage() {
 
           <p className="mt-5 text-center text-sm text-brand-slate">
             Already have an account?{' '}
-            <Link href="/login" className="text-brand-primary font-semibold hover:text-brand-dark transition-colors">
+            <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="text-brand-primary font-semibold hover:text-brand-dark transition-colors">
               Log in
             </Link>
           </p>
@@ -136,6 +121,7 @@ export default function SignupPage() {
             <p className="text-xs text-brand-steel text-center">
               By signing up, you agree to our Terms of Service and Privacy Policy
             </p>
+          </div>
           </div>
         </div>
       </div>

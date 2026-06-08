@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProductWithVariants } from '@/lib/products';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/products/[id]
  * Returns a product with all its variants and inventory data.
@@ -32,7 +34,7 @@ export async function GET(
 
     return NextResponse.json(
       { success: true, data: product },
-      { status: 200, headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } },
+      { status: 200, headers: { 'Cache-Control': 'public, max-age=30' } },
     );
   } catch (error) {
     logger.error('API', 'GET /api/products/[id] — unhandled error', {
