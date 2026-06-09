@@ -4,16 +4,22 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
+import { useToast } from '@/components/ToastContext';
+import { useRazorpay, RazorpayResponse } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
   const { currentUser } = useUser();
+  const { showToast } = useToast();
+  const { openCheckout } = useRazorpay();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('cod');
+  const [paymentState, setPaymentState] = useState<'idle' | 'creating' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -145,6 +151,108 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleRazorpayPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const validationError = validateOrderForm(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setPaymentState('creating');
+    showToast('Creating order…', 'success');
+
+    try {
+      // Step 1 — create DB order + Razorpay order on the server
+      const createRes = await fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          customerPhone: formatPhoneNumber(formData.customerPhone),
+          items: state.items,
+          subtotal: getSubtotal(),
+          convenienceFee: getConvenienceFee(),
+          total: getTotal(),
+          currency: 'INR',
+        }),
+      });
+
+      if (!createRes.ok) {
+        const data = await createRes.json();
+        throw new Error(data.error || 'Failed to initiate payment');
+      }
+
+      const { razorpayOrderId, amount, currency, orderId, statusToken } = await createRes.json();
+
+      setPaymentState('processing');
+
+      // Step 2 — open Razorpay checkout modal
+      await openCheckout({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
+        amount,
+        currency,
+        name: 'FastGet',
+        description: 'Order payment',
+        order_id: razorpayOrderId,
+        prefill: {
+          name: formData.customerName,
+          contact: formatPhoneNumber(formData.customerPhone),
+        },
+        theme: { color: '#F5A623' },
+        handler: async (response: RazorpayResponse) => {
+          // Step 3 — verify signature on the server
+          setPaymentState('verifying');
+          try {
+            const verifyRes = await fetch('/api/payment/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId,
+              }),
+            });
+
+            if (!verifyRes.ok) {
+              const data = await verifyRes.json();
+              throw new Error(data.error || 'Payment verification failed');
+            }
+
+            setPaymentState('success');
+            showToast('Payment successful! Order placed.', 'success');
+            clearCart();
+            router.push(`/order/${statusToken}`);
+          } catch (err) {
+            setPaymentState('failed');
+            setIsSubmitting(false);
+            const msg = err instanceof Error ? err.message : 'Payment verification failed';
+            setError(msg);
+            showToast(msg, 'error');
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentState('idle');
+            setIsSubmitting(false);
+            showToast('Payment was cancelled', 'error');
+          },
+        },
+      });
+      // isSubmitting stays true until handler or ondismiss fires
+    } catch (err) {
+      setPaymentState('failed');
+      setIsSubmitting(false);
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      setError(msg);
+      showToast(msg, 'error');
+    }
+  };
+
   const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all duration-200';
 
   return (
@@ -168,7 +276,7 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="card p-6 space-y-6">
+            <form onSubmit={paymentMethod === 'razorpay' ? handleRazorpayPayment : handleSubmit} className="card p-6 space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-brand-primary" />
@@ -306,12 +414,78 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Payment method selection */}
+              <div className="border-t border-neutral-100 pt-6">
+                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-brand-primary" />
+                  Payment Method
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <label
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+                      paymentMethod === 'cod'
+                        ? 'border-brand-primary bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                      className="w-4 h-4 accent-brand-primary"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4 text-brand-slate" />
+                      <div>
+                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
+                        <p className="text-xs text-brand-slate">Pay when delivered</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+                      paymentMethod === 'razorpay'
+                        ? 'border-brand-primary bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
+                      onChange={() => setPaymentMethod('razorpay')}
+                      className="w-4 h-4 accent-brand-primary"
+                    />
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-brand-slate" />
+                      <div>
+                        <p className="font-semibold text-brand-charcoal text-sm">Pay Online</p>
+                        <p className="text-xs text-brand-slate">UPI / Card / Net Banking</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                {isSubmitting
+                  ? paymentState === 'creating'
+                    ? 'Creating order…'
+                    : paymentState === 'processing'
+                    ? 'Complete payment in popup…'
+                    : paymentState === 'verifying'
+                    ? 'Verifying payment…'
+                    : 'Placing Order…'
+                  : paymentMethod === 'razorpay'
+                  ? 'Proceed to Pay'
+                  : 'Place Order'}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
             </form>
@@ -352,7 +526,9 @@ export default function CheckoutPage() {
 
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
                 <p className="text-sm text-green-800 font-semibold mb-1">Payment Method</p>
-                <p className="text-sm text-green-700">Cash on Delivery</p>
+                <p className="text-sm text-green-700">
+                  {paymentMethod === 'razorpay' ? 'Online Payment (Razorpay)' : 'Cash on Delivery'}
+                </p>
               </div>
 
               {formData.deliveryType === 'urgent' && (

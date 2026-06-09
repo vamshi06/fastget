@@ -59,7 +59,7 @@ export type OrderStatus =
   | 'cancelled';
 
 export type DeliveryType = 'urgent' | 'scheduled';
-export type PaymentMethod = 'cod';
+export type PaymentMethod = 'cod' | 'razorpay';
 
 export interface OrderItem {
   sku: string;
