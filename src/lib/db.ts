@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { timingSafeEqual } from 'crypto';
-import { Order, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types';
+import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS } from '@/types';
 import { logger } from '@/lib/logger';
 
 /**
@@ -75,6 +75,8 @@ export interface DbOrder {
   eta: string | null;
   status_token: string;
   update_token: string;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
 }
 
 /**
@@ -674,7 +676,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     subtotal: dbOrder.subtotal,
     convenienceFee: dbOrder.convenience_fee,
     total: dbOrder.total,
-    paymentMethod: dbOrder.payment_method as 'cod',
+    paymentMethod: dbOrder.payment_method as PaymentMethod,
     status: dbOrder.status,
     eta: dbOrder.eta || undefined,
     statusToken: dbOrder.status_token,
