@@ -1,38 +1,80 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
 import { HeroSection } from '@/components/home/HeroSection';
 import { TrustBadges } from '@/components/home/TrustBadges';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { RentalBanner } from '@/components/home/RentalBanner';
-import { SearchBar } from '@/components/SearchBar';
+import { ProductSection } from '@/components/home/ProductSection';
 
 export default function Home() {
-  const router = useRouter();
-
-  const handleSearch = (query: string) => {
-    if (query.trim()) {
-      router.push(`/catalog?q=${encodeURIComponent(query)}`);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-brand-bg">
+    <div className="min-h-screen bg-brand-fog">
+
+      {/* 1. Hero banner */}
       <HeroSection />
 
-      {/* Search bar */}
-      <div className="page-container py-6">
-        <SearchBar
-          onSearch={handleSearch}
-          placeholder="Search for plywood, hinges, plumbing fittings..."
-        />
-      </div>
+      {/* 4. Product-heavy feed */}
+      <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
 
-      <div className="page-container pb-8 space-y-12">
-        <TrustBadges />
+        {/* Best Deals — all categories, show highest discount first */}
+        <ProductSection
+          title="Best Deals"
+          subtitle="Lowest prices on construction materials"
+          limit={10}
+        />
+
+        {/* Civil materials spotlight */}
+        <ProductSection
+          title="Cement & Civil Materials"
+          subtitle="Strongest prices on site basics"
+          category="civil-materials"
+          limit={8}
+        />
+
+        {/* Carpentry section */}
+        <ProductSection
+          title="Carpentry Essentials"
+          subtitle="Plywood, hinges, screws & more"
+          category="carpentry"
+          limit={8}
+        />
+
+        {/* 5. Category grid — Browse all sections */}
         <CategoryStrip />
+
+        {/* Plumbing section */}
+        <ProductSection
+          title="Plumbing Supplies"
+          subtitle="CPVC, PVC, fittings & fixtures"
+          category="plumbing"
+          limit={8}
+        />
+
+        {/* Electrical section */}
+        <ProductSection
+          title="Electrical Materials"
+          subtitle="Wires, switches, boards & accessories"
+          category="electrical"
+          limit={8}
+        />
+
+        {/* Tools section */}
+        <ProductSection
+          title="Tools & Machines"
+          subtitle="Power tools, hand tools & equipment"
+          category="tools-machines"
+          limit={8}
+        />
+
+        {/* 6. Promo / rental banner */}
         <RentalBanner />
       </div>
+
+      {/* 7. Trust strip — full width at bottom */}
+      <div className="bg-white border-t border-neutral-100">
+        <div className="page-container">
+          <TrustBadges />
+        </div>
+      </div>
+
     </div>
   );
 }

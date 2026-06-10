@@ -82,6 +82,7 @@ export interface Order {
   convenienceFee: number;
   total: number;
   paymentMethod: PaymentMethod;
+  paymentStatus?: string | null;
   status: OrderStatus;
   eta?: string;
   statusToken: string;

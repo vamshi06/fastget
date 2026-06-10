@@ -5,7 +5,12 @@ const nextConfig = {
   },
   // Allow Next.js Image component to serve external URLs if needed in future
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+    ],
   },
 };
 

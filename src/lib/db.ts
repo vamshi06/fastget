@@ -77,6 +77,9 @@ export interface DbOrder {
   update_token: string;
   razorpay_order_id: string | null;
   razorpay_payment_id: string | null;
+  razorpay_signature: string | null;
+  payment_status: string | null;
+  payment_captured_at: Date | null;
 }
 
 /**
@@ -677,6 +680,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     convenienceFee: dbOrder.convenience_fee,
     total: dbOrder.total,
     paymentMethod: dbOrder.payment_method as PaymentMethod,
+    paymentStatus: dbOrder.payment_status ?? null,
     status: dbOrder.status,
     eta: dbOrder.eta || undefined,
     statusToken: dbOrder.status_token,

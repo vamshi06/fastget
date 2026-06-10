@@ -50,7 +50,9 @@
       "Bash(node -e \"console.log\\(require\\('./node_modules/expo/package.json'\\).version\\)\")",
       "Bash(npx expo *)",
       "Bash(ipconfig)",
-      "Bash(findstr /i \"IPv4\")"
+      "Bash(findstr /i \"IPv4\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\" -Force)",
+      "Bash(xargs grep -l \"interface Product\\\\|type Product\")"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",

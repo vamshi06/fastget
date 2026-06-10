@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useCart } from "@/components/CartContext";
 import Link from "next/link";
 import {
   Order,
@@ -48,6 +49,7 @@ const statusColors: Record<OrderStatus, string> = {
 export default function OrderStatusPage() {
   const params = useParams();
   const token = (params.token as string).toLowerCase();
+  const { clearCart } = useCart();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,13 @@ export default function OrderStatusPage() {
 
     return () => clearInterval(interval);
   }, [fetchOrder]);
+
+  // Clear cart once when a Razorpay payment is confirmed
+  useEffect(() => {
+    if (order?.paymentMethod === 'razorpay' && order?.paymentStatus === 'captured') {
+      clearCart();
+    }
+  }, [order?.paymentMethod, order?.paymentStatus, clearCart]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -167,6 +176,20 @@ export default function OrderStatusPage() {
           </button>
         </div>
 
+        {/* Payment pending banner — only for Razorpay orders still in 'received' state without payment */}
+        {order.paymentMethod === 'razorpay' && order.paymentStatus !== 'captured' && order.status !== 'cancelled' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-yellow-800 text-sm">Payment Not Confirmed</p>
+              <p className="text-yellow-700 text-sm mt-0.5">
+                Your payment has not been captured yet. If you completed a UPI or card payment, it may take a
+                few minutes. If the issue persists, please contact support.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Order Status Card */}
         <div className="card p-6 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
@@ -189,7 +212,9 @@ export default function OrderStatusPage() {
 
           <div className="bg-brand-fog rounded-xl p-4 border border-neutral-100">
             <p className="text-brand-slate text-sm leading-relaxed">
-              {ORDER_STATUS_DESCRIPTIONS[order.status]}
+              {order.status === 'cancelled' && order.paymentMethod === 'razorpay' && !order.paymentStatus
+                ? 'Payment was not completed. No charge was made. You can place a new order anytime.'
+                : ORDER_STATUS_DESCRIPTIONS[order.status]}
             </p>
             {order.eta &&
               order.status !== "delivered" &&
@@ -206,7 +231,9 @@ export default function OrderStatusPage() {
             )}
             {order.status === "cancelled" && (
               <p className="mt-3 text-red-700 font-semibold text-sm">
-                This order has been cancelled
+                {order.paymentMethod === 'razorpay' && !order.paymentStatus
+                  ? 'Payment was not completed — this order was not placed.'
+                  : 'This order has been cancelled.'}
               </p>
             )}
           </div>
@@ -357,7 +384,14 @@ export default function OrderStatusPage() {
                 <p className="text-brand-slate">
                   <span className="font-semibold text-brand-charcoal">Payment Method:</span>
                 </p>
-                <p className="text-brand-charcoal font-medium mt-1">Cash on Delivery</p>
+                <p className="text-brand-charcoal font-medium mt-1">
+                  {order.paymentMethod === 'razorpay' ? 'Online Payment (Razorpay)' : 'Cash on Delivery'}
+                </p>
+                {order.paymentMethod === 'razorpay' && (
+                  <p className={`text-xs font-semibold mt-2 ${order.paymentStatus === 'captured' ? 'text-green-700' : 'text-yellow-700'}`}>
+                    {order.paymentStatus === 'captured' ? 'Payment Confirmed' : 'Awaiting Payment'}
+                  </p>
+                )}
               </div>
             </div>
 

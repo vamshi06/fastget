@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPaymentSignature } from '@/lib/razorpay';
+import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
 import { confirmOrderPayment, getStatusToken } from '@/lib/payment-db';
 import { logger } from '@/lib/logger';
 
@@ -48,8 +48,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment verification failed. Signature mismatch.' }, { status: 400 });
     }
 
+    // Signature only proves the response came from Razorpay — NOT that the payment
+    // was successful. Cancelled/failed UPI payments also produce a valid signature.
+    // Fetch the actual payment status from Razorpay before recording anything.
+    let payment: Awaited<ReturnType<typeof fetchPayment>>;
+    try {
+      payment = await fetchPayment(razorpay_payment_id);
+    } catch (err) {
+      logger.error('Payment', 'verify-payment — Razorpay payment fetch failed', {
+        orderId,
+        razorpay_payment_id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
+      return NextResponse.json({ error: 'Could not verify payment status with Razorpay.' }, { status: 502 });
+    }
+
+    if (payment.status !== 'captured' && payment.status !== 'authorized') {
+      logger.warn('Payment', 'verify-payment — payment not captured', {
+        orderId,
+        razorpay_payment_id,
+        status: payment.status,
+      });
+      logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
+      return NextResponse.json(
+        { error: `Payment was not completed (status: ${payment.status}). Please try again.` },
+        { status: 400 },
+      );
+    }
+
     // Mark order as paid
-    const confirmed = await confirmOrderPayment(orderId, razorpay_payment_id, razorpay_order_id);
+    const confirmed = await confirmOrderPayment(orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature);
     if (!confirmed) {
       logger.error('Payment', 'verify-payment — DB update failed', { orderId });
       logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);

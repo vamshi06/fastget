@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
-import { useRazorpay, RazorpayResponse } from '@/hooks/useRazorpay';
+import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
 import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, CreditCard, Banknote } from 'lucide-react';
 import Link from 'next/link';
@@ -16,10 +16,17 @@ export default function CheckoutPage() {
   const { currentUser } = useUser();
   const { showToast } = useToast();
   const { openCheckout } = useRazorpay();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('cod');
   const [paymentState, setPaymentState] = useState<'idle' | 'creating' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
+
+  // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
+  useEffect(() => {
+    const paymentError = searchParams.get('payment_error');
+    if (paymentError) setError(decodeURIComponent(paymentError));
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -190,7 +197,15 @@ export default function CheckoutPage() {
 
       setPaymentState('processing');
 
-      // Step 2 — open Razorpay checkout modal
+      // Step 2 — open Razorpay checkout.
+      // callback_url is used instead of a JS handler so that Razorpay POSTs the
+      // payment result to our server even when the user leaves the app (e.g. GPay).
+      // The server verifies the payment and redirects to success or failure.
+      const callbackUrl =
+        `${window.location.origin}/api/payment/callback` +
+        `?orderId=${encodeURIComponent(orderId)}` +
+        `&statusToken=${encodeURIComponent(statusToken)}`;
+
       await openCheckout({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount,
@@ -198,52 +213,27 @@ export default function CheckoutPage() {
         name: 'FastGet',
         description: 'Order payment',
         order_id: razorpayOrderId,
+        callback_url: callbackUrl,
         prefill: {
           name: formData.customerName,
           contact: formatPhoneNumber(formData.customerPhone),
         },
         theme: { color: '#F5A623' },
-        handler: async (response: RazorpayResponse) => {
-          // Step 3 — verify signature on the server
-          setPaymentState('verifying');
-          try {
-            const verifyRes = await fetch('/api/payment/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                orderId,
-              }),
-            });
-
-            if (!verifyRes.ok) {
-              const data = await verifyRes.json();
-              throw new Error(data.error || 'Payment verification failed');
-            }
-
-            setPaymentState('success');
-            showToast('Payment successful! Order placed.', 'success');
-            clearCart();
-            router.push(`/order/${statusToken}`);
-          } catch (err) {
-            setPaymentState('failed');
-            setIsSubmitting(false);
-            const msg = err instanceof Error ? err.message : 'Payment verification failed';
-            setError(msg);
-            showToast(msg, 'error');
-          }
-        },
         modal: {
           ondismiss: () => {
+            // Best-effort: mark the DB order cancelled so it doesn't show as "received"
+            fetch('/api/payment/cancel-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId }),
+            }).catch(() => {});
             setPaymentState('idle');
             setIsSubmitting(false);
             showToast('Payment was cancelled', 'error');
           },
         },
       });
-      // isSubmitting stays true until handler or ondismiss fires
+      // isSubmitting stays true until ondismiss fires or the page navigates away
     } catch (err) {
       setPaymentState('failed');
       setIsSubmitting(false);

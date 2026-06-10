@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Platform, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import WebView, { WebViewNavigation } from 'react-native-webview';
+import WebView, { WebViewNavigation, WebViewRequest } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
 import { APP_URL } from '../constants/config';
@@ -38,6 +38,31 @@ export default function WebViewScreen() {
     setCanGoBack(navState.canGoBack);
   };
 
+  // Hand off UPI deep links and intent:// URLs to the OS so Razorpay's UPI
+  // flow can open GPay / PhonePe / Paytm natively. Without this, Razorpay
+  // detects the WebView environment and hides the UPI payment option entirely.
+  const handleShouldStartLoadWithRequest = (request: WebViewRequest): boolean => {
+    const { url } = request;
+    if (
+      url.startsWith('http://') ||
+      url.startsWith('https://') ||
+      url.startsWith('about:')
+    ) {
+      return true; // let WebView handle normal URLs
+    }
+    // UPI, intent, and other app deep links — open via OS
+    Linking.openURL(url).catch(() => {});
+    return false;
+  };
+
+  // Android WebViews append " wv" to the User-Agent header on every HTTP request.
+  // Razorpay's servers read this header and hide UPI server-side when they see it.
+  // JS-based UA overrides don't affect HTTP headers, so we set the actual UA via prop.
+  // We use a standard Chrome Mobile UA (no "wv") only on Android; iOS is unaffected.
+  const ANDROID_UA =
+    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+
   return (
     // edges={['top']} keeps the status bar area clear while letting the WebView
     // extend edge-to-edge at the bottom so the site's own layout can manage it.
@@ -50,6 +75,7 @@ export default function WebViewScreen() {
             ref={webViewRef}
             source={{ uri: APP_URL }}
             style={styles.webView}
+            userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
             onLoadStart={() => setHasError(false)}
             onLoadEnd={() => setInitialLoading(false)}
             onError={() => {
@@ -64,6 +90,7 @@ export default function WebViewScreen() {
               }
             }}
             onNavigationStateChange={handleNavigationStateChange}
+            onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
             // iOS swipe-back gesture

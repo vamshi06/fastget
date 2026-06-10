@@ -158,26 +158,9 @@
            bg-green-50 text-green-700 text-xs font-semibold;
   }
 
-  /* ── Announcement Bar ─────────────────────────────────────── */
+  /* ── Announcement Bar (orange background) ────────────────── */
   .announcement-bar {
-    @apply w-full bg-brand-charcoal text-white text-center py-2 px-4 text-xs font-medium relative overflow-hidden;
-    border-bottom: 2px solid var(--fg-orange);
-  }
-  /* Subtle moving shimmer for announcement bar */
-  .announcement-bar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 60%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(245,166,35,0.06), transparent);
-    animation: announcement-shine 6s ease-in-out infinite;
-  }
-  @keyframes announcement-shine {
-    0%   { left: -60%; }
-    50%  { left: 140%; }
-    100% { left: 140%; }
+    @apply w-full bg-brand-primary text-white text-center py-2.5 px-4 text-xs font-semibold relative overflow-hidden;
   }
 
   /* ── Sticky Nav ───────────────────────────────────────────── */
@@ -203,6 +186,11 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
+  /* ── Section gap (vertical rhythm) ───────────────────────── */
+  .section-gap {
+    @apply py-10 md:py-14;
+  }
+
   /* ── Icon Box (industrial accent container) ───────────────── */
   .icon-box {
     @apply w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0;
@@ -222,6 +210,17 @@
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+
+  /* Scroll-triggered fade-up — add class, JS intersection not required (CSS only fallback) */
+  .scroll-fade {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+  .scroll-fade.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
