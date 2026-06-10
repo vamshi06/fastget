@@ -37,6 +37,16 @@ export async function createRazorpayOrder(
 }
 
 /**
+ * Fetches a payment from Razorpay to check its actual status.
+ * Used after signature verification to confirm the payment was captured,
+ * not just that the response was signed (cancelled payments are also signed).
+ */
+export async function fetchPayment(paymentId: string) {
+  const rz = getInstance();
+  return rz.payments.fetch(paymentId);
+}
+
+/**
  * Verifies the Razorpay payment signature using HMAC SHA256.
  * The signed body is: `razorpay_order_id|razorpay_payment_id`
  */

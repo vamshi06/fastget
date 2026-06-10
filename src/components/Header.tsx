@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCart } from './CartContext';
 import { useUser } from './UserContext';
 import {
-  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown, MapPin,
+  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown,
 } from 'lucide-react';
 import { useLocationSplash, SERVICE_AREAS } from './LocationSplashContext';
 import { useEffect, useRef, useState } from 'react';
@@ -123,12 +123,17 @@ export function Header() {
             onClick={openSplash}
             aria-label="Change delivery location"
             className={cn(
-              'hidden md:flex items-center gap-2 px-3 py-2 rounded-xl shrink-0',
+              'hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl shrink-0',
               'border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50',
               'transition-all duration-150 group',
             )}
           >
-            <MapPin className="w-3.5 h-3.5 text-brand-primary flex-shrink-0" />
+            {/* Delivery time circle */}
+            <div className="flex-shrink-0 w-11 h-11 rounded-full bg-brand-primary flex flex-col items-center justify-center"
+              style={{ boxShadow: '0 2px 8px rgba(245,166,35,0.35)' }}>
+              <span className="text-[13px] font-black text-white leading-none">~45</span>
+              <span className="text-[7px] font-bold text-white/80 leading-none uppercase tracking-wide">Min</span>
+            </div>
             <div className="text-left">
               <p className="text-[0.65rem] text-brand-steel leading-none mb-0.5 uppercase tracking-wide font-medium">
                 Deliver to
@@ -146,16 +151,17 @@ export function Header() {
           {/* Search Bar — desktop */}
           <form onSubmit={handleSearch} className="flex-1 min-w-0 hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-brand-steel pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search for plywood, hinges, fittings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
+                className="w-full pl-11 pr-4 py-3 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
                            placeholder:text-brand-steel
                            focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
                            transition-all duration-200"
+                style={{ fontSize: '14px' }}
               />
             </div>
           </form>
@@ -303,8 +309,10 @@ export function Header() {
             aria-label="Change delivery location"
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50 transition-all duration-150 group"
           >
-            <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-brand-primary" />
+            <div className="w-10 h-10 bg-brand-primary rounded-full flex flex-col items-center justify-center flex-shrink-0"
+              style={{ boxShadow: '0 2px 8px rgba(245,166,35,0.30)' }}>
+              <span className="text-[11px] font-black text-white leading-none">~45</span>
+              <span className="text-[6px] font-bold text-white/80 leading-none uppercase">Min</span>
             </div>
             <div className="flex-1 text-left">
               <p className="text-[0.65rem] text-brand-steel uppercase tracking-wide font-medium leading-none mb-0.5">

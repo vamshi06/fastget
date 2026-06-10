@@ -53,6 +53,7 @@ export async function GET(
           convenienceFee: order.convenienceFee,
           total: order.total,
           paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
           status: order.status,
           eta: order.eta,
           statusToken: order.statusToken,

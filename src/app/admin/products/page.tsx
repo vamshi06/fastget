@@ -48,8 +48,6 @@ export default function ProductsPage() {
   const [total, setTotal]                   = useState(0);
   const [loadingCats, setLoadingCats]       = useState(true);
   const [loadingProds, setLoadingProds]     = useState(true);
-  // Cache: slug → { products, total }
-  const [cache, setCache]                   = useState<Record<string, { products: Product[]; total: number }>>({});
 
   // Load categories once
   useEffect(() => {
@@ -61,42 +59,34 @@ export default function ProductsPage() {
       .finally(() => setLoadingCats(false));
   }, []);
 
-  // Fetch products for the active tab
-  const loadProducts = useCallback(
-    (slug: string) => {
-      if (cache[slug]) {
-        setProducts(cache[slug].products);
-        setTotal(cache[slug].total);
-        return;
-      }
-      setLoadingProds(true);
-      const url =
-        slug === 'all'
-          ? '/api/products?limit=500'
-          : `/api/products?category=${slug}&limit=500`;
-      fetch(url)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success) {
-            const p = data.data.products as Product[];
-            const t = data.data.total as number;
-            setProducts(p);
-            setTotal(t);
-            setCache((prev) => ({ ...prev, [slug]: { products: p, total: t } }));
-          }
-        })
-        .finally(() => setLoadingProds(false));
-    },
-    [cache]
-  );
+  // Fetch products for the active tab — always fresh, no caching
+  const loadProducts = useCallback((slug: string) => {
+    setLoadingProds(true);
+    const url =
+      slug === 'all'
+        ? '/api/products?limit=500'
+        : `/api/products?category=${slug}&limit=500`;
+    fetch(url, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setProducts(data.data.products as Product[]);
+          setTotal(data.data.total as number);
+        }
+      })
+      .finally(() => setLoadingProds(false));
+  }, []);
 
   // Load products whenever active tab changes
   useEffect(() => {
     loadProducts(activeSlug);
-  }, [activeSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSlug, loadProducts]);
 
   const handleTab = (slug: string) => {
-    if (slug === activeSlug) return;
+    if (slug === activeSlug) {
+      loadProducts(slug); // re-fetch even if same tab selected
+      return;
+    }
     setProducts([]);
     setActiveSlug(slug);
   };

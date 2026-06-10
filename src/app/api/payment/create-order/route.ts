@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRazorpayOrder } from '@/lib/razorpay';
 import { createOrder } from '@/lib/db';
-import { ensurePaymentColumns, setRazorpayOrderId } from '@/lib/payment-db';
+import { setRazorpayOrderId, deleteOrder } from '@/lib/payment-db';
 import { generateUUID, generateToken, formatPhoneNumber, validateOrderForm } from '@/lib/utils';
 import { Order } from '@/types';
 import { logger } from '@/lib/logger';
@@ -23,8 +23,6 @@ export async function POST(request: NextRequest) {
   logger.info('Payment', 'POST /api/payment/create-order');
 
   try {
-    await ensurePaymentColumns();
-
     const body = await request.json();
     const { currency = 'INR', items, subtotal, convenienceFee, total, ...formFields } = body;
 
@@ -98,6 +96,8 @@ export async function POST(request: NextRequest) {
         orderId,
         error: err instanceof Error ? err.message : String(err),
       });
+      // Clean up the DB order so it doesn't sit as an orphaned 'received' order
+      await deleteOrder(orderId);
       logger.api('POST', '/api/payment/create-order', 502, Date.now() - start);
       return NextResponse.json({ error: 'Payment gateway unavailable. Please try again.' }, { status: 502 });
     }

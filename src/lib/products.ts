@@ -300,7 +300,10 @@ export async function getProductsFromCategoryTables(
     if (variantIds.length > 0) {
       try {
         const stockRows = await sqlClient.query(
-          `SELECT id, stock_quantity FROM product_variants WHERE id = ANY($1::uuid[])`,
+          `SELECT pv.id, COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
+           FROM product_variants pv
+           LEFT JOIN inventory inv ON inv.variant_id = pv.id
+           WHERE pv.id = ANY($1::uuid[])`,
           [variantIds] as any[],
         ) as any[];
         const stockMap = new Map(stockRows.map((r: any) => [r.id as string, Number(r.stock_quantity)]));
@@ -507,7 +510,6 @@ export interface DbProductVariant {
   product_id: string;
   sku: string;
   price_override: number | null;
-  stock_quantity: number;
   attributes: Record<string, string>;
   created_at: Date;
 }
@@ -748,11 +750,10 @@ export async function createProductVariant(
   const sql = getClient();
   try {
     const result = await sql`
-      INSERT INTO product_variants (product_id, sku, stock_quantity, attributes, price_override, mrp_price, moq)
+      INSERT INTO product_variants (product_id, sku, attributes, price_override, mrp_price, moq)
       VALUES (
         ${productId},
         ${sku},
-        ${stockQuantity},
         ${JSON.stringify(attributes)},
         ${priceOverride || null},
         ${mrpPrice || null},
@@ -762,7 +763,16 @@ export async function createProductVariant(
     `;
 
     if (result.length === 0) return null;
-    return dbVariantToVariant(result[0] as DbProductVariant);
+    const variant = dbVariantToVariant(result[0] as DbProductVariant);
+
+    // Seed inventory row for this variant
+    await sql`
+      INSERT INTO inventory (variant_id, stock_quantity, reserved_quantity)
+      VALUES (${variant.id}, ${stockQuantity}, 0)
+      ON CONFLICT (variant_id) DO NOTHING
+    `;
+
+    return variant;
   } catch (error) {
     logger.error('Products', 'Failed to create product variant', { error: error instanceof Error ? error.message : String(error) });
     return null;
@@ -815,14 +825,13 @@ export async function updateVariantStock(
 ): Promise<boolean> {
   const sql = getClient();
   try {
-    const result = await sql`
-      UPDATE product_variants
-      SET stock_quantity = ${quantity}
-      WHERE id = ${variantId}
-      RETURNING id
+    await sql`
+      INSERT INTO inventory (variant_id, stock_quantity, reserved_quantity)
+      VALUES (${variantId}, ${quantity}, 0)
+      ON CONFLICT (variant_id)
+      DO UPDATE SET stock_quantity = ${quantity}, updated_at = NOW()
     `;
-
-    return result.length > 0;
+    return true;
   } catch (error) {
     logger.error('Products', 'Failed to update variant stock', { error: error instanceof Error ? error.message : String(error) });
     return false;
@@ -1151,8 +1160,10 @@ export async function checkStockAvailability(
   try {
     const variantIds = items.map((item) => item.variantId);
     const result = await sql`
-      SELECT id, stock_quantity FROM product_variants
-      WHERE id = ANY(${variantIds})
+      SELECT pv.id, COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
+      FROM product_variants pv
+      LEFT JOIN inventory inv ON inv.variant_id = pv.id
+      WHERE pv.id = ANY(${variantIds})
     `;
 
     const availability = new Map<string, boolean>();
@@ -1212,7 +1223,7 @@ function dbVariantToVariant(dbVar: DbProductVariant): ProductVariant {
     productId: dbVar.product_id,
     sku: dbVar.sku,
     priceOverride: dbVar.price_override || undefined,
-    stockQuantity: dbVar.stock_quantity,
+    stockQuantity: 0,
     attributes: dbVar.attributes,
     createdAt:
       dbVar.created_at instanceof Date
