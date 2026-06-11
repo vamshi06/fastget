@@ -28,6 +28,9 @@ export default function CheckoutPage() {
     if (paymentError) setError(decodeURIComponent(paymentError));
   }, [searchParams]);
 
+  const [useAccountName, setUseAccountName] = useState(false);
+  const [useAccountPhone, setUseAccountPhone] = useState(false);
+
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
@@ -36,6 +39,22 @@ export default function CheckoutPage() {
     deliveryType: 'urgent' as 'urgent' | 'scheduled',
     scheduledTime: '',
   });
+
+  const handleUseAccountName = (checked: boolean) => {
+    setUseAccountName(checked);
+    setFormData(prev => ({
+      ...prev,
+      customerName: checked && currentUser ? currentUser.name : '',
+    }));
+  };
+
+  const handleUseAccountPhone = (checked: boolean) => {
+    setUseAccountPhone(checked);
+    setFormData(prev => ({
+      ...prev,
+      customerPhone: checked && currentUser?.phone ? currentUser.phone : '',
+    }));
+  };
 
   if (isLoaded && !currentUser) {
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
@@ -140,6 +159,7 @@ export default function CheckoutPage() {
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
           total: getTotal(),
+          userId: currentUser?.id,
         }),
       });
 
@@ -185,6 +205,7 @@ export default function CheckoutPage() {
           convenienceFee: getConvenienceFee(),
           total: getTotal(),
           currency: 'INR',
+          userId: currentUser?.id,
         }),
       });
 
@@ -226,7 +247,7 @@ export default function CheckoutPage() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ orderId }),
-            }).catch(() => {});
+            }).catch(() => { });
             setPaymentState('idle');
             setIsSubmitting(false);
             showToast('Payment was cancelled', 'error');
@@ -277,10 +298,25 @@ export default function CheckoutPage() {
                     <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Full Name *
                     </label>
+                    {currentUser && (
+                      <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={useAccountName}
+                          onChange={(e) => handleUseAccountName(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-brand-primary"
+                        />
+                        <span className="text-xs text-brand-slate">Use account name ({currentUser.name})</span>
+                      </label>
+                    )}
                     <input
                       type="text"
                       value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (useAccountName && value !== currentUser?.name) setUseAccountName(false);
+                        setFormData({ ...formData, customerName: value });
+                      }}
                       className={inputCls}
                       placeholder="Enter your name"
                     />
@@ -289,12 +325,27 @@ export default function CheckoutPage() {
                     <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                       Phone Number *
                     </label>
+                    {currentUser?.phone && (
+                      <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={useAccountPhone}
+                          onChange={(e) => handleUseAccountPhone(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-brand-primary"
+                        />
+                        <span className="text-xs text-brand-slate">Use account number ({currentUser.phone})</span>
+                      </label>
+                    )}
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
                       <input
                         type="tel"
                         value={formData.customerPhone}
-                        onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (useAccountPhone && value !== currentUser?.phone) setUseAccountPhone(false);
+                          setFormData({ ...formData, customerPhone: value });
+                        }}
                         className={`${inputCls} pl-10`}
                         placeholder="10-digit mobile number"
                       />
@@ -344,11 +395,10 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <label
-                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
-                        formData.deliveryType === 'urgent'
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${formData.deliveryType === 'urgent'
                           ? 'border-brand-primary bg-primary-50'
                           : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
@@ -364,11 +414,10 @@ export default function CheckoutPage() {
                       </div>
                     </label>
                     <label
-                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
-                        formData.deliveryType === 'scheduled'
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${formData.deliveryType === 'scheduled'
                           ? 'border-brand-primary bg-primary-50'
                           : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
@@ -412,34 +461,10 @@ export default function CheckoutPage() {
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <label
-                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
-                      paymentMethod === 'cod'
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'razorpay'
                         ? 'border-brand-primary bg-primary-50'
                         : 'border-neutral-200 hover:border-neutral-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={paymentMethod === 'cod'}
-                      onChange={() => setPaymentMethod('cod')}
-                      className="w-4 h-4 accent-brand-primary"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Banknote className="w-4 h-4 text-brand-slate" />
-                      <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
-                        <p className="text-xs text-brand-slate">Pay when delivered</p>
-                      </div>
-                    </div>
-                  </label>
-                  <label
-                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
-                      paymentMethod === 'razorpay'
-                        ? 'border-brand-primary bg-primary-50'
-                        : 'border-neutral-200 hover:border-neutral-300'
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -457,6 +482,28 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   </label>
+                  <label
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'cod'
+                        ? 'border-brand-primary bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                      }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                      className="w-4 h-4 accent-brand-primary"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4 text-brand-slate" />
+                      <div>
+                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
+                        <p className="text-xs text-brand-slate">Pay when delivered</p>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -469,13 +516,13 @@ export default function CheckoutPage() {
                   ? paymentState === 'creating'
                     ? 'Creating order…'
                     : paymentState === 'processing'
-                    ? 'Complete payment in popup…'
-                    : paymentState === 'verifying'
-                    ? 'Verifying payment…'
-                    : 'Placing Order…'
+                      ? 'Complete payment in popup…'
+                      : paymentState === 'verifying'
+                        ? 'Verifying payment…'
+                        : 'Placing Order…'
                   : paymentMethod === 'razorpay'
-                  ? 'Proceed to Pay'
-                  : 'Place Order'}
+                    ? 'Proceed to Pay'
+                    : 'Place Order'}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
             </form>

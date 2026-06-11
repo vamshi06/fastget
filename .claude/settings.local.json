@@ -52,7 +52,8 @@
       "Bash(ipconfig)",
       "Bash(findstr /i \"IPv4\")",
       "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\" -Force)",
-      "Bash(xargs grep -l \"interface Product\\\\|type Product\")"
+      "Bash(xargs grep -l \"interface Product\\\\|type Product\")",
+      "Bash(npx next *)"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",

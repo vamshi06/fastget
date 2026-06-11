@@ -87,6 +87,7 @@ export interface Order {
   eta?: string;
   statusToken: string;
   updateToken: string;
+  userId?: string;
 }
 
 export interface OrderFormData {

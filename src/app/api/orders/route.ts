@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       status: 'received' as OrderStatus,
       statusToken,
       updateToken,
+      userId: typeof body.userId === 'string' ? body.userId : undefined,
     };
 
     // Save to Neon database

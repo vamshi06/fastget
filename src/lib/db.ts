@@ -80,6 +80,7 @@ export interface DbOrder {
   razorpay_signature: string | null;
   payment_status: string | null;
   payment_captured_at: Date | null;
+  user_id: string | null;
 }
 
 /**
@@ -407,13 +408,13 @@ export async function createOrder(order: Order): Promise<boolean> {
       INSERT INTO orders (
         id, created_at, customer_name, customer_phone, site_address, landmark,
         delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
-        payment_method, status, eta, status_token, update_token
+        payment_method, status, eta, status_token, update_token, user_id
       ) VALUES (
         ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
         ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
         ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
         ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
-        ${order.eta || null}, ${order.statusToken}, ${order.updateToken}
+        ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null}
       )
     `;
     logger.info('DB', 'Order created successfully', { orderId: order.id });
@@ -435,13 +436,13 @@ export async function createOrder(order: Order): Promise<boolean> {
           INSERT INTO orders (
             id, created_at, customer_name, customer_phone, site_address, landmark,
             delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
-            payment_method, status, eta, status_token, update_token
+            payment_method, status, eta, status_token, update_token, user_id
           ) VALUES (
             ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
             ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
             ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
             ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
-            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}
+            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null}
           )
         `;
         return true;
@@ -685,7 +686,26 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     eta: dbOrder.eta || undefined,
     statusToken: dbOrder.status_token,
     updateToken: dbOrder.update_token,
+    userId: dbOrder.user_id || undefined,
   };
+}
+
+/**
+ * Get all orders placed by a specific user (by user_id).
+ */
+export async function getOrdersByUserId(userId: string): Promise<Order[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT * FROM orders
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `;
+    return (result as DbOrder[]).map(dbOrderToOrder);
+  } catch (error) {
+    logger.error('DB', 'Failed to get orders by user_id', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
 }
 
 // sql client helpers are accessed via getUnpooledConnection() or the internal getClient()/getUnpooledClient()

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { currency = 'INR', items, subtotal, convenienceFee, total, ...formFields } = body;
+    const { currency = 'INR', items, subtotal, convenienceFee, total, userId, ...formFields } = body;
 
     // Re-use the same form validation as the COD orders flow
     const validationError = validateOrderForm(formFields);
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
       status: 'received',
       statusToken,
       updateToken,
+      userId: typeof userId === 'string' ? userId : undefined,
     };
 
     const dbSuccess = await createOrder(order);

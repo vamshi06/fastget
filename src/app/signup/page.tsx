@@ -42,7 +42,7 @@ export default function SignupPage() {
       });
       const data = await response.json();
       if (!response.ok) { setError(data.error || 'Signup failed'); return; }
-      setCurrentUser({ id: data.id, name: data.name, email: data.email });
+      setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone });
       router.push(redirect);
     } catch {
       setError('An error occurred during signup. Please try again.');

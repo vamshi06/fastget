@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCart } from './CartContext';
 import { useUser } from './UserContext';
 import {
-  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown,
+  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown, ClipboardList,
 } from 'lucide-react';
 import { useLocationSplash, SERVICE_AREAS } from './LocationSplashContext';
 import { useEffect, useRef, useState } from 'react';
@@ -210,9 +210,17 @@ export function Header() {
                       <p className="text-sm font-semibold text-brand-charcoal">{currentUser.name}</p>
                       <p className="text-xs text-brand-slate mt-0.5 truncate">{currentUser.email}</p>
                     </div>
+                    <Link
+                      href="/my-orders"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 transition-all duration-200"
+                    >
+                      <ClipboardList className="w-4 h-4 text-brand-primary" />
+                      My Orders
+                    </Link>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 transition-all duration-200"
+                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 border-t border-neutral-100 transition-all duration-200"
                     >
                       <LogOut className="w-4 h-4 text-brand-primary" />
                       Sign Out
