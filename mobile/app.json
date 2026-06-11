@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a56db"
+      "backgroundColor": "#F5A623"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -26,7 +26,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a56db"
+        "backgroundColor": "#F5A623"
       },
       "package": "com.elemantra.fastget",
       "permissions": [

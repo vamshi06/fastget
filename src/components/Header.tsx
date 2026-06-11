@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCart } from './CartContext';
 import { useUser } from './UserContext';
 import {
-  ShoppingCart, LogOut, User, Search, Menu, X, ChevronDown, ClipboardList,
+  ShoppingCart, LogOut, User, Search, ChevronDown, ClipboardList,
 } from 'lucide-react';
 import { useLocationSplash, SERVICE_AREAS } from './LocationSplashContext';
 import { useEffect, useRef, useState } from 'react';
@@ -39,7 +39,6 @@ export function Header() {
 
   const [scrolled,      setScrolled]      = useState(false);
   const [showDropdown,  setShowDropdown]  = useState(false);
-  const [mobileOpen,    setMobileOpen]    = useState(false);
   const [searchQuery,   setSearchQuery]   = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -62,8 +61,7 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
-      setMobileOpen(false);
+      router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}` as any);
     }
   };
 
@@ -98,8 +96,86 @@ export function Header() {
   return (
     <header className={cn('navbar transition-all duration-200', scrolled && 'shadow-md')}>
 
-      {/* ── Main Nav Row ── */}
-      <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ── Mobile Header Row ── */}
+      <div className="md:hidden w-full px-4 border-b border-neutral-100">
+        <div className="flex items-center h-14 gap-2">
+
+          {/* Delivery badge + location */}
+          <button
+            onClick={openSplash}
+            aria-label="Change delivery location"
+            className="flex items-center gap-2 flex-shrink-0 group"
+          >
+            <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
+              <span className="text-[13px] font-black leading-none">~45</span>
+              <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">Mins</span>
+            </div>
+            <div className="text-left">
+              <p className="text-[9px] text-brand-steel uppercase tracking-wide leading-none">Deliver to</p>
+              <div className="flex items-center gap-0.5">
+                <span className="text-xs font-semibold text-brand-charcoal leading-none group-hover:text-brand-primary transition-colors">
+                  {selectedLocation
+                    ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
+                    : 'Select area'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-brand-steel" />
+              </div>
+            </div>
+          </button>
+
+          {/* Center: Logo */}
+          <div className="flex-1 flex justify-center">
+            <Link href="/" className="flex items-center">
+              <div className="relative w-10 h-10">
+                <Image
+                  src="/fastget-logo-clear.png"
+                  alt="FastGet"
+                  fill
+                  sizes="40px"
+                  className="object-contain"
+                />
+              </div>
+            </Link>
+          </div>
+
+          {/* Right: Cart */}
+          <div className="flex items-center flex-shrink-0">
+            <Link
+              href="/cart"
+              aria-label="Cart"
+              className="relative p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+            >
+              <ShoppingCart className="w-5 h-5 text-brand-charcoal" />
+              {itemCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-0.5 bg-brand-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {itemCount > 9 ? '9+' : itemCount}
+                </span>
+              )}
+            </Link>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── Mobile Search Row ── */}
+      <div className="md:hidden w-full px-3 pb-2.5 pt-1 border-b border-neutral-100">
+        <form onSubmit={handleSearch} className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search products, brands..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => router.push('/catalog' as any)}
+            className="w-full pl-9 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
+                       placeholder:text-brand-steel focus:outline-none focus:ring-2 focus:ring-brand-primary/25
+                       focus:border-brand-primary focus:bg-white transition-all"
+          />
+        </form>
+      </div>
+
+      {/* ── Desktop Main Nav Row ── */}
+      <div className="hidden md:block w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 h-14">
 
           {/* Logo */}
@@ -122,30 +198,24 @@ export function Header() {
           <button
             onClick={openSplash}
             aria-label="Change delivery location"
-            className={cn(
-              'hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl shrink-0',
-              'border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50',
-              'transition-all duration-150 group',
-            )}
+            className="hidden md:flex items-center gap-2 shrink-0 group"
           >
-            {/* Delivery time circle */}
-            <div className="flex-shrink-0 w-11 h-11 rounded-full bg-brand-primary flex flex-col items-center justify-center"
-              style={{ boxShadow: '0 2px 8px rgba(245,166,35,0.35)' }}>
-              <span className="text-[13px] font-black text-white leading-none">~45</span>
-              <span className="text-[7px] font-bold text-white/80 leading-none uppercase tracking-wide">Min</span>
+            {/* Green badge — matches mobile */}
+            <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
+              <span className="text-[13px] font-black leading-none">~45</span>
+              <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">Mins</span>
             </div>
             <div className="text-left">
-              <p className="text-[0.65rem] text-brand-steel leading-none mb-0.5 uppercase tracking-wide font-medium">
-                Deliver to
-              </p>
-              <p className="text-xs font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors leading-none">
-                {selectedLocation
-                  ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
-                  : 'Select area'
-                }
-              </p>
+              <p className="text-[9px] text-brand-steel uppercase tracking-wide leading-none">Deliver to</p>
+              <div className="flex items-center gap-0.5">
+                <span className="text-xs font-semibold text-brand-charcoal leading-none group-hover:text-brand-primary transition-colors">
+                  {selectedLocation
+                    ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
+                    : 'Select area'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-brand-steel" />
+              </div>
             </div>
-            <ChevronDown className="w-3 h-3 text-brand-steel flex-shrink-0" />
           </button>
 
           {/* Search Bar — desktop */}
@@ -253,14 +323,6 @@ export function Header() {
               </div>
             )}
 
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden btn-ghost"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
 
@@ -308,87 +370,6 @@ export function Header() {
         </nav>
       </div>
 
-      {/* ── Mobile Menu ── */}
-      {mobileOpen && (
-        <div className="md:hidden border-t border-neutral-100 bg-white px-4 py-4 space-y-4 animate-slide-up">
-          {/* Mobile location button */}
-          <button
-            onClick={() => { openSplash(); setMobileOpen(false); }}
-            aria-label="Change delivery location"
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-neutral-200 hover:border-brand-primary/50 hover:bg-primary-50 transition-all duration-150 group"
-          >
-            <div className="w-10 h-10 bg-brand-primary rounded-full flex flex-col items-center justify-center flex-shrink-0"
-              style={{ boxShadow: '0 2px 8px rgba(245,166,35,0.30)' }}>
-              <span className="text-[11px] font-black text-white leading-none">~45</span>
-              <span className="text-[6px] font-bold text-white/80 leading-none uppercase">Min</span>
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-[0.65rem] text-brand-steel uppercase tracking-wide font-medium leading-none mb-0.5">
-                Deliver to
-              </p>
-              <p className="text-sm font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors leading-none">
-                {selectedLocation
-                  ? (SERVICE_AREAS.find(a => a.id === selectedLocation)?.name ?? selectedLocation)
-                  : 'Select delivery area'
-                }
-              </p>
-            </div>
-            <ChevronDown className="w-4 h-4 text-brand-steel flex-shrink-0" />
-          </button>
-
-          {/* Mobile search */}
-          <form onSubmit={handleSearch}>
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search materials..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
-                           focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
-                           transition-all duration-200"
-              />
-            </div>
-          </form>
-
-          {/* Mobile category grid */}
-          <div className="grid grid-cols-3 gap-2">
-            {NAV_CATEGORIES.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/catalog?category=${cat.id}`}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all duration-150',
-                  isCategoryActive(cat.id)
-                    ? 'bg-primary-50 border-brand-primary'
-                    : 'bg-brand-fog hover:bg-primary-50 hover:border-brand-primary border-transparent',
-                )}
-              >
-                <span className={cn(
-                  'text-xs font-semibold leading-tight',
-                  isCategoryActive(cat.id) ? 'text-brand-primary' : 'text-brand-graphite',
-                )}>
-                  {cat.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-
-          {/* Mobile auth */}
-          {!currentUser && (
-            <div className="flex gap-2 pt-2 border-t border-neutral-100">
-              <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 btn-secondary text-center">
-                Log In
-              </Link>
-              <Link href="/signup" onClick={() => setMobileOpen(false)} className="flex-1 btn-primary text-center">
-                Sign Up
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
     </header>
   );
 }

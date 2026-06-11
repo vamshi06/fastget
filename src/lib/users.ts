@@ -191,6 +191,45 @@ export async function updateUserPassword(
 }
 
 /**
+ * Get user by phone number (last 10 digits, strips country code).
+ */
+export async function getUserByPhone(phone: string): Promise<User | null> {
+  const sql = getUnpooledClient();
+  try {
+    const digits = phone.replace(/\D/g, '').slice(-10);
+    const result = await sql`
+      SELECT * FROM users
+      WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = ${digits}
+      LIMIT 1
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to get user by phone', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Authenticate a user with phone number and password.
+ */
+export async function authenticateUserByPhone(
+  phone: string,
+  plainPassword: string
+): Promise<User | null> {
+  try {
+    const user = await getUserByPhone(phone);
+    if (!user || !user.passwordHash) return null;
+    const isValid = await verifyPassword(plainPassword, user.passwordHash);
+    if (!isValid) return null;
+    return user;
+  } catch (error) {
+    logger.error('Users', 'Failed to authenticate user by phone', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
  * Authenticate a user with email and password.
  * Returns user object if credentials are valid, null otherwise.
  */

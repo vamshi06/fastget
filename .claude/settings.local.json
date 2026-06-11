@@ -53,7 +53,8 @@
       "Bash(findstr /i \"IPv4\")",
       "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\" -Force)",
       "Bash(xargs grep -l \"interface Product\\\\|type Product\")",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\mobile\" -Depth 2 -Exclude \"node_modules\")"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",

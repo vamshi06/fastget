@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { User, Mail, Lock, Phone, ArrowRight, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { FloatingInput } from '@/components/FloatingInput';
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
@@ -43,7 +44,7 @@ export default function SignupPage() {
       const data = await response.json();
       if (!response.ok) { setError(data.error || 'Signup failed'); return; }
       setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone });
-      router.push(redirect);
+      router.push(redirect as any);
     } catch {
       setError('An error occurred during signup. Please try again.');
     } finally {
@@ -51,80 +52,77 @@ export default function SignupPage() {
     }
   };
 
-  const inputCls = `w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-brand-charcoal bg-brand-fog
-                    focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
-                    transition-all duration-200`;
+  const fields = [
+    { label: 'Full Name',        name: 'name',            type: 'text'     },
+    { label: 'Email',            name: 'email',           type: 'email'    },
+    { label: 'Phone Number',     name: 'phone',           type: 'tel'      },
+    { label: 'Password',         name: 'password',        type: 'password' },
+    { label: 'Confirm Password', name: 'confirmPassword', type: 'password' },
+  ];
 
   return (
-    <div className="min-h-screen bg-brand-fog flex items-center justify-center py-10 px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
-          <div className="h-1 bg-brand-primary" />
+    <div
+      className="flex flex-col items-center justify-center gap-8 px-5 py-12"
+      style={{ backgroundColor: '#F5A623', minHeight: 'calc(100vh - 160px)' }}
+    >
+      {/* Tagline */}
+      <h2 className="text-[1.45rem] font-bold text-black text-center leading-snug px-2">
+        Building Materials At Low<br />Prices In Minutes
+      </h2>
 
-          <div className="p-8">
-            <div className="mb-7">
-              <h1 className="text-2xl font-black text-brand-charcoal">Create Account</h1>
-              <p className="text-brand-slate text-sm mt-1">Join FastGet for quick deliveries</p>
-            </div>
+      {/* Signup card */}
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl px-6 pt-6 pb-7">
+        <h3 className="text-2xl font-bold text-brand-charcoal text-center mb-6">
+          Create account
+        </h3>
 
-          {error && (
-            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {[
-              { label: 'Full Name', name: 'name', type: 'text', Icon: User, placeholder: 'John Doe' },
-              { label: 'Email Address', name: 'email', type: 'email', Icon: Mail, placeholder: 'your@email.com' },
-              { label: 'Phone Number', name: 'phone', type: 'tel', Icon: Phone, placeholder: '10-digit mobile number' },
-              { label: 'Password', name: 'password', type: 'password', Icon: Lock, placeholder: '••••••••' },
-              { label: 'Confirm Password', name: 'confirmPassword', type: 'password', Icon: Lock, placeholder: '••••••••' },
-            ].map(({ label, name, type, Icon, placeholder }) => (
-              <div key={name}>
-                <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                  {label}
-                </label>
-                <div className="relative">
-                  <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
-                  <input
-                    type={type}
-                    name={name}
-                    value={(formData as any)[name]}
-                    onChange={handleChange}
-                    className={inputCls}
-                    placeholder={placeholder}
-                  />
-                </div>
-              </div>
-            ))}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full py-3 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Creating Account…' : 'Create Account'}
-              {!isLoading && <ArrowRight className="w-4 h-4" />}
-            </button>
-          </form>
-
-          <p className="mt-5 text-center text-sm text-brand-slate">
-            Already have an account?{' '}
-            <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="text-brand-primary font-semibold hover:text-brand-dark transition-colors">
-              Log in
-            </Link>
-          </p>
-
-          <div className="mt-6 pt-5 border-t border-neutral-100">
-            <p className="text-xs text-brand-steel text-center">
-              By signing up, you agree to our Terms of Service and Privacy Policy
-            </p>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-red-800 text-sm">{error}</p>
           </div>
-          </div>
-        </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {fields.map(({ label, name, type }) => (
+            <FloatingInput
+              key={name}
+              label={label}
+              name={name}
+              type={type}
+              value={(formData as any)[name]}
+              onChange={handleChange}
+            />
+          ))}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3.5 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm
+                       disabled:opacity-50 flex items-center justify-center gap-2 transition-colors mt-1"
+          >
+            {isLoading ? 'Creating Account…' : 'Sign up'}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-brand-slate">
+          Already have an account?{' '}
+          <Link
+            href={redirect && redirect !== '/' ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
+            className="text-brand-primary font-semibold hover:text-brand-dark transition-colors"
+          >
+            Log in
+          </Link>
+        </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

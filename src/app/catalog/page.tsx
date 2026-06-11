@@ -11,7 +11,6 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ProductCard } from '@/components/ProductCard';
-import { SearchBar } from '@/components/SearchBar';
 import { Product } from '@/types';
 import {
   Package, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, X, Loader2,
@@ -228,25 +227,6 @@ function CatalogPageContent() {
   return (
     <div className="min-h-screen bg-brand-fog">
 
-      {/* Page header */}
-      <div className="bg-white border-b border-neutral-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="max-w-3xl">
-            <h1 className="text-[36px] leading-tight font-black tracking-[-0.03em] text-brand-charcoal mb-3">
-              Product Catalog
-            </h1>
-            <p className="text-[15px] text-brand-slate mb-7 leading-relaxed">
-              Browse construction materials with fast delivery and live inventory.
-            </p>
-            <SearchBar
-              onSearch={handleSearch}
-              placeholder="Search products, brands..."
-              initialValue={searchQuery}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
@@ -454,16 +434,16 @@ function CatalogPageContent() {
 
         {/* Loading skeletons */}
         {loading && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
             {Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
         {/* Products grid */}
         {!loading && !error && products.length > 0 && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
         )}

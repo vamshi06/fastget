@@ -18,14 +18,13 @@ interface ProductSectionProps {
 
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-44 sm:w-48 bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-      <div className="skeleton h-36 w-full" />
-      <div className="p-3 space-y-2">
-        <div className="skeleton h-3 w-14 rounded" />
-        <div className="skeleton h-4 w-full rounded" />
-        <div className="skeleton h-4 w-3/4 rounded" />
-        <div className="skeleton h-3 w-12 rounded" />
-        <div className="skeleton h-8 w-full rounded-xl mt-2" />
+    <div className="flex-shrink-0 w-28 bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+      <div className="skeleton h-16 w-full" />
+      <div className="p-1.5 space-y-1.5">
+        <div className="skeleton h-3 w-full rounded" />
+        <div className="skeleton h-3 w-3/4 rounded" />
+        <div className="skeleton h-3 w-1/2 rounded" />
+        <div className="skeleton h-6 w-full rounded-xl mt-1" />
       </div>
     </div>
   );

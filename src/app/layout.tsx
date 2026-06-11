@@ -7,6 +7,7 @@ import { UserProvider } from '@/components/UserContext';
 import { LocationSplashProvider } from '@/components/LocationSplashContext';
 import { ConditionalHeader } from '@/components/ConditionalHeader';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AnnouncementBar } from '@/components/AnnouncementBar';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -28,10 +29,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <LocationSplashProvider>
                 <AnnouncementBar />
                 <ConditionalHeader />
-                <main className="flex-grow">
+                <main className="flex-grow pb-16 md:pb-0">
                   {children}
                 </main>
-                <ConditionalFooter />
+                <div className="hidden md:block">
+                  <ConditionalFooter />
+                </div>
+                <MobileBottomNav />
               </LocationSplashProvider>
             </ToastProvider>
           </CartProvider>

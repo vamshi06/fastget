@@ -18,14 +18,14 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a56db',
+    backgroundColor: '#F5A623',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logo: {
     fontSize: 42,
     fontWeight: '800',
-    color: '#ffffff',
+    color: '#1C1C1E',
     letterSpacing: -1,
     marginBottom: 32,
   },
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: 'rgba(28, 28, 30, 0.65)',
     letterSpacing: 0.3,
   },
 });

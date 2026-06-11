@@ -6,7 +6,6 @@ import { Header } from './Header';
 export function ConditionalHeader() {
   const pathname = usePathname();
   
-  // Hide header for admin routes
   if (pathname.startsWith('/admin')) {
     return null;
   }

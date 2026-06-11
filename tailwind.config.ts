@@ -20,7 +20,7 @@ const config: Config = {
           fog:      '#F5F5F5',
           surface:  '#FFFFFF',
           steel:    '#9A9A9A',
-          success:  '#16A34A',
+          success:  '#16A34A',  
           bg:       '#FAFAFA',
         },
         primary: {

@@ -19,10 +19,11 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   const qty = cartItem?.quantity ?? 0;
   const inStock = product.stockStatus !== 'out';
 
-  const discountPct =
-    product.mrpPrice && product.mrpPrice > product.price
-      ? Math.round((1 - product.price / product.mrpPrice) * 100)
-      : 0;
+  const hasMrp = product.mrpPrice && product.mrpPrice > product.price;
+  const savings = hasMrp ? product.mrpPrice! - product.price : 0;
+  const discountPct = hasMrp
+    ? Math.round((savings / product.mrpPrice!) * 100)
+    : 0;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -46,121 +47,93 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   return (
     <Link
       href={`/catalog?q=${encodeURIComponent(product.name)}`}
-      className="group flex-shrink-0 w-44 sm:w-48 bg-white rounded-2xl border border-neutral-100 overflow-hidden
-                 hover:border-neutral-200 hover:-translate-y-0.5 transition-all duration-200"
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-      }}
+      className="flex-shrink-0 w-[118px] bg-white rounded-2xl border border-neutral-100 overflow-hidden"
+      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
     >
-      {/* Image area */}
-      <div className="relative w-full h-36 bg-neutral-50 overflow-hidden">
+      {/* Square image area */}
+      <div className="relative w-full aspect-square bg-neutral-50">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            sizes="(max-width: 640px) 176px, 192px"
-            className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+            sizes="118px"
+            className="object-contain p-2"
             loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-12 h-12 text-neutral-200" />
+            <Package className="w-8 h-8 text-neutral-200" />
           </div>
         )}
 
-        {discountPct >= 5 && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded-md leading-none">
+        {/* Discount badge top-left */}
+        {discountPct >= 3 && (
+          <div className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
             {discountPct}% OFF
           </div>
         )}
 
-        {product.stockStatus === 'low' && (
-          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-md leading-none">
-            Low Stock
+        {/* Out of stock overlay */}
+        {!inStock && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+            <span className="text-[9px] font-semibold text-neutral-500">Out of Stock</span>
           </div>
         )}
 
-        {!inStock && (
-          <div className="absolute inset-0 bg-white/75 flex items-center justify-center">
-            <span className="text-xs font-semibold text-brand-slate bg-white px-2 py-1 rounded-md border border-neutral-200">
-              Out of Stock
-            </span>
+        {/* Cart control — overlaid at bottom-right of image */}
+        {inStock && (
+          <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
+            {qty === 0 ? (
+              <button
+                onClick={handleAdd}
+                className="w-7 h-7 bg-white border border-neutral-200 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
+              >
+                <Plus className="w-4 h-4 text-brand-primary" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 bg-brand-primary rounded-xl px-1.5 py-1">
+                <button onClick={handleDecrease} className="text-white">
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className="text-white text-[11px] font-bold min-w-[14px] text-center">{qty}</span>
+                <button onClick={handleIncrease} className="text-white">
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        {product.brand && (
-          <p className="text-[10px] text-brand-steel uppercase tracking-wider font-semibold mb-0.5 truncate">
-            {product.brand}
-          </p>
-        )}
-
-        <h3 className="text-sm font-semibold text-brand-charcoal leading-snug line-clamp-2 mb-1 min-h-[2.5rem]">
-          {product.name}
-        </h3>
-
-        <p className="text-[11px] text-brand-steel mb-2">{product.unit}</p>
-
-        {/* Price */}
-        <div className="flex items-baseline gap-1.5 mb-2.5">
-          <span className="text-base font-bold text-brand-charcoal">
+      <div className="px-2 pt-1.5 pb-2">
+        {/* Price row */}
+        <div className="flex items-baseline gap-1 flex-wrap">
+          <span className="text-sm font-black text-brand-charcoal">
             ₹{product.price.toLocaleString('en-IN')}
           </span>
-          {product.mrpPrice && product.mrpPrice > product.price && (
-            <span className="text-xs text-brand-steel line-through">
-              ₹{product.mrpPrice.toLocaleString('en-IN')}
+          {hasMrp && (
+            <span className="text-[10px] text-neutral-400 line-through">
+              ₹{product.mrpPrice!.toLocaleString('en-IN')}
             </span>
           )}
         </div>
 
-        {/* Cart control */}
-        {inStock ? (
-          qty === 0 ? (
-            <button
-              onClick={handleAdd}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl
-                         text-xs font-semibold bg-brand-primary text-white
-                         hover:bg-brand-dark active:scale-[0.97] transition-all duration-150"
-              style={{ boxShadow: '0 2px 6px rgba(245,166,35,0.28)' }}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add
-            </button>
-          ) : (
-            <div className="flex items-center justify-between bg-primary-50 rounded-xl p-1">
-              <button
-                onClick={handleDecrease}
-                className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center
-                           hover:border-brand-primary hover:text-brand-primary active:scale-95
-                           transition-all duration-150 text-brand-charcoal"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-sm font-bold text-brand-charcoal min-w-[20px] text-center">{qty}</span>
-              <button
-                onClick={handleIncrease}
-                className="w-7 h-7 rounded-lg bg-brand-primary border border-brand-primary flex items-center justify-center
-                           hover:bg-brand-dark active:scale-95 transition-all duration-150 text-white"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )
-        ) : (
-          <button
-            disabled
-            className="w-full py-2 rounded-xl text-xs font-semibold bg-neutral-100 text-brand-steel cursor-not-allowed"
-          >
-            Out of Stock
-          </button>
+        {/* Savings */}
+        {savings > 0 && (
+          <p className="text-[9px] font-bold text-green-600 mb-0.5">
+            ₹{savings.toLocaleString('en-IN')} OFF
+          </p>
         )}
+
+        {/* Name */}
+        <p className="text-[10px] font-medium text-brand-charcoal line-clamp-2 leading-tight mb-0.5">
+          {product.name}
+        </p>
+
+        {/* Unit */}
+        <p className="text-[9px] text-neutral-400">{product.unit}</p>
       </div>
     </Link>
   );

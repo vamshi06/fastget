@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser } from '@/lib/users';
+import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
+import type { User } from '@/types';
 import { logger } from '@/lib/logger';
 
 /**
@@ -15,16 +16,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validation
-    if (!body.email || typeof body.email !== 'string') {
-      logger.warn('API', 'POST /api/auth/login — missing email');
-      logger.api('POST', '/api/auth/login', 400, Date.now() - start);
-      return NextResponse.json(
-        { success: false, error: 'Email is required' },
-        { status: 400 }
-      );
-    }
-
     if (!body.password || typeof body.password !== 'string') {
       logger.warn('API', 'POST /api/auth/login — missing password');
       logger.api('POST', '/api/auth/login', 400, Date.now() - start);
@@ -34,18 +25,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize email
-    const email = body.email.toLowerCase().trim();
+    let user: User | null = null;
 
-    // Authenticate user
-    const user = await authenticateUser(email, body.password);
-
-    if (!user) {
-      logger.warn('API', 'POST /api/auth/login — authentication failed', { email });
-      logger.api('POST', '/api/auth/login', 401, Date.now() - start);
+    if (body.phone && typeof body.phone === 'string') {
+      // Phone-based auth
+      user = await authenticateUserByPhone(body.phone.trim(), body.password);
+      if (!user) {
+        logger.warn('API', 'POST /api/auth/login — phone auth failed', { phone: body.phone });
+        logger.api('POST', '/api/auth/login', 401, Date.now() - start);
+        return NextResponse.json(
+          { success: false, error: 'Invalid phone number or password' },
+          { status: 401 }
+        );
+      }
+    } else if (body.email && typeof body.email === 'string') {
+      // Email-based auth (legacy)
+      const email = body.email.toLowerCase().trim();
+      user = await authenticateUser(email, body.password);
+      if (!user) {
+        logger.warn('API', 'POST /api/auth/login — email auth failed', { email });
+        logger.api('POST', '/api/auth/login', 401, Date.now() - start);
+        return NextResponse.json(
+          { success: false, error: 'Invalid email or password' },
+          { status: 401 }
+        );
+      }
+    } else {
+      logger.warn('API', 'POST /api/auth/login — missing phone or email');
+      logger.api('POST', '/api/auth/login', 400, Date.now() - start);
       return NextResponse.json(
-        { success: false, error: 'Invalid email or password' },
-        { status: 401 }
+        { success: false, error: 'Phone number or email is required' },
+        { status: 400 }
       );
     }
 

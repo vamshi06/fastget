@@ -31,7 +31,7 @@ export function AnnouncementBar() {
           className="text-white/70 hover:text-white transition-colors shrink-0"
           aria-label="Previous announcement"
         >
-          <ChevronLeft className="w-4 h-4" />
+          {/* <ChevronLeft className="w-4 h-4" /> */}
         </button>
         <span key={current} className="animate-ticker">
           {messages[current]}
@@ -41,7 +41,7 @@ export function AnnouncementBar() {
           className="text-white/70 hover:text-white transition-colors shrink-0"
           aria-label="Next announcement"
         >
-          <ChevronRight className="w-4 h-4" />
+          {/* <ChevronRight className="w-4 h-4" /> */}
         </button>
       </div>
       <button

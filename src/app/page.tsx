@@ -14,6 +14,9 @@ export default function Home() {
       {/* 4. Product-heavy feed */}
       <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
 
+        {/* Category grid — right after hero */}
+        <CategoryStrip />
+
         {/* Best Deals — all categories, show highest discount first */}
         <ProductSection
           title="Best Deals"
@@ -36,9 +39,6 @@ export default function Home() {
           category="carpentry"
           limit={8}
         />
-
-        {/* 5. Category grid — Browse all sections */}
-        <CategoryStrip />
 
         {/* Plumbing section */}
         <ProductSection
