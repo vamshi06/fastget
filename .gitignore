@@ -41,3 +41,6 @@ next-env.d.ts
 
 # gstack local state
 .gstack/
+
+# Claude local settings (may contain sensitive data)
+.claude/settings.local.json
