@@ -61,17 +61,9 @@ function SignupForm() {
   ];
 
   return (
-    <div
-      className="flex flex-col items-center justify-center gap-8 px-5 py-12"
-      style={{ backgroundColor: '#F5A623', minHeight: 'calc(100vh - 160px)' }}
-    >
-      {/* Tagline */}
-      <h2 className="text-[1.45rem] font-bold text-black text-center leading-snug px-2">
-        Building Materials At Low<br />Prices In Minutes
-      </h2>
-
+    <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-12">
       {/* Signup card */}
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl px-6 pt-6 pb-7">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-6 pt-6 pb-7">
         <h3 className="text-2xl font-bold text-brand-charcoal text-center mb-6">
           Create account
         </h3>

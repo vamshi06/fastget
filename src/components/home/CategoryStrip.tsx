@@ -23,15 +23,19 @@ function CategoryTile({ slug, name }: { slug: string; name: string }) {
       >
         {/* Placeholder shown until real image is added */}
         <div className="absolute inset-0 flex items-end justify-center pb-2 pointer-events-none">
-          <span className="text-[9px] text-neutral-400 text-center leading-tight px-1">{name}</span>
+          {/* <span className="text-[9px] text-neutral-400 text-center leading-tight px-1">{name}</span> */}
+          <span className="text-[9px] text-neutral-400 text-center leading-tight px-1"></span>
         </div>
-        {/* Drop category images into /public/categories/{slug}.png to replace */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/categories/${slug}.png`}
+          src={`/categories/${slug}.jpg`}
           alt={name}
-          className="absolute inset-0 w-full h-full object-contain p-2"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            const el = e.target as HTMLImageElement;
+            if (!el.src.endsWith('.png')) { el.src = `/categories/${slug}.png`; }
+            else { el.style.display = 'none'; }
+          }}
         />
       </div>
       <span className="text-[10px] sm:text-xs font-medium text-brand-charcoal text-center leading-tight px-0.5">
@@ -50,7 +54,7 @@ export function CategoryStrip() {
           <div className="speed-accent mt-1.5" />
         </div>
         <Link
-          href="/catalog"
+          href="/categories"
           className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1"
         >
           View All

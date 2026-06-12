@@ -1,7 +1,6 @@
 import { HeroSection } from '@/components/home/HeroSection';
 import { TrustBadges } from '@/components/home/TrustBadges';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
-import { RentalBanner } from '@/components/home/RentalBanner';
 import { ProductSection } from '@/components/home/ProductSection';
 
 export default function Home() {
@@ -64,8 +63,6 @@ export default function Home() {
           limit={8}
         />
 
-        {/* 6. Promo / rental banner */}
-        <RentalBanner />
       </div>
 
       {/* 7. Trust strip — full width at bottom */}

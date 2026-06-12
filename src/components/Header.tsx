@@ -158,7 +158,7 @@ export function Header() {
       </div>
 
       {/* ── Mobile Search Row ── */}
-      <div className="md:hidden w-full px-3 pb-2.5 pt-1 border-b border-neutral-100">
+      <div className={cn('md:hidden w-full px-3 pb-2.5 pt-1 border-b border-neutral-100', (pathname.startsWith('/my-orders') || pathname.startsWith('/account')) && 'hidden')}>
         <form onSubmit={handleSearch} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
           <input

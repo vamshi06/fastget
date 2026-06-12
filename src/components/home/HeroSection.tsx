@@ -5,21 +5,21 @@ import { useState, useEffect } from 'react';
 const slides = [
   {
     title: 'Construction Materials',
-    highlight: 'Delivered in 30–60 Min',
+    highlight: 'Delivered in 60 Min',
     description:
-      'Carpentry, Plumbing, Hardware, Electrical & more — everything your site needs, delivered same-day.',
+      'Carpentry, Plumbing, Hardware, Electrical & more everything your site needs, delivered same-day.',
   },
   {
     title: 'Keep Your Project',
     highlight: 'Moving Without Stops',
     description:
-      'Plywood, hinges, CPVC fittings, wires, bolts — urgent materials to your Mumbai site before work stops.',
+      'Plywood, hinges, CPVC fittings, wires, bolts urgent materials to your Mumbai site before work stops.',
   },
   {
     title: 'Carpentry, Plumbing,',
     highlight: 'Hardware & More',
     description:
-      'From plywood boards to CPVC fittings, electrical accessories to adhesives — your one-stop site store.',
+      'From plywood boards to CPVC fittings, electrical accessories to adhesives your one-stop site store.',
   },
 ];
 
@@ -57,7 +57,7 @@ export function HeroSection() {
         }}
       />
 
-      <div className="page-container relative z-10 py-12 md:py-16">
+      <div className="page-container relative z-10 py-7 md:py-10">
 
         {/* All slides stacked in the same grid cell — container sized to tallest */}
         <div className="grid">
