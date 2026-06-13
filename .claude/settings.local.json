@@ -56,11 +56,16 @@
       "Bash(npx next *)",
       "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\mobile\" -Depth 2 -Exclude \"node_modules\")",
       "Bash(node -e \"require\\('dotenv'\\)\")",
-      "Bash(node --env-file=.env.local scripts/fix-cloudinary-urls.mjs --dry-run)"
+      "Bash(node --env-file=.env.local scripts/fix-cloudinary-urls.mjs --dry-run)",
+      "Bash(mkdir -p \"c:/Users/Ruswin/Desktop/Elemantra/fastget/src/app/api/wishlist/[productId]\")",
+      "Bash(xargs ls -la)",
+      "Bash(rm \"c:/Users/Ruswin/Desktop/Elemantra/fastget/src/lib/sheets.ts\" && echo \"Deleted\")"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",
-      "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\products\\[productCode]"
+      "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\products\\[productCode]",
+      "c:\\Users\\Ruswin\\Desktop\\Elemantra\\fastget\\src\\app\\api\\wishlist",
+      "c:\\Users\\Ruswin\\Desktop\\Elemantra\\fastget\\src\\lib"
     ]
   }
 }

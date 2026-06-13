@@ -1,7 +1,7 @@
 // For physical Android/iOS device: use your PC's local Wi-Fi IP (e.g. 192.168.1.42).
 // For Android emulator: use 10.0.2.2 instead.
 // Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
-const DEV_URL = 'http://192.168.100.250:3000';
+const DEV_URL = 'http://192.168.101.176:3000';
 
 // TODO: set this once you deploy to Vercel — not needed until you do a production build.
 const PROD_URL = 'https://REPLACE_WITH_YOUR_VERCEL_URL.vercel.app';

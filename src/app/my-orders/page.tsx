@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
 import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -17,47 +16,100 @@ import {
   ArrowRight,
   MapPin,
   RefreshCw,
+  ClipboardList,
+  LogIn,
+  UserPlus,
+  Zap,
+  Shield,
 } from 'lucide-react';
 
+/* ─── Status helpers ────────────────────────────────────────────────────── */
+
 const statusColors: Record<OrderStatus, string> = {
-  received: 'bg-amber-100 text-amber-800 border-amber-200',
-  eta_assigned: 'bg-primary-100 text-primary-700 border-primary-200',
+  received:         'bg-amber-100 text-amber-800 border-amber-200',
+  eta_assigned:     'bg-primary-100 text-primary-700 border-primary-200',
   out_for_delivery: 'bg-neutral-100 text-brand-graphite border-neutral-200',
-  delivered: 'bg-green-100 text-green-800 border-green-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200',
+  delivered:        'bg-green-100 text-green-800 border-green-200',
+  cancelled:        'bg-red-100 text-red-800 border-red-200',
 };
 
 const statusIcons: Record<OrderStatus, React.ComponentType<{ className?: string }>> = {
-  received: Package,
-  eta_assigned: Clock,
+  received:         Package,
+  eta_assigned:     Clock,
   out_for_delivery: Truck,
-  delivered: CheckCircle,
-  cancelled: XCircle,
+  delivered:        CheckCircle,
+  cancelled:        XCircle,
 };
 
 function formatOrderDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function formatOrderTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function formatOrderTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+/* ─── Guest screen ──────────────────────────────────────────────────────── */
+
+function GuestOrders() {
+  return (
+    <div className="min-h-screen bg-brand-fog flex flex-col">
+      {/* Hero */}
+      <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
+    
+        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">My Orders</h1>
+        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
+          Log in to view your order history and track every delivery in real time.
+        </p>
+      </div>
+
+      {/* Benefits */}
+      <div className="px-4 py-6 space-y-3">
+        {[
+          { Icon: Truck,    text: 'Live delivery tracking for every order'     },
+          { Icon: Package,  text: 'Full order history, receipts & invoices'    },
+          { Icon: Zap,      text: 'Faster checkout with saved addresses'       },
+          { Icon: Shield,   text: 'Secure payments & order protection'         },
+        ].map(({ Icon, text }) => (
+          <div key={text} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-neutral-100">
+            <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Icon className="w-4.5 h-4.5 text-brand-primary" />
+            </div>
+            <span className="text-sm font-medium text-brand-charcoal">{text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* CTAs */}
+      <div className="px-4 pb-8 mt-0 space-y-3">
+        <Link
+          href={'/login?redirect=/my-orders' as any}
+          className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
+        >
+          <LogIn className="w-5 h-5" />
+          Log In
+        </Link>
+        <Link
+          href={'/signup?redirect=/my-orders' as any}
+          className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
+        >
+          <UserPlus className="w-5 h-5" />
+          Create an Account
+        </Link>
+      </div>
+    </div>
+  );
 }
+
+/* ─── Authenticated orders list ─────────────────────────────────────────── */
 
 export default function MyOrdersPage() {
   const { currentUser, isLoaded } = useUser();
-  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!currentUser) {
-      router.replace('/login?redirect=/my-orders');
-      return;
-    }
+    if (!isLoaded || !currentUser) return;
     fetchOrders();
   }, [isLoaded, currentUser]);
 
@@ -77,9 +129,11 @@ export default function MyOrdersPage() {
     }
   };
 
-  if (!isLoaded || (!currentUser && isLoaded)) {
-    return null;
-  }
+  // Not loaded yet — blank while hydrating
+  if (!isLoaded) return null;
+
+  // Guest state
+  if (!currentUser) return <GuestOrders />;
 
   return (
     <div className="min-h-screen bg-brand-fog py-8">
@@ -113,7 +167,7 @@ export default function MyOrdersPage() {
         {/* Loading skeleton */}
         {loading && (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3].map(i => (
               <div key={i} className="bg-white rounded-2xl p-5 animate-pulse">
                 <div className="flex justify-between mb-4">
                   <div className="h-4 bg-neutral-200 rounded w-32" />
@@ -150,11 +204,10 @@ export default function MyOrdersPage() {
         {/* Orders list */}
         {!loading && orders.length > 0 && (
           <div className="space-y-4">
-            {orders.map((order) => {
+            {orders.map(order => {
               const StatusIcon = statusIcons[order.status];
               return (
                 <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
-                  {/* Top bar */}
                   <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
                     <div>
                       <p className="text-xs text-brand-steel font-medium uppercase tracking-wide">
@@ -172,7 +225,6 @@ export default function MyOrdersPage() {
                     </span>
                   </div>
 
-                  {/* Items */}
                   <div className="px-5 py-4">
                     <div className="space-y-1.5 mb-4">
                       {order.items.slice(0, 3).map((item, idx) => (
@@ -193,7 +245,6 @@ export default function MyOrdersPage() {
                       )}
                     </div>
 
-                    {/* Address + total row */}
                     <div className="flex items-end justify-between pt-3 border-t border-neutral-100">
                       <div className="flex items-start gap-1.5 text-xs text-brand-slate max-w-[55%]">
                         <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-brand-steel" />
@@ -206,7 +257,6 @@ export default function MyOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Footer action */}
                   <Link
                     href={`/order/${order.statusToken}`}
                     className="flex items-center justify-between px-5 py-3 bg-brand-fog hover:bg-primary-50 border-t border-neutral-100 transition-colors group"
