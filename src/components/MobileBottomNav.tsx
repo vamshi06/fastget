@@ -12,7 +12,7 @@ const TABS = [
   { href: '/account',    label: 'Account',  Icon: User          },
 ];
 
-const HIDDEN_ROUTES = ['/login', '/signup', '/admin'];
+const HIDDEN_ROUTES = ['/admin'];
 
 export function MobileBottomNav() {
   const pathname = usePathname();

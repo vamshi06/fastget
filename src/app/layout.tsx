@@ -13,9 +13,9 @@ import { AnnouncementBar } from '@/components/AnnouncementBar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FastGet — Construction Materials Delivered Fast in Mumbai',
+  title: 'FastGet',
   description:
-    'Urgent building materials delivered to your Mumbai site in 30–60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
+    'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
   keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <LocationSplashProvider>
                 <AnnouncementBar />
                 <ConditionalHeader />
-                <main className="flex-grow pb-16 md:pb-0">
+                <main className="flex-grow flex flex-col pb-16 md:pb-0">
                   {children}
                 </main>
                 <div className="hidden md:block">

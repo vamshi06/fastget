@@ -5,7 +5,7 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const messages = [
   'Free delivery on orders above ₹10,000 — serving Andheri, Goregaon & Malad 🚀',
-  '⚡ 30–60 minute delivery on construction materials in Mumbai',
+  '⚡ 60 minute delivery on construction materials in Mumbai',
   'Carpentry · Plumbing · Hardware · Electrical & more — all in one place',
 ];
 
