@@ -54,7 +54,9 @@
       "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\" -Force)",
       "Bash(xargs grep -l \"interface Product\\\\|type Product\")",
       "Bash(npx next *)",
-      "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\mobile\" -Depth 2 -Exclude \"node_modules\")"
+      "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\mobile\" -Depth 2 -Exclude \"node_modules\")",
+      "Bash(node -e \"require\\('dotenv'\\)\")",
+      "Bash(node --env-file=.env.local scripts/fix-cloudinary-urls.mjs --dry-run)"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",
