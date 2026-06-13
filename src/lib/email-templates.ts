@@ -1,0 +1,177 @@
+/**
+ * FastGet branded email templates.
+ * Brand: primary #F5A623 (amber), charcoal #1C1C1E, slate #6B6B6E
+ */
+
+const P = '#F5A623'; // brand-primary
+const D = '#DC8A0E'; // brand-dark
+const C = '#1C1C1E'; // brand-charcoal
+const S = '#6B6B6E'; // brand-slate
+const G = '#F5F5F5'; // brand-fog (background)
+
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function wrap(body: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FastGet</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:${G};font-family:Inter,Arial,system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:${G};padding:40px 16px;">
+  <tr><td align="center">
+    <table width="100%" style="max-width:520px;" cellpadding="0" cellspacing="0" role="presentation">
+
+      <!-- Logotype -->
+      <tr><td align="center" style="padding-bottom:28px;">
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="width:44px;height:44px;background:${P};border-radius:12px;text-align:center;vertical-align:middle;">
+              <span style="font-size:22px;font-weight:900;color:#fff;line-height:44px;display:block;">F</span>
+            </td>
+            <td style="padding-left:10px;vertical-align:middle;">
+              <span style="font-size:20px;font-weight:800;color:${C};letter-spacing:-0.4px;">FastGet</span>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <!-- Card -->
+      <tr><td style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        ${body}
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td align="center" style="padding:28px 0 0;">
+        <p style="margin:0;font-size:12px;color:#9A9A9A;line-height:1.6;">
+          If you didn't create a FastGet account, you can safely ignore this email.<br>
+          &copy; ${new Date().getFullYear()} FastGet &mdash; Mumbai&apos;s fastest building materials delivery.
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function ctaButton(href: string, label: string): string {
+  return `<a href="${href}" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,${P} 0%,${D} 100%);color:#ffffff;font-size:15px;font-weight:700;border-radius:50px;text-decoration:none;letter-spacing:0.2px;">${label}</a>`;
+}
+
+function fallbackLink(href: string): string {
+  return `<p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">
+    Button not working? Copy and paste this link into your browser:<br>
+    <a href="${href}" style="color:${P};word-break:break-all;">${href}</a>
+  </p>`;
+}
+
+// ── Verify Email ──────────────────────────────────────────────────────────────
+
+export function verificationEmailTemplate(
+  name: string,
+  verifyUrl: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">✉️</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">Verify your email address</h1>
+      <p style="margin:0 0 32px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, welcome to FastGet! 🎉<br>
+        Please verify your email to activate your account and start ordering.
+      </p>
+      ${ctaButton(verifyUrl, 'Verify Email Address')}
+      ${fallbackLink(verifyUrl)}
+      <p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">This link expires in <strong>24 hours</strong>.</p>
+    </div>`;
+  return {
+    subject: 'Verify your FastGet email address',
+    html: wrap(body),
+    text: `Hi ${name},\n\nWelcome to FastGet! Please verify your email by visiting:\n\n${verifyUrl}\n\nThis link expires in 24 hours.\n\nIf you didn't create an account, ignore this email.`,
+  };
+}
+
+// ── Resend Verification ───────────────────────────────────────────────────────
+
+export function resendVerificationTemplate(
+  name: string,
+  verifyUrl: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">🔄</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">New verification link</h1>
+      <p style="margin:0 0 32px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, here is your new email verification link.<br>
+        Your previous link has been invalidated.
+      </p>
+      ${ctaButton(verifyUrl, 'Verify Email Address')}
+      ${fallbackLink(verifyUrl)}
+      <p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">This link expires in <strong>24 hours</strong>.</p>
+    </div>`;
+  return {
+    subject: 'Your new FastGet verification link',
+    html: wrap(body),
+    text: `Hi ${name},\n\nHere is your new verification link:\n\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+  };
+}
+
+// ── Password Reset ────────────────────────────────────────────────────────────
+
+export function passwordResetTemplate(
+  name: string,
+  resetUrl: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">🔐</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">Reset your password</h1>
+      <p style="margin:0 0 32px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, we received a request to reset your FastGet password.<br>
+        Click below to choose a new password.
+      </p>
+      ${ctaButton(resetUrl, 'Reset Password')}
+      ${fallbackLink(resetUrl)}
+      <p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">This link expires in <strong>1 hour</strong>. If you didn't request a reset, your password is safe — just ignore this email.</p>
+    </div>`;
+  return {
+    subject: 'Reset your FastGet password',
+    html: wrap(body),
+    text: `Hi ${name},\n\nReset your password by visiting:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore the email — your password won't change.`,
+  };
+}
+
+// ── Password Changed ──────────────────────────────────────────────────────────
+
+export function passwordChangedTemplate(
+  name: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">✅</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">Password changed</h1>
+      <p style="margin:0;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, your FastGet password has been successfully changed.<br><br>
+        If you did not make this change, please contact our support team immediately.
+      </p>
+    </div>`;
+  return {
+    subject: 'Your FastGet password has been changed',
+    html: wrap(body),
+    text: `Hi ${name},\n\nYour FastGet password has been successfully changed.\n\nIf you did not make this change, contact support immediately.`,
+  };
+}

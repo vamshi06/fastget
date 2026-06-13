@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { User, UserAddress, AddressType, UserRole } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -42,6 +43,14 @@ export interface DbUser {
   last_order_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  // Email verification fields (added in migration 009)
+  email_verified: boolean;
+  email_verified_at: Date | null;
+  verification_token: string | null;
+  verification_token_expiry: Date | null;
+  reset_password_token: string | null;
+  reset_password_token_expiry: Date | null;
+  resend_verification_at: Date | null;
 }
 
 /**
@@ -101,20 +110,19 @@ export async function createUser(
   phone: string,
   role: UserRole = 'customer',
   plainPassword?: string,
-  name?: string
+  name?: string,
+  emailVerified: boolean = true,
 ): Promise<User | null> {
   const sql = getClient();
   try {
     let passwordHash = null;
-
-    // Hash password if provided
     if (plainPassword) {
       passwordHash = await hashPassword(plainPassword);
     }
 
     const result = await sql`
-      INSERT INTO users (name, email, phone, role, password_hash)
-      VALUES (${name || 'User'}, ${email}, ${phone}, ${role}, ${passwordHash || null})
+      INSERT INTO users (name, email, phone, role, password_hash, email_verified)
+      VALUES (${name || 'User'}, ${email}, ${phone}, ${role}, ${passwordHash || null}, ${emailVerified})
       RETURNING *
     `;
 
@@ -531,7 +539,205 @@ function dbUserToUser(dbUser: DbUser): User {
       dbUser.updated_at instanceof Date
         ? dbUser.updated_at.toISOString()
         : String(dbUser.updated_at),
+    // email_verified defaults to true when column doesn't exist yet (migration safety)
+    emailVerified: dbUser.email_verified ?? true,
+    emailVerifiedAt: dbUser.email_verified_at
+      ? dbUser.email_verified_at instanceof Date
+        ? dbUser.email_verified_at.toISOString()
+        : String(dbUser.email_verified_at)
+      : undefined,
   };
+}
+
+// ============================================================================
+// Email Verification Utilities
+// ============================================================================
+
+function generateSecureToken(): string {
+  return randomBytes(32).toString('hex');
+}
+
+/**
+ * Get a raw DB user row including sensitive token fields (for auth operations only).
+ */
+async function getRawDbUser(userId: string): Promise<DbUser | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`;
+    if (result.length === 0) return null;
+    return result[0] as DbUser;
+  } catch (error) {
+    logger.error('Users', 'Failed to get raw DB user', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Store a new verification token for a user (replaces any existing token).
+ * Expiry is 24 hours from now.
+ */
+export async function setVerificationToken(
+  userId: string,
+): Promise<string | null> {
+  const sql = getClient();
+  try {
+    const token = generateSecureToken();
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await sql`
+      UPDATE users
+      SET verification_token = ${token},
+          verification_token_expiry = ${expiry.toISOString()},
+          resend_verification_at = NOW(),
+          updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+    return token;
+  } catch (error) {
+    logger.error('Users', 'Failed to set verification token', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Look up a user by their verification token and verify the token is not expired.
+ * Returns the User if valid, null otherwise.
+ */
+export async function getUserByVerificationToken(token: string): Promise<User | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT * FROM users
+      WHERE verification_token = ${token}
+        AND verification_token_expiry > NOW()
+      LIMIT 1
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to get user by verification token', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Mark a user's email as verified and clear the verification token.
+ */
+export async function verifyUserEmail(token: string): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      UPDATE users
+      SET email_verified = true,
+          email_verified_at = NOW(),
+          verification_token = NULL,
+          verification_token_expiry = NULL,
+          updated_at = NOW()
+      WHERE verification_token = ${token}
+        AND verification_token_expiry > NOW()
+      RETURNING *
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to verify user email', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Check if resend is rate-limited (1 resend per 60 seconds).
+ */
+export async function canResendVerification(userId: string): Promise<boolean> {
+  const raw = await getRawDbUser(userId);
+  if (!raw) return false;
+  if (!raw.resend_verification_at) return true;
+  const last = raw.resend_verification_at instanceof Date
+    ? raw.resend_verification_at.getTime()
+    : new Date(String(raw.resend_verification_at)).getTime();
+  return Date.now() - last > 60_000;
+}
+
+/**
+ * Get a user by email with full DB row (for auth ops that need emailVerified state).
+ */
+export async function getUserByEmailFull(email: string): Promise<User | null> {
+  return getUserByEmail(email);
+}
+
+// ============================================================================
+// Password Reset Utilities
+// ============================================================================
+
+/**
+ * Generate and store a password reset token for a user.
+ * Expiry is 1 hour from now.
+ */
+export async function setResetPasswordToken(userId: string): Promise<string | null> {
+  const sql = getClient();
+  try {
+    const token = generateSecureToken();
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await sql`
+      UPDATE users
+      SET reset_password_token = ${token},
+          reset_password_token_expiry = ${expiry.toISOString()},
+          updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+    return token;
+  } catch (error) {
+    logger.error('Users', 'Failed to set reset password token', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Look up a user by their password reset token, verifying it is not expired.
+ */
+export async function getUserByResetToken(token: string): Promise<User | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT * FROM users
+      WHERE reset_password_token = ${token}
+        AND reset_password_token_expiry > NOW()
+      LIMIT 1
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to get user by reset token', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Reset a user's password using a valid reset token.
+ * Clears the token after successful update.
+ */
+export async function resetUserPasswordByToken(
+  token: string,
+  newPassword: string,
+): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const passwordHash = await hashPassword(newPassword);
+    const result = await sql`
+      UPDATE users
+      SET password_hash = ${passwordHash},
+          reset_password_token = NULL,
+          reset_password_token_expiry = NULL,
+          updated_at = NOW()
+      WHERE reset_password_token = ${token}
+        AND reset_password_token_expiry > NOW()
+      RETURNING *
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to reset user password', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
 }
 
 /**

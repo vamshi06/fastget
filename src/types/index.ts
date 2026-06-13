@@ -140,6 +140,8 @@ export interface User {
   lastOrderAt?: string;
   createdAt: string;
   updatedAt: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string;
 }
 
 export type AddressType = 'home' | 'work' | 'other';
