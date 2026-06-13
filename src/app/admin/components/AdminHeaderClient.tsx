@@ -11,7 +11,10 @@ export function AdminHeaderClient() {
   const token = searchParams.get('token');
   const [showLogout, setShowLogout] = useState(false);
 
-  const handleLogout = () => { router.push('/'); };
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/admin/login');
+  };
 
   const isDashboard = pathname === '/admin';
   const isOrders = pathname.startsWith('/admin/orders');

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, ExternalLink, Pencil } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 
 interface CategoryOption {
   id: string;
@@ -41,6 +41,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   'tools_and_machines':    'Tools & Machines',
 };
 
+interface DeleteConfirm {
+  productCode: string;
+  name: string;
+}
+
 export default function ProductsPage() {
   const [categories, setCategories]         = useState<CategoryOption[]>([]);
   const [activeSlug, setActiveSlug]         = useState<string>('all');
@@ -48,6 +53,8 @@ export default function ProductsPage() {
   const [total, setTotal]                   = useState(0);
   const [loadingCats, setLoadingCats]       = useState(true);
   const [loadingProds, setLoadingProds]     = useState(true);
+  const [deleteConfirm, setDeleteConfirm]   = useState<DeleteConfirm | null>(null);
+  const [deleting, setDeleting]             = useState(false);
 
   // Load categories once
   useEffect(() => {
@@ -89,6 +96,28 @@ export default function ProductsPage() {
     }
     setProducts([]);
     setActiveSlug(slug);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `/admin/api/products/${encodeURIComponent(deleteConfirm.productCode)}`,
+        { method: 'DELETE' },
+      );
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Delete failed');
+      setProducts((prev) =>
+        prev.filter((p) => (p.productCode ?? p.id) !== deleteConfirm.productCode),
+      );
+      setTotal((prev) => Math.max(0, prev - 1));
+      setDeleteConfirm(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete product');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -263,6 +292,18 @@ export default function ProductsPage() {
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </Link>
+                      <button
+                        onClick={() =>
+                          setDeleteConfirm({
+                            productCode: product.productCode ?? product.id,
+                            name: product.name,
+                          })
+                        }
+                        className="p-1.5 rounded-lg text-brand-steel hover:text-red-600 hover:bg-red-50 inline-flex transition-all"
+                        title="Delete product"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -274,6 +315,45 @@ export default function ProductsPage() {
           <div className="px-4 py-3 border-t border-neutral-100 bg-brand-fog text-xs text-brand-steel">
             Showing {products.length} of {total} products
             {activeSlug !== 'all' && ` in ${CATEGORY_LABELS[activeSlug] ?? activeSlug}`}
+          </div>
+        </div>
+      )}
+      {/* ── Delete confirmation modal ──────────────────────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !deleting && setDeleteConfirm(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-brand-charcoal">Delete product?</h2>
+                <p className="text-sm text-brand-slate mt-0.5">
+                  <span className="font-semibold text-brand-charcoal">{deleteConfirm.name}</span>
+                  {' '}will be permanently removed from the catalog, inventory, and all related data.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-brand-charcoal hover:bg-brand-fog transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirmed}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
 const inputCls =
@@ -22,12 +22,8 @@ interface FormData {
   stockQuantity: string;
 }
 
-export default function EditProductPage({
-  params,
-}: {
-  params: { productCode: string };
-}) {
-  const { productCode } = params;
+export default function EditProductPage() {
+  const { productCode } = useParams<{ productCode: string }>();
   const router = useRouter();
 
   const [formData, setFormData]   = useState<FormData>({

@@ -352,6 +352,10 @@ export interface ProductDetail extends Product {
 export async function getProductWithVariants(identifier: string): Promise<ProductDetail | null> {
   const sql = getUnpooledClient();
   try {
+    // products_catalog_view holds the authoritative image_url from the
+    // category-specific tables (background-removed Cloudinary URLs).
+    // The products table image_url can be stale or absent, so we prefer
+    // the catalog view's value and fall back to products.image_url.
     const PRODUCT_SELECT = `
       SELECT
         p.id                           AS db_id,
@@ -360,12 +364,14 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
         COALESCE(p.brand,'')           AS brand,
         COALESCE(p.description,'')     AS description,
         p.price                        AS base_price_paise,
-        COALESCE(p.image_url,'')       AS image_url,
+        COALESCE(cv.image_url, p.image_url, '') AS image_url,
         COALESCE(p.uom,'')             AS product_uom,
         COALESCE(c.slug,'')            AS category_slug,
         COALESCE(c.name,'')            AS category_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN products_catalog_view cv
+        ON cv.product_code = COALESCE(p.product_code, p.id::text)
     `;
 
     // Try product_code first, then UUID, so both URL formats work
@@ -927,11 +933,18 @@ export interface RawProductRow {
  */
 export async function getProductRawRow(productCode: string): Promise<RawProductRow | null> {
   const sqlClient = getUnpooledClient();
+  // Query category tables directly (not products_catalog_view) so admin can
+  // load and edit inactive/discontinued products too.
+  const cols = `product_code, name, brand, description, price, mrp_price, moq, uom,
+                size, colour, image_url, status, category_slug, variant_id, products_id`;
+  const sub = (tbl: string) =>
+    `SELECT ${cols}, '${tbl}' AS source_table FROM ${tbl} WHERE product_code = $1`;
+  const query = [
+    'carpentry', 'paints_and_polish', 'plumbing', 'civil_materials',
+    'electrical', 'flooring_and_ceilings', 'glass_and_aluminium', 'tools_and_machines',
+  ].map(sub).join('\nUNION ALL\n') + '\nLIMIT 1';
   try {
-    const result = await sqlClient.query(
-      `SELECT * FROM products_catalog_view WHERE product_code = $1 LIMIT 1`,
-      [productCode],
-    ) as any[];
+    const result = await sqlClient.query(query, [productCode]) as any[];
     return result.length > 0 ? (result[0] as RawProductRow) : null;
   } catch (error) {
     logger.error('Products', 'getProductRawRow failed', {
@@ -1035,6 +1048,41 @@ export async function updateNormalisedProduct(
     return result.length > 0;
   } catch (error) {
     logger.error('Products', 'updateNormalisedProduct failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Hard-delete a product and all associated data:
+ * inventory row → product_variants row → category table row → products row.
+ */
+export async function deleteProductFromCategoryTable(
+  tableName: string,
+  productCode: string,
+  variantId: string | null,
+  productsId: string | null,
+): Promise<boolean> {
+  if (!VALID_CATEGORY_TABLES.has(tableName)) {
+    logger.warn('Products', `deleteProductFromCategoryTable: invalid table "${tableName}"`);
+    return false;
+  }
+  const sqlClient = getUnpooledClient();
+  try {
+    if (variantId) {
+      await sqlClient.query('DELETE FROM inventory WHERE variant_id = $1', [variantId]);
+    }
+    await sqlClient.query(`DELETE FROM ${tableName} WHERE product_code = $1`, [productCode]);
+    if (variantId) {
+      await sqlClient.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
+    }
+    if (productsId) {
+      await sqlClient.query('DELETE FROM products WHERE id = $1', [productsId]);
+    }
+    return true;
+  } catch (error) {
+    logger.error('Products', `deleteProductFromCategoryTable "${tableName}" failed`, {
       error: error instanceof Error ? error.message : String(error),
     });
     return false;

@@ -5,6 +5,7 @@ import {
   updateNormalisedProduct,
   updateVariantFields,
   upsertInventoryStock,
+  deleteProductFromCategoryTable,
 } from '@/lib/products';
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -22,12 +23,18 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     if (!row) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
-    // Fetch current stock from product_variants
+    // Fetch current stock from inventory (product_variants.stock_quantity doesn't exist in prod)
     let stockQuantity = 0;
     if (row.variant_id) {
       const sql = getUnpooledConnection();
-      const pvRows = await sql`SELECT stock_quantity FROM product_variants WHERE id = ${row.variant_id}`;
-      stockQuantity = (pvRows[0] as any)?.stock_quantity ?? 0;
+      const invRows = await sql`
+        SELECT COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
+        FROM product_variants pv
+        LEFT JOIN inventory inv ON inv.variant_id = pv.id
+        WHERE pv.id = ${row.variant_id}
+        LIMIT 1
+      `;
+      stockQuantity = Number((invRows[0] as any)?.stock_quantity ?? 0);
     }
 
     // Convert paise → rupees for the form
@@ -120,12 +127,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         await updateVariantFields(row.variant_id, varUpdates);
       }
 
-      // Update stock in both product_variants and inventory tables
+      // Update stock in inventory table (product_variants.stock_quantity doesn't exist in prod)
       if (body.stockQuantity !== undefined) {
         const qty = Math.max(0, Math.round(Number(body.stockQuantity)));
-        await updateVariantFields(row.variant_id, {});          // no-op if nothing else changed
-        const sql = getUnpooledConnection();
-        await sql`UPDATE product_variants SET stock_quantity = ${qty} WHERE id = ${row.variant_id}`;
         await upsertInventoryStock(row.variant_id, qty);
       }
     }
@@ -134,6 +138,38 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ success: true, productCode });
   } catch (error) {
     logger.error('API', `PATCH /admin/api/products/${productCode} failed`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// ── DELETE /admin/api/products/[productCode] ──────────────────────────────────
+// Hard-deletes the product from its category table, product_variants, inventory,
+// and (if linked) the normalised products table.
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const { productCode } = await ctx.params;
+  try {
+    const row = await getProductRawRow(productCode);
+    if (!row) {
+      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+    }
+
+    const ok = await deleteProductFromCategoryTable(
+      row.source_table,
+      productCode,
+      row.variant_id ?? null,
+      row.products_id ?? null,
+    );
+
+    if (!ok) {
+      return NextResponse.json({ success: false, error: 'Failed to delete product' }, { status: 500 });
+    }
+
+    logger.info('API', `DELETE /admin/api/products/${productCode} — deleted`);
+    return NextResponse.json({ success: true, productCode });
+  } catch (error) {
+    logger.error('API', `DELETE /admin/api/products/${productCode} failed`, {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

@@ -56,7 +56,9 @@
       "Bash(npx next *)",
       "Bash(Get-ChildItem -Path \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\mobile\" -Depth 2 -Exclude \"node_modules\")",
       "Bash(curl -s \"http://localhost:3000/api/products?category=civil-materials&q=cement&limit=1\")",
-      "PowerShell(Rename-Item \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\public\\\\categories\\\\flooring-ceilings.png\" \"flooring-ceilings.jpg\")"
+      "PowerShell(Rename-Item \"c:\\\\AK\\\\SPIT\\\\Internship\\\\Elemantra\\\\FastGet\\\\FastGet Vamshi\\\\fastget\\\\public\\\\categories\\\\flooring-ceilings.png\" \"flooring-ceilings.jpg\")",
+      "Bash(openssl rand *)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",

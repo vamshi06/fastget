@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
+import { createSessionToken, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/session';
 import type { User } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -59,17 +60,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info('Auth', 'User logged in', { userId: user.id });
+    logger.info('Auth', 'User logged in', { userId: user.id, role: user.role });
     logger.api('POST', '/api/auth/login', 200, Date.now() - start);
 
-    // Return user data without password hash
-    return NextResponse.json(
+    const sessionToken = await createSessionToken({ userId: user.id, role: user.role });
+
+    const response = NextResponse.json(
       {
         success: true,
         id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone,
+        role: user.role,
         message: 'Login successful',
       },
       {
@@ -81,6 +84,9 @@ export async function POST(request: NextRequest) {
         },
       }
     );
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, SESSION_COOKIE_OPTIONS);
+    return response;
   } catch (error) {
     logger.error('API', 'POST /api/auth/login — unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('POST', '/api/auth/login', 500, Date.now() - start);
