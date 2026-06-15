@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Product } from '@/types';
 import { useCart } from './CartContext';
 import { useToast } from './ToastContext';
+import { useWishlist } from './WishlistContext';
 import { formatCurrency } from '@/lib/utils';
-import { Plus, Minus, Package, Loader2, Tag } from 'lucide-react';
+import { Plus, Minus, Package, Loader2, Tag, Heart } from 'lucide-react';
 import Link from 'next/link';
 
 interface ProductCardProps {
@@ -16,7 +17,21 @@ interface ProductCardProps {
 export function ProductCard({ product, compact = false }: ProductCardProps) {
   const { state, addItem, updateQuantity, removeItem } = useCart();
   const { showToast } = useToast();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const [isAdding, setIsAdding] = useState(false);
+
+  const wishlisted = isInWishlist(product.id);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (wishlisted) {
+      await removeFromWishlist(product.id);
+      showToast(`Removed from wishlist`, 'success');
+    } else {
+      await addToWishlist(product);
+      showToast(`Saved to wishlist`, 'success', { label: 'View Wishlist', href: '/wishlist' });
+    }
+  };
 
   const cartItem = state.items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
@@ -80,8 +95,17 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               </div>
             )}
 
+            {/* Wishlist heart — compact card */}
+            <button
+              onClick={handleWishlistToggle}
+              aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+              className="absolute top-1.5 left-1.5 z-10 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
+            >
+              <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
+            </button>
+
             {discount > 0 && (
-              <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+              <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
                 {discount}% OFF
               </span>
             )}
@@ -154,6 +178,14 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               {discount}% off
             </span>
           )}
+          {/* Wishlist heart — full card */}
+          <button
+            onClick={handleWishlistToggle}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
+          </button>
           {product.stockStatus === 'out' && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
               <span className="text-xs font-semibold text-neutral-500 bg-white px-2.5 py-1 rounded-full border border-neutral-200">Out of Stock</span>

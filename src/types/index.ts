@@ -195,9 +195,10 @@ export interface ProductVariant {
 // Phase 4: User Preferences
 // ============================================================================
 
-export interface Wishlist {
+export interface WishlistItem {
   id: string;
   userId: string;
-  variantId: string;
+  productId: string;
+  productData: Product;
   addedAt: string;
 }

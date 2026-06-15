@@ -34,9 +34,7 @@ export function MobileBottomNav() {
                 isActive ? 'text-brand-primary' : 'text-brand-steel'
               )}
             >
-              <Icon
-                className={cn('w-5 h-5', isActive && 'stroke-[2.5]')}
-              />
+              <Icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
               <span
                 className={cn(
                   'text-[10px]',

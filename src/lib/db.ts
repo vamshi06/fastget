@@ -313,6 +313,8 @@ export async function initializeProductVariantsTable(): Promise<void> {
 
 /**
  * Initialize wishlists table for user favorites.
+ * Stores product_id (TEXT) so any product from any category table can be saved,
+ * and product_data (JSONB) snapshot so the wishlist page needs no extra joins.
  */
 export async function initializeWishlistsTable(): Promise<void> {
   const sql = getClient();
@@ -321,16 +323,24 @@ export async function initializeWishlistsTable(): Promise<void> {
       CREATE TABLE IF NOT EXISTS wishlists (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID NOT NULL,
-        variant_id UUID NOT NULL,
+        product_id TEXT NOT NULL,
+        product_data JSONB,
         added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT fk_wishlists_user_id
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        CONSTRAINT fk_wishlists_variant_id
-          FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
-        CONSTRAINT uk_wishlists_user_variant
-          UNIQUE (user_id, variant_id)
+        CONSTRAINT uk_wishlists_user_product
+          UNIQUE (user_id, product_id)
       )
     `;
+
+    // Migration safety: add columns and constraint for DBs using the old schema
+    await sql`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS product_id TEXT`;
+    await sql`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS product_data JSONB`;
+    try {
+      await sql`ALTER TABLE wishlists ADD CONSTRAINT uk_wishlists_user_product UNIQUE (user_id, product_id)`;
+    } catch {
+      // constraint already exists — safe to ignore
+    }
 
     await sql`CREATE INDEX IF NOT EXISTS idx_wishlists_user_id ON wishlists(user_id)`;
 
@@ -338,6 +348,65 @@ export async function initializeWishlistsTable(): Promise<void> {
   } catch (error) {
     logger.error('DB', 'Failed to initialize wishlists table', { error: error instanceof Error ? error.message : String(error) });
     throw error;
+  }
+}
+
+/**
+ * Get all wishlist items for a user, returning the stored product snapshots.
+ */
+export async function getWishlistByUserId(userId: string): Promise<object[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT product_data FROM wishlists
+      WHERE user_id = ${userId} AND product_id IS NOT NULL
+      ORDER BY added_at DESC
+    `;
+    return result.map(row => row.product_data as object).filter(Boolean);
+  } catch (error) {
+    logger.error('DB', 'Failed to get wishlist', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Add a product to a user's wishlist.
+ * Silently ignores duplicates (ON CONFLICT DO NOTHING).
+ */
+export async function addToWishlist(
+  userId: string,
+  productId: string,
+  productData: object
+): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql`
+      INSERT INTO wishlists (user_id, product_id, product_data)
+      VALUES (${userId}, ${productId}, ${JSON.stringify(productData)})
+      ON CONFLICT (user_id, product_id) DO UPDATE
+        SET product_data = ${JSON.stringify(productData)}, added_at = CURRENT_TIMESTAMP
+    `;
+    return true;
+  } catch (error) {
+    logger.error('DB', 'Failed to add to wishlist', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/**
+ * Remove a product from a user's wishlist.
+ */
+export async function removeFromWishlist(userId: string, productId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql`
+      DELETE FROM wishlists
+      WHERE user_id = ${userId} AND product_id = ${productId}
+    `;
+    return true;
+  } catch (error) {
+    logger.error('DB', 'Failed to remove from wishlist', { error: error instanceof Error ? error.message : String(error) });
+    return false;
   }
 }
 
