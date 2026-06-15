@@ -42,7 +42,7 @@ export function Footer() {
             <ul className="space-y-3">
               {[
                 { href: '/catalog', label: 'Browse Products' },
-                { href: '/order',   label: 'Track Your Order' },
+                { href: '/my-orders', label: 'Order History' },
                 { href: '/cart',    label: 'Shopping Cart' },
               ].map(({ href, label }) => (
                 <li key={href}>

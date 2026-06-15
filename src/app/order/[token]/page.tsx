@@ -162,7 +162,7 @@ export default function OrderStatusPage() {
           <p className="text-brand-slate mb-8">
             {error || "We could not find an order with this token."}
           </p>
-          <Link href="/order" className="btn-primary inline-flex px-6 py-3">
+          <Link href="/my-orders" className="btn-primary inline-flex px-6 py-3">
             <ChevronLeft className="w-5 h-5" />
             Go Back
           </Link>

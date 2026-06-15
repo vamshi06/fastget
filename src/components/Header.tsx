@@ -490,16 +490,16 @@ export function Header() {
             </Link>
           ))}
           <Link
-            href="/order"
+            href="/my-orders"
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
               "hover:bg-primary-50 hover:text-brand-primary",
-              pathname === "/order" || pathname.startsWith("/order/")
+              pathname === "/my-orders" || pathname.startsWith("/order/")
                 ? "bg-primary-50 text-brand-primary font-semibold"
                 : "text-brand-graphite font-medium",
             )}
           >
-            Track Order
+            Order History
           </Link>
         </nav>
       </div>
