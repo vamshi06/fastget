@@ -462,18 +462,7 @@ export function Header() {
 
         {/* ── Category Nav Row (desktop) ── */}
         <nav className="hidden md:flex items-center gap-0.5 py-1 border-t border-neutral-100 overflow-x-auto hide-scrollbar">
-          <Link
-            href="/"
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
-              "hover:bg-primary-50 hover:text-brand-primary",
-              pathname === "/"
-                ? "bg-primary-50 text-brand-primary font-semibold"
-                : "text-brand-graphite font-medium",
-            )}
-          >
-            Home
-          </Link>
+          
           {NAV_CATEGORIES.map((cat) => (
             <Link
               key={cat.id}
@@ -489,18 +478,6 @@ export function Header() {
               {cat.name}
             </Link>
           ))}
-          <Link
-            href="/my-orders"
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
-              "hover:bg-primary-50 hover:text-brand-primary",
-              pathname === "/my-orders" || pathname.startsWith("/order/")
-                ? "bg-primary-50 text-brand-primary font-semibold"
-                : "text-brand-graphite font-medium",
-            )}
-          >
-            Order History
-          </Link>
         </nav>
       </div>
     </header>
