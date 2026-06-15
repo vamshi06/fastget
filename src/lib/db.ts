@@ -201,6 +201,8 @@ export async function initializeUserAddressesTable(): Promise<void> {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_user_addresses_is_primary ON user_addresses(user_id, is_primary)`;
+    // Enforce at DB level: at most one primary address per user
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_addresses_one_primary ON user_addresses(user_id) WHERE is_primary = true`;
 
     logger.info('DB', 'User addresses table initialized successfully');
   } catch (error) {
