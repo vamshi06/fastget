@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react';
 
 type State = 'loading' | 'success' | 'error' | 'no-token';
 
+const REDIRECT_DELAY_MS = 3000;
+
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get('token');
   const [state, setState] = useState<State>(token ? 'loading' : 'no-token');
   const [errorMsg, setErrorMsg] = useState('');
+  const [countdown, setCountdown] = useState(REDIRECT_DELAY_MS / 1000);
 
   useEffect(() => {
     if (!token) return;
@@ -36,6 +40,21 @@ function VerifyEmailContent() {
       });
   }, [token]);
 
+  useEffect(() => {
+    if (state !== 'success') return;
+
+    const timer = setTimeout(() => router.push('/login'), REDIRECT_DELAY_MS);
+
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { clearInterval(interval); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+
+    return () => { clearTimeout(timer); clearInterval(interval); };
+  }, [state, router]);
+
   return (
     <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10 text-center">
@@ -53,7 +72,7 @@ function VerifyEmailContent() {
             <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-brand-charcoal">Email verified!</h2>
             <p className="mt-2 text-sm text-brand-slate">
-              Your email has been verified successfully. You can now log in to your account.
+              Your email has been verified successfully. Redirecting to login in {countdown}s…
             </p>
             <Link
               href="/login"
