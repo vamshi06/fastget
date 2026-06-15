@@ -398,39 +398,10 @@ export async function updateUserAddress(
     landmark?: string;
     city?: string;
     phone?: string;
-    isPrimary?: boolean;
   }
 ): Promise<UserAddress | null> {
   const sql = getClient();
   try {
-    // Build dynamic update query
-    const setClauses = [];
-    const params: any[] = [];
-
-    if (updates.type) {
-      setClauses.push(`type = $${params.length + 1}`);
-      params.push(updates.type);
-    }
-    if (updates.street) {
-      setClauses.push(`street = $${params.length + 1}`);
-      params.push(updates.street);
-    }
-    if (updates.landmark !== undefined) {
-      setClauses.push(`landmark = $${params.length + 1}`);
-      params.push(updates.landmark || null);
-    }
-    if (updates.city) {
-      setClauses.push(`city = $${params.length + 1}`);
-      params.push(updates.city);
-    }
-    if (updates.phone) {
-      setClauses.push(`phone = $${params.length + 1}`);
-      params.push(updates.phone);
-    }
-
-    if (setClauses.length === 0) return null;
-
-    // Using neon sql template, we can't use dynamic params easily, so let's use a simpler approach
     const result = await sql`
       UPDATE user_addresses
       SET 
@@ -737,6 +708,32 @@ export async function resetUserPasswordByToken(
   } catch (error) {
     logger.error('Users', 'Failed to reset user password', { error: error instanceof Error ? error.message : String(error) });
     return null;
+  }
+}
+
+/**
+ * Set one address as primary for a user (unsets all others).
+ */
+export async function setPrimaryAddress(userId: string, addressId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql`UPDATE user_addresses SET is_primary = false WHERE user_id = ${userId}`;
+    const result = await sql`
+      UPDATE user_addresses
+      SET is_primary = true
+      WHERE id = ${addressId} AND user_id = ${userId}
+      RETURNING id
+    `;
+    if (result.length === 0) return false;
+    await sql`
+      UPDATE users
+      SET preferred_address_id = ${addressId}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+    `;
+    return true;
+  } catch (error) {
+    logger.error('Users', 'Failed to set primary address', { error: error instanceof Error ? error.message : String(error) });
+    return false;
   }
 }
 
