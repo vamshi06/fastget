@@ -390,39 +390,10 @@ export async function updateUserAddress(
     landmark?: string;
     city?: string;
     phone?: string;
-    isPrimary?: boolean;
   }
 ): Promise<UserAddress | null> {
   const sql = getClient();
   try {
-    // Build dynamic update query
-    const setClauses = [];
-    const params: any[] = [];
-
-    if (updates.type) {
-      setClauses.push(`type = $${params.length + 1}`);
-      params.push(updates.type);
-    }
-    if (updates.street) {
-      setClauses.push(`street = $${params.length + 1}`);
-      params.push(updates.street);
-    }
-    if (updates.landmark !== undefined) {
-      setClauses.push(`landmark = $${params.length + 1}`);
-      params.push(updates.landmark || null);
-    }
-    if (updates.city) {
-      setClauses.push(`city = $${params.length + 1}`);
-      params.push(updates.city);
-    }
-    if (updates.phone) {
-      setClauses.push(`phone = $${params.length + 1}`);
-      params.push(updates.phone);
-    }
-
-    if (setClauses.length === 0) return null;
-
-    // Using neon sql template, we can't use dynamic params easily, so let's use a simpler approach
     const result = await sql`
       UPDATE user_addresses
       SET 

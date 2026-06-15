@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
+import { FloatingInput } from '@/components/FloatingInput';
 import { UserAddress, AddressType } from '@/types';
 import {
   MapPin,
@@ -153,59 +154,39 @@ function AddressForm({
       </div>
 
       {/* Street */}
-      <div>
-        <label className="text-xs font-semibold text-brand-slate uppercase tracking-wide mb-1 block">
-          Street Address <span className="text-red-500">*</span>
-        </label>
-        <input
-          value={form.street}
-          onChange={(e) => set('street', e.target.value)}
-          placeholder="Building, street, area"
-          required
-          className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary transition-colors"
-        />
-      </div>
+      <FloatingInput
+        label="Street Address *"
+        name="street"
+        value={form.street}
+        onChange={(e) => set('street', e.target.value)}
+        required
+      />
 
       {/* Landmark */}
-      <div>
-        <label className="text-xs font-semibold text-brand-slate uppercase tracking-wide mb-1 block">
-          Landmark <span className="text-brand-steel font-normal">(optional)</span>
-        </label>
-        <input
-          value={form.landmark}
-          onChange={(e) => set('landmark', e.target.value)}
-          placeholder="Near temple, opposite school…"
-          className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary transition-colors"
-        />
-      </div>
+      <FloatingInput
+        label="Landmark (optional)"
+        name="landmark"
+        value={form.landmark}
+        onChange={(e) => set('landmark', e.target.value)}
+      />
 
       {/* City + Phone */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-semibold text-brand-slate uppercase tracking-wide mb-1 block">
-            City <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.city}
-            onChange={(e) => set('city', e.target.value)}
-            placeholder="City"
-            required
-            className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary transition-colors"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-brand-slate uppercase tracking-wide mb-1 block">
-            Phone <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.phone}
-            onChange={(e) => set('phone', e.target.value)}
-            placeholder="10-digit number"
-            required
-            maxLength={10}
-            className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary transition-colors"
-          />
-        </div>
+        <FloatingInput
+          label="City *"
+          name="city"
+          value={form.city}
+          onChange={(e) => set('city', e.target.value)}
+          required
+        />
+        <FloatingInput
+          label="Phone *"
+          name="phone"
+          value={form.phone}
+          onChange={(e) => set('phone', e.target.value)}
+          required
+          maxLength={10}
+        />
       </div>
 
       {/* Set as primary */}
