@@ -789,4 +789,59 @@ export async function getOrdersByUserId(userId: string): Promise<Order[]> {
   }
 }
 
+/**
+ * Cancel an order by its public statusToken (customer-facing).
+ * Only allowed from 'received' or 'eta_assigned' — not once out for delivery.
+ * Uses optimistic locking (WHERE status = currentStatus) to prevent race conditions.
+ */
+export async function cancelOrderByStatusToken(
+  statusToken: string
+): Promise<{ cancelled: boolean; reason?: string }> {
+  const sql = getUnpooledClient();
+  try {
+    const rows = await sql`
+      SELECT id, status FROM orders
+      WHERE LOWER(status_token) = LOWER(${statusToken})
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+      return { cancelled: false, reason: 'Order not found' };
+    }
+
+    const row = rows[0] as { id: string; status: OrderStatus };
+    const cancellableStatuses: OrderStatus[] = ['received', 'eta_assigned'];
+
+    if (row.status === 'cancelled') {
+      return { cancelled: false, reason: 'Order is already cancelled' };
+    }
+    if (row.status === 'delivered') {
+      return { cancelled: false, reason: 'Delivered orders cannot be cancelled' };
+    }
+    if (!cancellableStatuses.includes(row.status)) {
+      return { cancelled: false, reason: 'Order cannot be cancelled once it is out for delivery' };
+    }
+
+    const result = await sql`
+      UPDATE orders
+      SET status = 'cancelled'
+      WHERE LOWER(status_token) = LOWER(${statusToken})
+        AND status = ${row.status}
+      RETURNING id
+    `;
+
+    if (result.length === 0) {
+      return { cancelled: false, reason: 'Order status changed — please refresh and try again' };
+    }
+
+    logger.info('DB', 'Order cancelled by customer', { statusToken });
+    return { cancelled: true };
+  } catch (error) {
+    logger.error('DB', 'Failed to cancel order by status token', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { cancelled: false, reason: 'Database error' };
+  }
+}
+
 // sql client helpers are accessed via getUnpooledConnection() or the internal getClient()/getUnpooledClient()

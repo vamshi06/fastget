@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCart } from "@/components/CartContext";
+import { useToast } from "@/components/ToastContext";
 import Link from "next/link";
 import {
   Order,
@@ -48,8 +49,10 @@ const statusColors: Record<OrderStatus, string> = {
 
 export default function OrderStatusPage() {
   const params = useParams();
+  const router = useRouter();
   const token = (params.token as string).toLowerCase();
   const { clearCart } = useCart();
+  const { showToast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,9 @@ export default function OrderStatusPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -108,6 +114,29 @@ export default function OrderStatusPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleCancelOrder = async () => {
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/orders/${token}/cancel`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setCancelError(data.error || 'Failed to cancel order');
+        return;
+      }
+      setShowCancelModal(false);
+      showToast('Your order has been cancelled successfully.', 'success');
+      router.push('/my-orders');
+    } catch {
+      setCancelError('Network error — please try again');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const isCancellable =
+    order?.status === 'received' || order?.status === 'eta_assigned';
 
   if (loading) {
     return (
@@ -362,7 +391,7 @@ export default function OrderStatusPage() {
           {/* Right Column - Payment & Actions */}
           <div className="space-y-6">
             {/* Payment Summary */}
-            <div className="card p-6 sticky top-20">
+            <div className="card p-6 top-20">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">
                 Payment Details
               </h2>
@@ -413,6 +442,15 @@ export default function OrderStatusPage() {
                   <Download className="w-4 h-4" />
                   Print Receipt
                 </button>
+                {isCancellable && (
+                  <button
+                    onClick={() => { setCancelError(null); setShowCancelModal(true); }}
+                    className="w-full py-2.5 text-sm font-semibold flex items-center justify-center gap-2 rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancel Order
+                  </button>
+                )}
               </div>
             </div>
 
@@ -433,6 +471,66 @@ export default function OrderStatusPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      {showCancelModal && order && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <XCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <h2 className="text-lg font-bold text-brand-charcoal">Cancel this order?</h2>
+            </div>
+
+            <p className="text-brand-slate text-sm mb-3">
+              Are you sure you want to cancel order{" "}
+              <span className="font-semibold text-brand-charcoal">#{order.statusToken.toUpperCase()}</span>?
+              This action cannot be undone.
+            </p>
+
+            {order.paymentMethod === 'razorpay' && order.paymentStatus === 'captured' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
+                <p className="text-yellow-800 text-sm font-medium">Refund Notice</p>
+                <p className="text-yellow-700 text-sm mt-0.5">
+                  Your online payment of {formatCurrency(order.total)} will be refunded to your original payment
+                  method within 5–7 business days.
+                </p>
+              </div>
+            )}
+
+            {cancelError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                <p className="text-red-700 text-sm">{cancelError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={cancelling}
+                className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {cancelling ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  'Yes, Cancel Order'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

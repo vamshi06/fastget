@@ -741,6 +741,32 @@ export async function resetUserPasswordByToken(
 }
 
 /**
+ * Set one address as primary for a user (unsets all others).
+ */
+export async function setPrimaryAddress(userId: string, addressId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql`UPDATE user_addresses SET is_primary = false WHERE user_id = ${userId}`;
+    const result = await sql`
+      UPDATE user_addresses
+      SET is_primary = true
+      WHERE id = ${addressId} AND user_id = ${userId}
+      RETURNING id
+    `;
+    if (result.length === 0) return false;
+    await sql`
+      UPDATE users
+      SET preferred_address_id = ${addressId}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+    `;
+    return true;
+  } catch (error) {
+    logger.error('Users', 'Failed to set primary address', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/**
  * Convert database address row to UserAddress interface.
  */
 function dbAddressToUserAddress(dbAddr: DbUserAddress): UserAddress {

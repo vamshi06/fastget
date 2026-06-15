@@ -7,8 +7,16 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, CreditCard, Banknote } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, CreditCard, Banknote, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine } from 'lucide-react';
 import Link from 'next/link';
+import { UserAddress, AddressType } from '@/types';
+
+const ADDRESS_TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: string }>> = {
+  home: Home,
+  work: Briefcase,
+  other: MoreHorizontal,
+};
+const ADDRESS_TYPE_LABELS: Record<AddressType, string> = { home: 'Home', work: 'Work', other: 'Other' };
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -30,6 +38,10 @@ export default function CheckoutPage() {
 
   const [useAccountName, setUseAccountName] = useState(false);
   const [useAccountPhone, setUseAccountPhone] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -55,6 +67,34 @@ export default function CheckoutPage() {
       customerPhone: checked && currentUser?.phone ? currentUser.phone : '',
     }));
   };
+
+  const applyAddress = (addr: UserAddress) => {
+    setSelectedAddress(addr);
+    setShowAddressPicker(false);
+    setManualEntry(false);
+    setFormData(prev => ({
+      ...prev,
+      siteAddress: addr.landmark ? `${addr.street}, ${addr.city}` : `${addr.street}, ${addr.city}`,
+      landmark: addr.landmark ?? '',
+      customerPhone: prev.customerPhone || addr.phone,
+    }));
+  };
+
+  // Fetch saved addresses and auto-fill from primary on mount
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch(`/api/addresses?userId=${currentUser.id}`)
+      .then(r => r.json())
+      .then(data => {
+        const addrs: UserAddress[] = data.addresses ?? [];
+        setSavedAddresses(addrs);
+        const primary = addrs.find(a => a.isPrimary) ?? addrs[0];
+        if (primary) applyAddress(primary);
+      })
+      .catch(() => { });
+    // applyAddress is stable — no deps needed beyond currentUser
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   if (isLoaded && !currentUser) {
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
@@ -359,32 +399,110 @@ export default function CheckoutPage() {
                   <MapPin className="w-5 h-5 text-brand-primary" />
                   Delivery Address
                 </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                      Site Address *
-                    </label>
-                    <textarea
-                      value={formData.siteAddress}
-                      onChange={(e) => setFormData({ ...formData, siteAddress: e.target.value })}
-                      rows={3}
-                      className={`${inputCls} resize-none`}
-                      placeholder="Building name, street address, area, landmark"
-                    />
+
+                {/* Selected address card */}
+                {selectedAddress && !manualEntry ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-4 bg-primary-50 border border-brand-primary rounded-xl">
+                      <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                        {(() => { const Icon = ADDRESS_TYPE_ICONS[selectedAddress.type]; return <Icon className="w-4 h-4 text-brand-primary" />; })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-brand-primary uppercase tracking-wide mb-0.5">
+                          {ADDRESS_TYPE_LABELS[selectedAddress.type]}
+                        </p>
+                        <p className="text-sm font-medium text-brand-charcoal leading-snug">{selectedAddress.street}</p>
+                        {selectedAddress.landmark && (
+                          <p className="text-xs text-brand-slate mt-0.5">Near {selectedAddress.landmark}</p>
+                        )}
+                        <p className="text-sm text-brand-slate">{selectedAddress.city}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddressPicker(p => !p)}
+                        className="flex items-center gap-1 text-xs font-semibold text-brand-primary hover:text-brand-dark transition-colors flex-shrink-0 mt-0.5"
+                      >
+                        Change
+                        {showAddressPicker ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {/* Address picker */}
+                    {showAddressPicker && (
+                      <div className="border border-neutral-200 rounded-xl overflow-hidden divide-y divide-neutral-100">
+                        {savedAddresses.map(addr => {
+                          const Icon = ADDRESS_TYPE_ICONS[addr.type];
+                          const isActive = addr.id === selectedAddress.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              onClick={() => applyAddress(addr)}
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isActive ? 'bg-primary-50' : 'bg-white hover:bg-neutral-50'}`}
+                            >
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-brand-primary' : 'bg-neutral-100'}`}>
+                                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-slate'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-brand-charcoal">{ADDRESS_TYPE_LABELS[addr.type]}{addr.isPrimary && <span className="ml-1.5 text-brand-primary">· Primary</span>}</p>
+                                <p className="text-xs text-brand-slate truncate">{addr.street}, {addr.city}</p>
+                              </div>
+                              {isActive && <ChevronRight className="w-4 h-4 text-brand-primary flex-shrink-0" />}
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => { setManualEntry(true); setShowAddressPicker(false); setSelectedAddress(null); setFormData(p => ({ ...p, siteAddress: '', landmark: '' })); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left bg-white hover:bg-neutral-50 transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                            <PenLine className="w-3.5 h-3.5 text-brand-slate" />
+                          </div>
+                          <span className="text-xs font-semibold text-brand-slate">Enter a different address</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                      Landmark (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.landmark}
-                      onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
-                      className={inputCls}
-                      placeholder="Nearby landmark for easier navigation"
-                    />
+                ) : (
+                  /* Manual entry fields */
+                  <div className="space-y-4">
+                    {savedAddresses.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { const primary = savedAddresses.find(a => a.isPrimary) ?? savedAddresses[0]; applyAddress(primary); }}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-brand-dark transition-colors"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        Use a saved address
+                      </button>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                        Site Address *
+                      </label>
+                      <textarea
+                        value={formData.siteAddress}
+                        onChange={(e) => setFormData({ ...formData, siteAddress: e.target.value })}
+                        rows={3}
+                        className={`${inputCls} resize-none`}
+                        placeholder="Building name, street address, area, landmark"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                        Landmark (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.landmark}
+                        onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
+                        className={inputCls}
+                        placeholder="Nearby landmark for easier navigation"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="border-t border-neutral-100 pt-6">
