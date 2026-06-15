@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react';
@@ -16,9 +16,11 @@ function VerifyEmailContent() {
   const [state, setState] = useState<State>(token ? 'loading' : 'no-token');
   const [errorMsg, setErrorMsg] = useState('');
   const [countdown, setCountdown] = useState(REDIRECT_DELAY_MS / 1000);
+  const didVerify = useRef(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || didVerify.current) return;
+    didVerify.current = true;
 
     fetch('/api/auth/verify-email', {
       method: 'POST',
