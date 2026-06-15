@@ -13,6 +13,13 @@ import {
   ChevronDown,
   ClipboardList,
   Heart,
+  MapPin,
+  Headphones,
+  Truck,
+  RefreshCw,
+  Lock,
+  FileText,
+  BookOpen,
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
@@ -47,6 +54,7 @@ export function Header() {
 
   const [scrolled, setScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showPolicies, setShowPolicies] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -358,33 +366,79 @@ export function Header() {
 
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden z-50 animate-fade-in">
+                    {/* Profile header */}
                     <div className="px-5 py-4 bg-primary-50 border-b border-neutral-100">
-                      <p className="text-sm font-semibold text-brand-charcoal">
-                        {currentUser.name}
-                      </p>
-                      <p className="text-xs text-brand-slate mt-0.5 truncate">
-                        {currentUser.email}
-                      </p>
+                      <p className="text-sm font-semibold text-brand-charcoal">{currentUser.name}</p>
+                      <p className="text-xs text-brand-slate mt-0.5 truncate">{currentUser.email}</p>
                     </div>
-                   
+
+                    {/* Account links */}
+                    {[
+                      { href: '/my-orders',    label: 'Order History', Icon: ClipboardList },
+                      { href: '/my-addresses', label: 'My Addresses',  Icon: MapPin        },
+                    ].map(({ href, label, Icon }) => (
+                      <Link
+                        key={href}
+                        href={href as any}
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
+                      >
+                        <Icon className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                        {label}
+                      </Link>
+                    ))}
+
+                    {/* Support */}
                     <Link
-                      href="/my-orders"
+                      href={'/support' as any}
                       onClick={() => setShowDropdown(false)}
-                      className="flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 transition-all duration-200"
+                      className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
                     >
-                      <ClipboardList className="w-4 h-4 text-brand-primary" />
-                      My Orders
+                      <Headphones className="w-4 h-4 text-brand-slate flex-shrink-0" />
+                      FastGet Support
                     </Link>
+
+                    {/* Policies accordion */}
+                    <button
+                      onClick={() => setShowPolicies(p => !p)}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
+                    >
+                      <BookOpen className="w-4 h-4 text-brand-slate flex-shrink-0" />
+                      <span className="flex-1 text-left">Policies</span>
+                      <ChevronDown className={cn('w-3.5 h-3.5 text-brand-steel transition-transform duration-200', showPolicies && 'rotate-180')} />
+                    </button>
+                    {showPolicies && (
+                      <>
+                        {[
+                          { href: '/shipping-policy', label: 'Shipping Policy', Icon: Truck     },
+                          { href: '/refund-policy',   label: 'Refund Policy',   Icon: RefreshCw },
+                          { href: '/privacy-policy',  label: 'Privacy Policy',  Icon: Lock      },
+                          { href: '/terms',           label: 'Terms of Service', Icon: FileText },
+                        ].map(({ href, label, Icon }) => (
+                          <Link
+                            key={href}
+                            href={href as any}
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 pl-10 pr-5 py-3 text-sm text-brand-slate hover:bg-neutral-50 hover:text-brand-charcoal transition-colors border-b border-neutral-100"
+                          >
+                            <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                            {label}
+                          </Link>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Sign out */}
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 border-t border-neutral-100 transition-all duration-200"
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 border-b border-neutral-100 transition-colors"
                     >
-                      <LogOut className="w-4 h-4 text-brand-primary" />
+                      <LogOut className="w-4 h-4 text-brand-primary flex-shrink-0" />
                       Sign Out
                     </button>
                     <button
                       onClick={handleDeleteAccount}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-sm text-red-600 border-t border-neutral-100 hover:bg-red-50 transition-all duration-200"
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       Delete Account
                     </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import {
@@ -13,11 +14,13 @@ import {
   FileText,
   LogOut,
   ChevronRight,
+  ChevronDown,
   LogIn,
   UserPlus,
   User,
   ShieldCheck,
   Star,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,12 +64,48 @@ function MenuItem({
 /* ─── Public links (visible without auth) ───────────────────────────────── */
 
 const PUBLIC_ITEMS = [
-  { href: '/support',         label: 'FastGet Support', Icon: Headphones },
-  { href: '/shipping-policy', label: 'Shipping Policy', Icon: Truck      },
-  { href: '/refund-policy',   label: 'Refund Policy',   Icon: RefreshCw  },
-  { href: '/privacy-policy',  label: 'Privacy Policy',  Icon: Lock       },
-  { href: '/terms',           label: 'Terms of Service', Icon: FileText  },
+  { href: '/support', label: 'FastGet Support', Icon: Headphones },
 ];
+
+const POLICY_ITEMS = [
+  { href: '/shipping-policy', label: 'Shipping Policy', Icon: Truck     },
+  { href: '/refund-policy',   label: 'Refund Policy',   Icon: RefreshCw },
+  { href: '/privacy-policy',  label: 'Privacy Policy',  Icon: Lock      },
+  { href: '/terms',           label: 'Terms of Service', Icon: FileText },
+];
+
+/* ─── Policies accordion (shared between guest + auth screens) ──────────── */
+
+function PoliciesSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center px-4 py-4 hover:bg-neutral-50 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center flex-shrink-0">
+          <BookOpen className="w-5 h-5 text-brand-dark" />
+        </div>
+        <span className="ml-3 text-sm font-medium text-brand-charcoal flex-1 text-left">Policies</span>
+        <ChevronDown className={cn('w-4 h-4 text-brand-steel transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="border-t border-neutral-100">
+          {POLICY_ITEMS.map((item, idx) => (
+            <MenuItem
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              Icon={item.Icon}
+              isLast={idx === POLICY_ITEMS.length - 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ─── Guest screen ──────────────────────────────────────────────────────── */
 
@@ -122,6 +161,8 @@ function GuestAccount() {
           />
         ))}
       </div>
+
+      <PoliciesSection />
 
       <p className="text-center text-xs text-brand-steel mt-6">FastGet v1.0.0</p>
     </div>
@@ -193,6 +234,8 @@ export default function AccountPage() {
           />
         ))}
       </div>
+
+      <PoliciesSection />
 
       {/* Log Out */}
       <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
