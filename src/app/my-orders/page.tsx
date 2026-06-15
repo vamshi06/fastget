@@ -118,7 +118,7 @@ export default function MyOrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/orders/my-orders?userId=${currentUser.id}`);
+      const res = await fetch(`/api/orders/my-orders?userId=${currentUser.id}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load orders');
       const data = await res.json();
       setOrders(data.orders);

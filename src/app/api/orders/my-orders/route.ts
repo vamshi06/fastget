@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const orders = await getOrdersByUserId(userId);
     logger.api('GET', '/api/orders/my-orders', 200, Date.now() - start);
-    return NextResponse.json({ orders });
+    return NextResponse.json({ orders }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     logger.error('API', 'GET /api/orders/my-orders — unhandled error', {
       error: error instanceof Error ? error.message : String(error),
