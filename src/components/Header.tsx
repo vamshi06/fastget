@@ -366,14 +366,7 @@ export function Header() {
                         {currentUser.email}
                       </p>
                     </div>
-                    <Link
-                      href={"/wishlist" as any}
-                      onClick={() => setShowDropdown(false)}
-                      className="flex items-center gap-3 px-5 py-4 text-sm text-brand-charcoal hover:bg-neutral-50 transition-all duration-200"
-                    >
-                      <Heart className="w-4 h-4 text-red-500" />
-                      My Wishlist
-                    </Link>
+                   
                     <Link
                       href="/my-orders"
                       onClick={() => setShowDropdown(false)}
