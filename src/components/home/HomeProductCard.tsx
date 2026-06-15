@@ -46,7 +46,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
 
   return (
     <Link
-      href={`/catalog?q=${encodeURIComponent(product.name)}`}
+      href={`/product/${product.id}`}
       className="flex-shrink-0 w-[118px] bg-white rounded-2xl border border-neutral-100 overflow-hidden"
       style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
     >

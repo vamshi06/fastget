@@ -91,6 +91,17 @@ export default function WebViewScreen() {
             }}
             onNavigationStateChange={handleNavigationStateChange}
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'DOWNLOAD_PDF' && msg.url) {
+                  // Opens the PDF URL via the OS:
+                  // Android → Download Manager saves the file to Downloads
+                  // iOS → Safari opens it as a PDF with share/print options
+                  Linking.openURL(msg.url);
+                }
+              } catch {}
+            }}
             javaScriptEnabled
             domStorageEnabled
             // iOS swipe-back gesture

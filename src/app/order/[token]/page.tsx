@@ -155,7 +155,7 @@ export default function OrderStatusPage() {
 
   return (
     <div className="min-h-screen bg-brand-fog py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="page-content" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <Link
@@ -362,7 +362,7 @@ export default function OrderStatusPage() {
           {/* Right Column - Payment & Actions */}
           <div className="space-y-6">
             {/* Payment Summary */}
-            <div className="card p-6 sticky top-20">
+            <div className="card p-6">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">
                 Payment Details
               </h2>
@@ -407,7 +407,17 @@ export default function OrderStatusPage() {
                   {copied ? "Copied!" : "Copy Order Token"}
                 </button>
                 <button
-                  onClick={() => window.print()}
+                  type="button"
+                  onClick={() => {
+                    const rnWebView = typeof window !== 'undefined' && (window as any).ReactNativeWebView;
+                    if (rnWebView && typeof rnWebView.postMessage === 'function') {
+                      // In WebView: trigger direct PDF download via the invoice API
+                      const pdfUrl = `${window.location.origin}/api/invoice/${order.statusToken}`;
+                      rnWebView.postMessage(JSON.stringify({ type: 'DOWNLOAD_PDF', url: pdfUrl }));
+                    } else {
+                      window.print();
+                    }
+                  }}
                   className="btn-secondary w-full py-2.5 text-sm"
                 >
                   <Download className="w-4 h-4" />
@@ -432,6 +442,134 @@ export default function OrderStatusPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Print Invoice (hidden on screen, shown only when printing) ── */}
+      <div id="print-invoice">
+
+        {/* Dark header band */}
+        <div className="inv-header">
+          <div className="inv-header-left">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/fastget-logo-clear.png" alt="FastGet" style={{ height: '30px', width: 'auto', display: 'block' }} />
+              <p className="inv-company-name">FastGet</p>
+            </div>
+            <p className="inv-company-sub">
+              Rapid Construction Delivery &nbsp;|&nbsp; fastget.in
+            </p>
+          </div>
+          <div className="inv-invoice-badge"><em>Invoice</em></div>
+        </div>
+
+        {/* Yellow tab accent below badge */}
+        <div className="inv-tab-accent" />
+
+        {/* Bill To + Invoice meta */}
+        <div className="inv-info-row">
+          <div className="inv-bill-to">
+            <p className="inv-info-label">BILL TO:</p>
+            <p className="inv-party-name">{order.customerName}</p>
+            <p className="inv-party-line">{order.siteAddress}</p>
+            {order.landmark && (
+              <p className="inv-party-line">Landmark: {order.landmark}</p>
+            )}
+            <p className="inv-party-line">{order.customerPhone}</p>
+          </div>
+          <div className="inv-meta-block">
+            <p className="inv-meta-num">#{order.statusToken.toUpperCase()}</p>
+            <div className="inv-meta-row">
+              <span className="inv-meta-key">Issue Date:</span>
+              <span className="inv-meta-val">{formatDate(order.createdAt)}</span>
+            </div>
+            {order.eta ? (
+              <div className="inv-meta-row">
+                <span className="inv-meta-key">ETA:</span>
+                <span className="inv-meta-val">{order.eta}</span>
+              </div>
+            ) : order.scheduledTime ? (
+              <div className="inv-meta-row">
+                <span className="inv-meta-key">Scheduled:</span>
+                <span className="inv-meta-val">{formatDate(order.scheduledTime)}</span>
+              </div>
+            ) : null}
+            <hr className="inv-meta-divider" />
+            <div className="inv-meta-row inv-meta-total">
+              <span className="inv-meta-key">Total Amount Due:</span>
+              <span className="inv-meta-val">{formatCurrency(order.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <hr className="inv-divider" />
+
+        <p className="inv-intro">
+          This invoice has been generated for the following order placed on{" "}
+          {formatDate(order.createdAt)} at {formatTime(order.createdAt)}.
+        </p>
+
+        {/* Items table */}
+        <table className="inv-table">
+          <thead>
+            <tr>
+              <th style={{ width: "45%" }}>Item</th>
+              <th style={{ width: "12%", textAlign: "center" }}>Quantity</th>
+              <th style={{ width: "22%", textAlign: "right" }}>Price per Unit</th>
+              <th style={{ width: "21%", textAlign: "right" }}>Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.items.map((item, index) => (
+              <tr key={index}>
+                <td>
+                  <div className="inv-item-name">{item.name}</div>
+                  <div className="inv-item-sku">{item.sku}</div>
+                </td>
+                <td style={{ textAlign: "center" }}>{item.quantity}</td>
+                <td style={{ textAlign: "right" }}>{formatCurrency(item.price)}</td>
+                <td style={{ textAlign: "right" }}>{formatCurrency(item.price * item.quantity)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Payment methods (left) + Totals (right) */}
+        <div className="inv-bottom-row">
+          <div className="inv-payment-block">
+            <p className="inv-payment-title">Our Payment Methods:</p>
+            {order.paymentMethod === "razorpay" ? (
+              <>
+                <p className="inv-payment-line">Online Payment (Razorpay)</p>
+                <p className="inv-payment-line">
+                  Status:{" "}
+                  {order.paymentStatus === "captured" ? "Confirmed" : "Pending"}
+                </p>
+              </>
+            ) : (
+              <p className="inv-payment-line">Cash on Delivery (Pay at site)</p>
+            )}
+          </div>
+          <div className="inv-totals-block">
+            <div className="inv-totals-row">
+              <span className="inv-totals-label">Sub Total</span>
+              <span className="inv-totals-value">{formatCurrency(order.subtotal)}</span>
+            </div>
+            <div className="inv-totals-row">
+              <span className="inv-totals-label">Convenience Fee</span>
+              <span className="inv-totals-value">{formatCurrency(order.convenienceFee)}</span>
+            </div>
+            <div className="inv-totals-row inv-totals-grand">
+              <span className="inv-totals-label">Total Due</span>
+              <span className="inv-totals-value">{formatCurrency(order.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        {/* <div className="inv-footer">
+          <p>https://fastget.in &nbsp;//&nbsp; Page 1</p>
+        </div> */}
+
       </div>
     </div>
   );
