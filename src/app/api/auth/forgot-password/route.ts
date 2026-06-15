@@ -48,10 +48,19 @@ export async function POST(request: NextRequest) {
     }
 
     const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
-    const tmpl = passwordResetTemplate(user.name, resetUrl);
-    await sendEmail({ to: user.email, ...tmpl });
 
-    logger.info('Auth', '[AUTH] Password Reset email sent', { userId: user.id });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n🔑 PASSWORD RESET URL (dev)\n   ${resetUrl}\n`);
+    }
+
+    const tmpl = passwordResetTemplate(user.name, resetUrl);
+    const sent = await sendEmail({ to: user.email, ...tmpl });
+
+    if (!sent) {
+      logger.error('Auth', 'forgot-password — email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
+    }
+
+    logger.info('Auth', '[AUTH] Password Reset email sent', { userId: user.id, delivered: sent });
     logger.api('POST', '/api/auth/forgot-password', 200, Date.now() - start);
 
     return okResponse;

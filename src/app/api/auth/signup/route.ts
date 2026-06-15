@@ -80,8 +80,11 @@ export async function POST(request: NextRequest) {
     if (token) {
       const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
       const tmpl = verificationEmailTemplate(user.name, verifyUrl);
-      await sendEmail({ to: user.email, ...tmpl });
-      logger.info('Auth', '[AUTH] Verification Sent', { userId: user.id });
+      const sent = await sendEmail({ to: user.email, ...tmpl });
+      if (!sent) {
+        logger.error('Auth', 'signup — verification email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
+      }
+      logger.info('Auth', '[AUTH] Verification Sent', { userId: user.id, delivered: sent });
     } else {
       logger.warn('Auth', 'signup — verification token generation failed', { userId: user.id });
     }

@@ -68,17 +68,22 @@ async function sendViaResend(msg: EmailMessage): Promise<boolean> {
   }
   try {
     const client = new Resend(apiKey);
-    const { error } = await client.emails.send({
+    const { data, error } = await client.emails.send({
       from: getFrom(),
-      to: msg.to,
+      to: [msg.to],
       subject: msg.subject,
       html: msg.html,
       text: msg.text,
     });
     if (error) {
-      logger.error('Email', 'Resend SDK error', { message: error.message });
+      logger.error('Email', 'Resend SDK error', {
+        name: error.name,
+        message: error.message,
+        statusCode: (error as { statusCode?: number }).statusCode,
+      });
       return false;
     }
+    logger.debug('Email', 'Resend message ID', { id: data?.id });
     logger.info('Email', `Sent via Resend → ${msg.to}`);
     return true;
   } catch (error) {

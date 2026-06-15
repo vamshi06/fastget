@@ -554,14 +554,19 @@ export async function setVerificationToken(
   try {
     const token = generateSecureToken();
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    await sql`
+    const result = await sql`
       UPDATE users
       SET verification_token = ${token},
           verification_token_expiry = ${expiry.toISOString()},
           resend_verification_at = NOW(),
           updated_at = NOW()
       WHERE id = ${userId}
+      RETURNING id
     `;
+    if (result.length === 0) {
+      logger.error('Users', 'setVerificationToken — UPDATE matched 0 rows', { userId });
+      return null;
+    }
     return token;
   } catch (error) {
     logger.error('Users', 'Failed to set verification token', { error: error instanceof Error ? error.message : String(error) });
@@ -647,14 +652,20 @@ export async function setResetPasswordToken(userId: string): Promise<string | nu
   const sql = getClient();
   try {
     const token = generateSecureToken();
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await sql`
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const result = await sql`
       UPDATE users
       SET reset_password_token = ${token},
           reset_password_token_expiry = ${expiry.toISOString()},
           updated_at = NOW()
       WHERE id = ${userId}
+      RETURNING id
     `;
+    if (result.length === 0) {
+      logger.error('Users', 'setResetPasswordToken — UPDATE matched 0 rows', { userId });
+      return null;
+    }
+    logger.debug('Users', 'setResetPasswordToken — stored', { prefix: token.slice(0, 8), userId });
     return token;
   } catch (error) {
     logger.error('Users', 'Failed to set reset password token', { error: error instanceof Error ? error.message : String(error) });
@@ -666,15 +677,35 @@ export async function setResetPasswordToken(userId: string): Promise<string | nu
  * Look up a user by their password reset token, verifying it is not expired.
  */
 export async function getUserByResetToken(token: string): Promise<User | null> {
-  const sql = getUnpooledClient();
+  // Use the pooled client — same connection path as setResetPasswordToken writes.
+  // The unpooled (direct) endpoint can lag behind the pooler for freshly committed rows.
+  const sql = getClient();
   try {
+    logger.debug('Users', 'getUserByResetToken — looking up token', { prefix: token.slice(0, 8) });
     const result = await sql`
       SELECT * FROM users
       WHERE reset_password_token = ${token}
         AND reset_password_token_expiry > NOW()
       LIMIT 1
     `;
-    if (result.length === 0) return null;
+    if (result.length === 0) {
+      const anyMatch = await sql`
+        SELECT reset_password_token_expiry
+        FROM users
+        WHERE reset_password_token = ${token}
+        LIMIT 1
+      `;
+      if (anyMatch.length > 0) {
+        logger.warn('Users', 'getUserByResetToken — token found but EXPIRED', {
+          expiry: anyMatch[0].reset_password_token_expiry,
+        });
+      } else {
+        logger.warn('Users', 'getUserByResetToken — token NOT FOUND in DB (never stored, already used, or overwritten)', {
+          prefix: token.slice(0, 8),
+        });
+      }
+      return null;
+    }
     return dbUserToUser(result[0] as DbUser);
   } catch (error) {
     logger.error('Users', 'Failed to get user by reset token', { error: error instanceof Error ? error.message : String(error) });
