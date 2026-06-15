@@ -66,7 +66,7 @@ export default function OrderStatusPage() {
 
   const fetchOrder = useCallback(async () => {
     try {
-      const response = await fetch(`/api/orders/${token}`);
+      const response = await fetch(`/api/orders/${token}`, { cache: 'no-store' });
       const data = await response.json();
 
       if (!response.ok) {
