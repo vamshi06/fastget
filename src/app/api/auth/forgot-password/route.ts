@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, setResetPasswordToken } from '@/lib/users';
-import { sendEmail, getAppUrl } from '@/lib/email';
-import { passwordResetTemplate } from '@/lib/email-templates';
+import { getUserByEmail, setResetPasswordOtp } from '@/lib/users';
+import { sendEmail } from '@/lib/email';
+import { passwordResetOtpTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 
 /**
@@ -40,20 +40,18 @@ export async function POST(request: NextRequest) {
       return okResponse;
     }
 
-    const token = await setResetPasswordToken(user.id);
-    if (!token) {
-      logger.error('Auth', 'forgot-password — failed to generate token', { userId: user.id });
+    const otp = await setResetPasswordOtp(user.id);
+    if (!otp) {
+      logger.error('Auth', 'forgot-password — failed to generate OTP', { userId: user.id });
       logger.api('POST', '/api/auth/forgot-password', 200, Date.now() - start);
       return okResponse;
     }
 
-    const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
-
     if (process.env.NODE_ENV === 'development') {
-      console.log(`\n🔑 PASSWORD RESET URL (dev)\n   ${resetUrl}\n`);
+      console.log(`\n🔑 PASSWORD RESET OTP (dev): ${otp}\n`);
     }
 
-    const tmpl = passwordResetTemplate(user.name, resetUrl);
+    const tmpl = passwordResetOtpTemplate(user.name, otp);
     const sent = await sendEmail({ to: user.email, ...tmpl });
 
     if (!sent) {

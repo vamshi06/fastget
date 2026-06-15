@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, Mail } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { FloatingInput } from '@/components/FloatingInput';
 
 function SignupForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const redirect = searchParams.get('redirect') || '/';
 
   const [formData, setFormData] = useState({
@@ -19,7 +20,6 @@ function SignupForm() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,47 +58,14 @@ function SignupForm() {
         return;
       }
 
-      // New flow: show "check your inbox" screen
-      setRegisteredEmail(data.email || formData.email.toLowerCase().trim());
+      const email = data.email || formData.email.toLowerCase().trim();
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch {
       setError('An error occurred during signup. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  // ── Post-signup: verify email prompt ─────────────────────────────────────
-  if (registeredEmail) {
-    return (
-      <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-12">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10 text-center">
-          <Mail className="w-14 h-14 text-brand-primary mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-brand-charcoal">Account created!</h3>
-          <p className="mt-2 text-sm text-brand-slate">
-            We&apos;ve sent a verification link to{' '}
-            <span className="font-semibold text-brand-charcoal">{registeredEmail}</span>.
-            Click the link in the email to activate your account.
-          </p>
-          <p className="mt-3 text-xs text-brand-steel">
-            Didn&apos;t get it? Check your spam folder, or{' '}
-            <Link
-              href={`/resend-verification?email=${encodeURIComponent(registeredEmail)}`}
-              className="text-brand-primary font-semibold hover:text-brand-dark"
-            >
-              resend the email
-            </Link>
-            .
-          </p>
-          <Link
-            href={`/login${redirect && redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}` as any}
-            className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   // ── Signup form ───────────────────────────────────────────────────────────
   const fields = [

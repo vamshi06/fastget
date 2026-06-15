@@ -37,10 +37,15 @@ function getFrom(): string {
 
 export function getAppUrl(): string {
   return (
-    process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||
     'http://localhost:3000'
   );
+}
+
+// Returns the base for deep-link URLs used in mobile emails.
+// Format: `${getDeepLinkUrl()}path?query` → e.g. fastget://verify-email?token=…
+export function getDeepLinkUrl(): string {
+  return process.env.DEEP_LINK_SCHEME || 'fastget://';
 }
 
 // ── Mock provider ─────────────────────────────────────────────────────────────

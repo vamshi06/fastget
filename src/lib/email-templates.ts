@@ -76,6 +76,56 @@ function fallbackLink(href: string): string {
   </p>`;
 }
 
+// ── OTP Verification ──────────────────────────────────────────────────────────
+
+export function otpVerificationEmailTemplate(
+  name: string,
+  otp: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">✉️</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">Your verification code</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, enter this code in the FastGet app to activate your account.
+      </p>
+      <div style="background:${G};border-radius:16px;padding:20px 32px;display:inline-block;margin-bottom:24px;">
+        <span style="font-size:44px;font-weight:900;letter-spacing:0.2em;color:${C};font-family:monospace,Courier New;">${otp}</span>
+      </div>
+      <p style="margin:0;font-size:13px;color:#9A9A9A;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+    </div>`;
+  return {
+    subject: 'Your FastGet verification code',
+    html: wrap(body),
+    text: `Hi ${name},\n\nYour FastGet verification code is:\n\n${otp}\n\nEnter this code in the app to activate your account. It expires in 10 minutes.\n\nIf you didn't create an account, ignore this email.`,
+  };
+}
+
+export function resendOtpEmailTemplate(
+  name: string,
+  otp: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">🔄</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">New verification code</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, here is your new verification code. Your previous code has been invalidated.
+      </p>
+      <div style="background:${G};border-radius:16px;padding:20px 32px;display:inline-block;margin-bottom:24px;">
+        <span style="font-size:44px;font-weight:900;letter-spacing:0.2em;color:${C};font-family:monospace,Courier New;">${otp}</span>
+      </div>
+      <p style="margin:0;font-size:13px;color:#9A9A9A;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+    </div>`;
+  return {
+    subject: 'Your new FastGet verification code',
+    html: wrap(body),
+    text: `Hi ${name},\n\nYour new FastGet verification code is:\n\n${otp}\n\nEnter this code in the app. It expires in 10 minutes.`,
+  };
+}
+
 // ── Verify Email ──────────────────────────────────────────────────────────────
 
 export function verificationEmailTemplate(
@@ -125,6 +175,32 @@ export function resendVerificationTemplate(
     subject: 'Your new FastGet verification link',
     html: wrap(body),
     text: `Hi ${name},\n\nHere is your new verification link:\n\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+  };
+}
+
+// ── Password Reset OTP ────────────────────────────────────────────────────────
+
+export function passwordResetOtpTemplate(
+  name: string,
+  otp: string,
+): { subject: string; html: string; text: string } {
+  const safeName = esc(name);
+  const body = `
+    <div style="padding:44px 40px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:20px;">🔐</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:${C};line-height:1.2;">Password reset code</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:${S};line-height:1.6;">
+        Hi ${safeName}, enter this code in the FastGet app to reset your password.
+      </p>
+      <div style="background:${G};border-radius:16px;padding:20px 32px;display:inline-block;margin-bottom:24px;">
+        <span style="font-size:44px;font-weight:900;letter-spacing:0.2em;color:${C};font-family:monospace,Courier New;">${otp}</span>
+      </div>
+      <p style="margin:0;font-size:13px;color:#9A9A9A;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+    </div>`;
+  return {
+    subject: 'Your FastGet password reset code',
+    html: wrap(body),
+    text: `Hi ${name},\n\nYour FastGet password reset code is:\n\n${otp}\n\nEnter this code in the app. It expires in 10 minutes.\n\nIf you didn't request a reset, ignore this email — your password won't change.`,
   };
 }
 

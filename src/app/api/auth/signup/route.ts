@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, setVerificationToken } from '@/lib/users';
-import { sendEmail, getAppUrl } from '@/lib/email';
-import { verificationEmailTemplate } from '@/lib/email-templates';
+import { createUser, setVerificationOtp } from '@/lib/users';
+import { sendEmail } from '@/lib/email';
+import { otpVerificationEmailTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 
 /**
@@ -75,18 +75,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate verification token and send email
-    const token = await setVerificationToken(user.id);
-    if (token) {
-      const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
-      const tmpl = verificationEmailTemplate(user.name, verifyUrl);
+    // Generate OTP and send verification email
+    const otp = await setVerificationOtp(user.id);
+    if (otp) {
+      const tmpl = otpVerificationEmailTemplate(user.name, otp);
       const sent = await sendEmail({ to: user.email, ...tmpl });
       if (!sent) {
         logger.error('Auth', 'signup — verification email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
       }
-      logger.info('Auth', '[AUTH] Verification Sent', { userId: user.id, delivered: sent });
+      logger.info('Auth', '[AUTH] Verification OTP Sent', { userId: user.id, delivered: sent });
     } else {
-      logger.warn('Auth', 'signup — verification token generation failed', { userId: user.id });
+      logger.warn('Auth', 'signup — OTP generation failed', { userId: user.id });
     }
 
     logger.info('Auth', '[AUTH] Signup', { userId: user.id });

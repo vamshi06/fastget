@@ -3,16 +3,15 @@
 import { useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
+import { KeyRound, XCircle, Loader2 } from 'lucide-react';
 
-function VerifyEmailContent() {
+function VerifyResetOtpContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const prefillEmail = searchParams.get('email') || '';
+  const email = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState(prefillEmail);
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
-  const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -52,20 +51,19 @@ function VerifyEmailContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.includes('@')) { setErrorMsg('Please enter a valid email address'); setState('error'); return; }
     if (otp.length !== 6) { setErrorMsg('Enter all 6 digits'); setState('error'); return; }
 
     setState('loading');
     try {
-      const res = await fetch('/api/auth/verify-email', {
+      const res = await fetch('/api/auth/verify-reset-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), otp }),
+        body: JSON.stringify({ email, otp }),
       });
       const data = await res.json();
+
       if (data.success) {
-        setState('success');
-        setTimeout(() => router.push('/login'), 2500);
+        router.push(`/reset-password?token=${encodeURIComponent(data.token)}`);
       } else {
         setErrorMsg(data.error || 'Verification failed.');
         setState('error');
@@ -76,30 +74,12 @@ function VerifyEmailContent() {
     }
   };
 
-  if (state === 'success') {
-    return (
-      <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10 text-center">
-          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-brand-charcoal">Email verified!</h2>
-          <p className="mt-2 text-sm text-brand-slate">Your account is active. Taking you to login…</p>
-          <Link
-            href="/login"
-            className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10">
         <div className="text-center mb-6">
-          <Mail className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold text-brand-charcoal">Enter verification code</h2>
+          <KeyRound className="w-10 h-10 text-brand-primary mx-auto mb-3" />
+          <h2 className="text-2xl font-bold text-brand-charcoal">Enter reset code</h2>
           <p className="mt-1.5 text-sm text-brand-slate">
             We sent a 6-digit code to{' '}
             <span className="font-semibold text-brand-charcoal">{email || 'your email'}</span>
@@ -114,17 +94,6 @@ function VerifyEmailContent() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {!prefillEmail && (
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-2xl text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            />
-          )}
-
-          {/* 6-digit OTP boxes */}
           <div className="flex justify-center gap-2">
             {digits.map((d, i) => (
               <input
@@ -152,16 +121,13 @@ function VerifyEmailContent() {
           >
             {state === 'loading' ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
-            ) : 'Verify'}
+            ) : 'Verify Code'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-brand-slate">
           Didn&apos;t receive a code?{' '}
-          <Link
-            href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-            className="text-brand-primary font-semibold hover:text-brand-dark"
-          >
+          <Link href="/forgot-password" className="text-brand-primary font-semibold hover:text-brand-dark">
             Resend
           </Link>
         </p>
@@ -170,10 +136,10 @@ function VerifyEmailContent() {
   );
 }
 
-export default function VerifyEmailPage() {
+export default function VerifyResetOtpPage() {
   return (
     <Suspense>
-      <VerifyEmailContent />
+      <VerifyResetOtpContent />
     </Suspense>
   );
 }

@@ -528,6 +528,10 @@ function generateSecureToken(): string {
   return randomBytes(32).toString('hex');
 }
 
+function generateOtp(): string {
+  return (100000 + (randomBytes(3).readUIntBE(0, 3) % 900000)).toString();
+}
+
 /**
  * Get a raw DB user row including sensitive token fields (for auth operations only).
  */
@@ -570,6 +574,62 @@ export async function setVerificationToken(
     return token;
   } catch (error) {
     logger.error('Users', 'Failed to set verification token', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Generate and store a 6-digit OTP for email verification.
+ * Expiry is 10 minutes from now.
+ */
+export async function setVerificationOtp(userId: string): Promise<string | null> {
+  const sql = getClient();
+  try {
+    const otp = generateOtp();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const result = await sql`
+      UPDATE users
+      SET verification_token = ${otp},
+          verification_token_expiry = ${expiry.toISOString()},
+          resend_verification_at = NOW(),
+          updated_at = NOW()
+      WHERE id = ${userId}
+      RETURNING id
+    `;
+    if (result.length === 0) {
+      logger.error('Users', 'setVerificationOtp — UPDATE matched 0 rows', { userId });
+      return null;
+    }
+    return otp;
+  } catch (error) {
+    logger.error('Users', 'Failed to set verification OTP', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Verify a user's email by matching OTP against their email address.
+ * Clears the OTP after successful verification.
+ */
+export async function verifyUserEmailByOtp(email: string, otp: string): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      UPDATE users
+      SET email_verified = true,
+          email_verified_at = NOW(),
+          verification_token = NULL,
+          verification_token_expiry = NULL,
+          updated_at = NOW()
+      WHERE LOWER(email) = LOWER(${email})
+        AND verification_token = ${otp}
+        AND verification_token_expiry > NOW()
+      RETURNING *
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to verify user email by OTP', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -643,6 +703,68 @@ export async function getUserByEmailFull(email: string): Promise<User | null> {
 // ============================================================================
 // Password Reset Utilities
 // ============================================================================
+
+/**
+ * Generate and store a 6-digit OTP for password reset.
+ * Expiry is 10 minutes from now.
+ */
+export async function setResetPasswordOtp(userId: string): Promise<string | null> {
+  const sql = getClient();
+  try {
+    const otp = generateOtp();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const result = await sql`
+      UPDATE users
+      SET reset_password_token = ${otp},
+          reset_password_token_expiry = ${expiry.toISOString()},
+          updated_at = NOW()
+      WHERE id = ${userId}
+      RETURNING id
+    `;
+    if (result.length === 0) {
+      logger.error('Users', 'setResetPasswordOtp — UPDATE matched 0 rows', { userId });
+      return null;
+    }
+    return otp;
+  } catch (error) {
+    logger.error('Users', 'Failed to set reset password OTP', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Verify a reset OTP by email + OTP, then exchange it for a proper reset token.
+ * Returns the reset token on success, null if OTP is invalid/expired.
+ */
+export async function verifyResetOtp(email: string, otp: string): Promise<string | null> {
+  const sql = getClient();
+  try {
+    // Check OTP is valid first
+    const check = await sql`
+      SELECT id FROM users
+      WHERE LOWER(email) = LOWER(${email})
+        AND reset_password_token = ${otp}
+        AND reset_password_token_expiry > NOW()
+      LIMIT 1
+    `;
+    if (check.length === 0) return null;
+
+    // Exchange OTP for a proper reset token (24h) so the reset-password page works unchanged
+    const token = generateSecureToken();
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await sql`
+      UPDATE users
+      SET reset_password_token = ${token},
+          reset_password_token_expiry = ${expiry.toISOString()},
+          updated_at = NOW()
+      WHERE id = ${check[0].id}
+    `;
+    return token;
+  } catch (error) {
+    logger.error('Users', 'Failed to verify reset OTP', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
 
 /**
  * Generate and store a password reset token for a user.

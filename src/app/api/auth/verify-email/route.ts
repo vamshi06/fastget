@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyUserEmail } from '@/lib/users';
+import { verifyUserEmailByOtp } from '@/lib/users';
 import { logger } from '@/lib/logger';
 
 /**
  * POST /api/auth/verify-email
  *
- * Validates the token, marks the user's email as verified, and clears the token.
- * Body: { token: string }
+ * Validates a 6-digit OTP against the user's email, marks the account verified.
+ * Body: { email: string; otp: string }
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
@@ -14,22 +14,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.token || typeof body.token !== 'string' || body.token.trim().length === 0) {
-      logger.warn('Auth', 'verify-email — missing token');
+    if (!body.email || typeof body.email !== 'string') {
       logger.api('POST', '/api/auth/verify-email', 400, Date.now() - start);
-      return NextResponse.json(
-        { success: false, error: 'Verification token is required' },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
 
-    const user = await verifyUserEmail(body.token.trim());
+    if (!body.otp || typeof body.otp !== 'string' || !/^\d{6}$/.test(body.otp.trim())) {
+      logger.api('POST', '/api/auth/verify-email', 400, Date.now() - start);
+      return NextResponse.json({ success: false, error: 'Enter the 6-digit code from your email' }, { status: 400 });
+    }
+
+    const user = await verifyUserEmailByOtp(body.email.trim(), body.otp.trim());
 
     if (!user) {
-      logger.warn('Auth', 'verify-email — invalid or expired token');
+      logger.warn('Auth', 'verify-email — invalid or expired OTP');
       logger.api('POST', '/api/auth/verify-email', 400, Date.now() - start);
       return NextResponse.json(
-        { success: false, error: 'Verification link is invalid or has expired.' },
+        { success: false, error: 'Incorrect code or code has expired. Request a new one.' },
         { status: 400 },
       );
     }

@@ -6,11 +6,32 @@ import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
 import { APP_URL } from '../constants/config';
 
+const SCHEME = 'fastget://';
+
 export default function WebViewScreen() {
   const webViewRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [webViewSource, setWebViewSource] = useState({ uri: APP_URL });
+
+  useEffect(() => {
+    const handleDeepLink = (rawUrl: string) => {
+      let path: string | null = null;
+      if (rawUrl.startsWith(SCHEME)) {
+        // Production deep link: fastget://verify-email?token=TOKEN
+        path = rawUrl.slice(SCHEME.length);
+      } else if (rawUrl.includes('/--/')) {
+        // Expo Go dev link: exp://192.168.x.x:8081/--/verify-email?token=TOKEN
+        path = rawUrl.split('/--/')[1] ?? null;
+      }
+      if (path) setWebViewSource({ uri: `${APP_URL}/${path}` });
+    };
+
+    Linking.getInitialURL().then((url) => { if (url) handleDeepLink(url); });
+    const sub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+    return () => sub.remove();
+  }, []);
 
   // Android hardware back button: navigate back in WebView history first.
   useEffect(() => {
@@ -73,7 +94,7 @@ export default function WebViewScreen() {
         <View style={styles.webViewContainer}>
           <WebView
             ref={webViewRef}
-            source={{ uri: APP_URL }}
+            source={webViewSource}
             style={styles.webView}
             userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
             onLoadStart={() => setHasError(false)}

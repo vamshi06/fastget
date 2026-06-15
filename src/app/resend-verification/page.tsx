@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, CheckCircle2 } from 'lucide-react';
 import { FloatingInput } from '@/components/FloatingInput';
@@ -10,6 +10,7 @@ function ResendVerificationForm() {
   const searchParams = useSearchParams();
   const prefillEmail = searchParams.get('email') || '';
 
+  const router = useRouter();
   const [email, setEmail] = useState(prefillEmail);
   const [state, setState] = useState<'idle' | 'loading' | 'sent'>('idle');
   const [error, setError] = useState('');
@@ -32,8 +33,8 @@ function ResendVerificationForm() {
         setState('idle');
         return;
       }
-      // Always show "sent" to prevent enumeration (API always returns 200)
-      setState('sent');
+      // Redirect back to OTP entry page
+      router.push(`/verify-email?email=${encodeURIComponent(email.toLowerCase().trim())}`);
     } catch {
       setError('A network error occurred. Please try again.');
       setState('idle');

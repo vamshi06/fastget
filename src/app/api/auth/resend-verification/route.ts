@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, setVerificationToken, canResendVerification } from '@/lib/users';
-import { sendEmail, getAppUrl } from '@/lib/email';
-import { resendVerificationTemplate } from '@/lib/email-templates';
+import { getUserByEmail, setVerificationOtp, canResendVerification } from '@/lib/users';
+import { sendEmail } from '@/lib/email';
+import { resendOtpEmailTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 
 /**
@@ -56,15 +56,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = await setVerificationToken(user.id);
-    if (!token) {
-      logger.error('Auth', 'resend-verification — failed to generate token', { userId: user.id });
+    const otp = await setVerificationOtp(user.id);
+    if (!otp) {
+      logger.error('Auth', 'resend-verification — failed to generate OTP', { userId: user.id });
       logger.api('POST', '/api/auth/resend-verification', 500, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 
-    const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
-    const tmpl = resendVerificationTemplate(user.name, verifyUrl);
+    const tmpl = resendOtpEmailTemplate(user.name, otp);
     await sendEmail({ to: user.email, ...tmpl });
 
     logger.info('Auth', '[AUTH] Verification Sent (resend)', { userId: user.id });
