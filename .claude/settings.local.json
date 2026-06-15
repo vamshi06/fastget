@@ -59,7 +59,8 @@
       "Bash(node --env-file=.env.local scripts/fix-cloudinary-urls.mjs --dry-run)",
       "Bash(mkdir -p \"c:/Users/Ruswin/Desktop/Elemantra/fastget/src/app/api/wishlist/[productId]\")",
       "Bash(xargs ls -la)",
-      "Bash(rm \"c:/Users/Ruswin/Desktop/Elemantra/fastget/src/lib/sheets.ts\" && echo \"Deleted\")"
+      "Bash(rm \"c:/Users/Ruswin/Desktop/Elemantra/fastget/src/lib/sheets.ts\" && echo \"Deleted\")",
+      "PowerShell(git checkout intern)"
     ],
     "additionalDirectories": [
       "c:\\AK\\SPIT\\Internship\\Elemantra\\FastGet\\FastGet Vamshi\\fastget\\src\\app\\admin\\api\\products",
