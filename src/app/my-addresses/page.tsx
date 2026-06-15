@@ -236,6 +236,7 @@ function AddressCard({
   onSetPrimary,
   deleting,
   settingPrimary,
+  hasPrimary,
 }: {
   address: UserAddress;
   onEdit: () => void;
@@ -243,6 +244,7 @@ function AddressCard({
   onSetPrimary: () => void;
   deleting: boolean;
   settingPrimary: boolean;
+  hasPrimary: boolean;
 }) {
   const Icon = TYPE_ICONS[address.type];
 
@@ -298,7 +300,7 @@ function AddressCard({
           className="mt-3 text-xs font-semibold text-brand-primary hover:underline disabled:opacity-40 flex items-center gap-1"
         >
           <Star className="w-3 h-3" />
-          {settingPrimary ? 'Setting…' : 'Set as primary'}
+          {settingPrimary ? 'Switching…' : hasPrimary ? 'Switch to primary' : 'Set as primary'}
         </button>
       )}
     </div>
@@ -527,6 +529,7 @@ export default function MyAddressesPage() {
                 onSetPrimary={() => handleSetPrimary(addr.id)}
                 deleting={deletingId === addr.id}
                 settingPrimary={settingPrimaryId === addr.id}
+                hasPrimary={addresses.some(a => a.isPrimary)}
               />
             )
           )}
