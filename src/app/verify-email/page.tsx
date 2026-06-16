@@ -3,7 +3,30 @@
 import { useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronLeft, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
+
+function AuthHero({ title }: { title: string }) {
+  return (
+    <div className="relative h-[28vh] min-h-[180px] flex-shrink-0">
+      <Image
+        src="/construction-background.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60" />
+      <Link
+        href="/login"
+        className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
+      >
+        <ChevronLeft className="w-5 h-5 text-white" />
+      </Link>
+      <h1 className="absolute bottom-6 left-6 text-2xl font-black text-white tracking-tight">{title}</h1>
+    </div>
+  );
+}
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -78,11 +101,11 @@ function VerifyEmailContent() {
 
   if (state === 'success') {
     return (
-      <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10 text-center">
-          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-brand-charcoal">Email verified!</h2>
-          <p className="mt-2 text-sm text-brand-slate">Your account is active. Taking you to login…</p>
+      <div className="flex-1 flex flex-col">
+        <AuthHero title="Email verified!" />
+        <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center">
+          <CheckCircle2 className="w-14 h-14 text-green-500 mb-4" />
+          <p className="text-sm text-brand-slate">Your account is active. Taking you to login…</p>
           <Link
             href="/login"
             className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
@@ -95,12 +118,12 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10">
-        <div className="text-center mb-6">
+    <div className="flex-1 flex flex-col">
+      <AuthHero title="Verify your email" />
+      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 pt-6 pb-6 shadow-xl flex flex-col justify-center">
+        <div className="text-center mb-5">
           <Mail className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold text-brand-charcoal">Enter verification code</h2>
-          <p className="mt-1.5 text-sm text-brand-slate">
+          <p className="text-sm text-brand-slate">
             We sent a 6-digit code to{' '}
             <span className="font-semibold text-brand-charcoal">{email || 'your email'}</span>
           </p>
@@ -138,7 +161,7 @@ function VerifyEmailContent() {
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 onPaste={handlePaste}
                 className="w-11 h-14 text-center text-2xl font-bold border-2 rounded-2xl
-                           text-brand-charcoal bg-brand-fog focus:outline-none
+                           text-brand-charcoal bg-white focus:outline-none
                            focus:border-brand-primary border-neutral-200 transition-colors"
               />
             ))}

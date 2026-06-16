@@ -3,8 +3,31 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { KeyRound } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronLeft, KeyRound } from 'lucide-react';
 import { FloatingInput } from '@/components/FloatingInput';
+
+function AuthHero({ title }: { title: string }) {
+  return (
+    <div className="relative h-[28vh] min-h-[180px] flex-shrink-0">
+      <Image
+        src="/construction-background.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60" />
+      <Link
+        href="/login"
+        className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
+      >
+        <ChevronLeft className="w-5 h-5 text-white" />
+      </Link>
+      <h1 className="absolute bottom-6 left-6 text-2xl font-black text-white tracking-tight">{title}</h1>
+    </div>
+  );
+}
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -33,12 +56,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex-1 bg-brand-fog flex flex-col items-center justify-center px-5 py-16">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-6 pt-7 pb-7">
-        <div className="text-center mb-6">
-          <KeyRound className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold text-brand-charcoal">Forgot password?</h2>
-          <p className="mt-1.5 text-sm text-brand-slate">
+    <div className="flex-1 flex flex-col">
+      <AuthHero title="Forgot password?" />
+      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-6 pb-6 shadow-xl flex flex-col justify-center">
+        <div className="text-center mb-5">
+          <p className="text-sm text-brand-slate">
             Enter your email and we&apos;ll send a 6-digit reset code.
           </p>
         </div>

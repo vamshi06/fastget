@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
@@ -99,60 +100,67 @@ export default function CheckoutPage() {
   if (isLoaded && !currentUser) {
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
     return (
-      <div className="min-h-screen bg-brand-fog flex items-center justify-center py-10 px-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
-            <div className="h-1 bg-brand-primary" />
+      <div className="relative flex-1 flex flex-col overflow-hidden">
+        {/* Background photo */}
+        <Image
+          src="/construction-background.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover"
+        />
+        {/* Dark gradient overlay for text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
 
-            {/* Card header */}
-            <div className="px-8 pt-8 pb-6 border-b border-neutral-100">
-              <div className="flex items-center justify-between mb-1">
-                <h1 className="text-2xl font-black text-brand-charcoal">Almost there!</h1>
-                {itemCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5 bg-primary-50 text-brand-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary-200">
-                    <Package className="w-3.5 h-3.5" />
-                    {itemCount} item{itemCount > 1 ? 's' : ''} in cart
-                  </span>
-                )}
-              </div>
-              <p className="text-brand-slate text-sm">Sign in to complete your order and enjoy fast delivery</p>
-            </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col flex-1 justify-between px-6 pt-10 pb-6">
+          <div className="text-center">
+            {itemCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 mb-4">
+                <Package className="w-3.5 h-3.5" />
+                {itemCount} item{itemCount > 1 ? 's' : ''} in cart
+              </span>
+            )}
+            <h1 className="text-3xl font-black text-white tracking-tight">Almost there!</h1>
+            <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
+              Sign in to complete your order and enjoy fast delivery
+            </p>
+          </div>
 
-            {/* Benefits */}
-            <div className="px-8 py-5 space-y-3 bg-brand-fog/50">
-              {[
-                { icon: Zap, text: 'Urgent delivery in 30–60 minutes' },
-                { icon: ClipboardList, text: 'Track your order in real time' },
-                { icon: ShieldCheck, text: 'Secure account & order history' },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-3.5 h-3.5 text-brand-primary" />
-                  </div>
-                  <span className="text-sm text-brand-graphite">{text}</span>
+          {/* Benefits */}
+          <div className="space-y-1">
+            {[
+              { icon: Zap, text: 'Urgent delivery in 30–60 minutes' },
+              { icon: ClipboardList, text: 'Track your order in real time' },
+              { icon: ShieldCheck, text: 'Secure account & order history' },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
+                <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4.5 h-4.5 text-white" />
                 </div>
-              ))}
-            </div>
+                <span className="text-sm font-medium text-white">{text}</span>
+              </div>
+            ))}
+          </div>
 
-            {/* CTAs */}
-            <div className="px-8 py-6 space-y-3">
-              <Link
-                href="/login?redirect=/checkout"
-                className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-              >
-                Log In to Your Account
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/signup?redirect=/checkout"
-                className="w-full py-3 flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-200 text-brand-charcoal font-semibold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
-              >
-                Create a New Account
-              </Link>
-              <p className="text-center text-xs text-brand-steel pt-1">
-                Your cart is saved — it will be waiting after you sign in
-              </p>
-            </div>
+          {/* CTAs */}
+          <div className="space-y-3">
+            <Link
+              href="/login?redirect=/checkout"
+              className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
+            >
+              Log In to Your Account
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/signup?redirect=/checkout"
+              className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
+            >
+              Create a New Account
+            </Link>
+            <p className="text-center text-xs text-white/70 pt-1">
+              Your cart is saved — it will be waiting after you sign in
+            </p>
           </div>
         </div>
       </div>

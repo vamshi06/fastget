@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <LocationSplashProvider>
                 <AnnouncementBar />
                 <ConditionalHeader />
-                <main className="flex-grow flex flex-col pb-16 md:pb-0">
+                <main className="flex-grow flex flex-col" style={{ paddingBottom: 'var(--bottom-nav-space)' }}>
                   {children}
                 </main>
                 <div className="hidden md:block">

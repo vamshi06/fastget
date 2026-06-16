@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useUser } from '@/components/UserContext';
 import {
   ClipboardList,
@@ -113,33 +114,44 @@ function GuestAccount() {
   return (
     <div className="min-h-screen bg-brand-fog pb-8">
 
-      {/* Hero card */}
-      <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100 shadow-sm">
-        <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-5">
-          <User className="w-10 h-10 text-neutral-400" />
-        </div>
-        <h1 className="text-xl font-black text-brand-charcoal">Welcome to FastGet</h1>
-        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          Sign in to manage your orders, addresses, and account settings.
-        </p>
-      </div>
+      {/* Hero */}
+      <div className="relative overflow-hidden">
+        <Image
+          src="/construction-background.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
 
-      {/* CTAs */}
-      <div className="px-4 pt-6 space-y-3">
-        <Link
-          href={'/login?redirect=/account' as any}
-          className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
-        >
-          <LogIn className="w-5 h-5" />
-          Log In
-        </Link>
-        <Link
-          href={'/signup?redirect=/account' as any}
-          className="flex items-center justify-center gap-2.5 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
-        >
-          <UserPlus className="w-5 h-5" />
-          Create an Account
-        </Link>
+        <div className="relative z-10 px-6 pt-14 pb-8 text-center">
+          <div className="w-20 h-20 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
+            <User className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Welcome to FastGet</h1>
+          <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
+            Sign in to manage your orders, addresses, and account settings.
+          </p>
+
+          {/* CTAs */}
+          <div className="mt-7 space-y-3 max-w-sm mx-auto">
+            <Link
+              href={'/login?redirect=/account' as any}
+              className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
+            >
+              <LogIn className="w-5 h-5" />
+              Log In
+            </Link>
+            <Link
+              href={'/signup?redirect=/account' as any}
+              className="flex items-center justify-center gap-2.5 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
+            >
+              <UserPlus className="w-5 h-5" />
+              Create an Account
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Divider */}

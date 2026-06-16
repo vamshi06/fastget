@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useUser } from '@/components/UserContext';
 import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -52,49 +53,61 @@ function formatOrderTime(iso: string) {
 
 function GuestOrders() {
   return (
-    <div className="min-h-screen bg-brand-fog flex flex-col">
-      {/* Hero */}
-      <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
-    
-        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">My Orders</h1>
-        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          Log in to view your order history and track every delivery in real time.
-        </p>
-      </div>
+    <div className="relative flex-1 flex flex-col overflow-hidden">
+      {/* Background photo */}
+      <Image
+        src="/construction-background.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover"
+      />
+      {/* Dark gradient overlay for text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
 
-      {/* Benefits */}
-      <div className="px-4 py-6 space-y-3">
-        {[
-          { Icon: Truck,    text: 'Live delivery tracking for every order'     },
-          { Icon: Package,  text: 'Full order history, receipts & invoices'    },
-          { Icon: Zap,      text: 'Faster checkout with saved addresses'       },
-          { Icon: Shield,   text: 'Secure payments & order protection'         },
-        ].map(({ Icon, text }) => (
-          <div key={text} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-neutral-100">
-            <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Icon className="w-4.5 h-4.5 text-brand-primary" />
+      {/* Content */}
+      <div className="relative z-10 flex flex-col flex-1 justify-between px-6 pt-10 pb-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-black text-white tracking-tight">My Orders</h1>
+          <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
+            Log in to view your order history and track every delivery in real time.
+          </p>
+        </div>
+
+        {/* Benefits */}
+        <div className="space-y-1">
+          {[
+            { Icon: Truck,    text: 'Live delivery tracking for every order'     },
+            { Icon: Package,  text: 'Full order history, receipts & invoices'    },
+            { Icon: Zap,      text: 'Faster checkout with saved addresses'       },
+            { Icon: Shield,   text: 'Secure payments & order protection'         },
+          ].map(({ Icon, text }) => (
+            <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
+              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon className="w-4.5 h-4.5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-white">{text}</span>
             </div>
-            <span className="text-sm font-medium text-brand-charcoal">{text}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* CTAs */}
-      <div className="px-4 pb-8 mt-0 space-y-3">
-        <Link
-          href={'/login?redirect=/my-orders' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
-        >
-          <LogIn className="w-5 h-5" />
-          Log In
-        </Link>
-        <Link
-          href={'/signup?redirect=/my-orders' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
-        >
-          <UserPlus className="w-5 h-5" />
-          Create an Account
-        </Link>
+        {/* CTAs */}
+        <div className="space-y-3">
+          <Link
+            href={'/login?redirect=/my-orders' as any}
+            className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
+          >
+            <LogIn className="w-5 h-5" />
+            Log In
+          </Link>
+          <Link
+            href={'/signup?redirect=/my-orders' as any}
+            className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
+          >
+            <UserPlus className="w-5 h-5" />
+            Create an Account
+          </Link>
+        </div>
       </div>
     </div>
   );

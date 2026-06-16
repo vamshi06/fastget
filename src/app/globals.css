@@ -36,6 +36,15 @@
     --shadow-brand:      0 4px 14px rgba(245,166,35,0.28);
     --shadow-brand-lg:   0 8px 24px rgba(245,166,35,0.35);
     --shadow-nav:        0 1px 0 rgba(0,0,0,0.06);
+
+    /* Reserved space for MobileBottomNav — kept in sync with its actual
+       visibility (route-hidden / keyboard-open) so hiding it doesn't leave
+       a dangling empty gap. See MobileBottomNav.tsx. */
+    --bottom-nav-space: 4rem;
+  }
+
+  @media (min-width: 768px) {
+    :root { --bottom-nav-space: 0px; }
   }
 
   * { box-sizing: border-box; }
