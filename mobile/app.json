@@ -35,9 +35,6 @@
         "ACCESS_NETWORK_STATE"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
       "expo-updates",
       "expo-asset"

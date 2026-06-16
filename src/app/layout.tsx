@@ -14,6 +14,7 @@ import { AnnouncementBar } from '@/components/AnnouncementBar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://fastget.in'),
   title: 'FastGet',
   description:
     'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
