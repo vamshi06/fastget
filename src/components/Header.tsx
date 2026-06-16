@@ -22,6 +22,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
+import { DeleteAccountButton } from "./DeleteAccountButton";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -88,30 +89,6 @@ export function Header() {
   };
 
   const handleLogout = () => {
-    logout();
-    setShowDropdown(false);
-    router.push("/");
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!currentUser) return;
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This cannot be undone.",
-    );
-    if (!confirmed) return;
-
-    const res = await fetch("/api/auth/delete", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: currentUser.id }),
-    });
-
-    if (!res.ok) {
-      const result = await res.json();
-      console.error("Account deletion failed:", result.error);
-      return;
-    }
-
     logout();
     setShowDropdown(false);
     router.push("/");
@@ -436,6 +413,9 @@ export function Header() {
                       <LogOut className="w-4 h-4 text-brand-primary flex-shrink-0" />
                       Sign Out
                     </button>
+
+                    {/* Delete account */}
+                    <DeleteAccountButton variant="dropdown" />
                   </div>
                 )}
               </div>
