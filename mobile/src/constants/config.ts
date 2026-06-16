@@ -3,8 +3,7 @@
 // Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
 const DEV_URL = 'http://192.168.101.87:3000';
 
-// TODO: set this once you deploy to Vercel — not needed until you do a production build.
-const PROD_URL = 'https://REPLACE_WITH_YOUR_VERCEL_URL.vercel.app';
+const PROD_URL = 'https://fastget.in';
 
 export const APP_URL = __DEV__ ? DEV_URL : PROD_URL;
 

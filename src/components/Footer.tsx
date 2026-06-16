@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Phone, MapPin, Mail, Zap } from 'lucide-react';
+import { Headphones, MapPin, Mail, Zap } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -62,16 +62,28 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Contact</h3>
             <ul className="space-y-3">
-              {[
-                { icon: Phone,  text: 'Support: Coming Soon' },
-                { icon: MapPin, text: 'Mumbai, Maharashtra' },
-                { icon: Mail,   text: 'support@fastget.in' },
-              ].map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-2.5 text-sm text-neutral-400">
-                  <Icon className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                  <span>{text}</span>
-                </li>
-              ))}
+              <li>
+                <Link
+                  href={'/support' as any}
+                  className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-brand-primary transition-colors"
+                >
+                  <Headphones className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                  <span>FastGet Support</span>
+                </Link>
+              </li>
+              <li className="flex items-center gap-2.5 text-sm text-neutral-400">
+                <MapPin className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                <span>Mumbai, Maharashtra</span>
+              </li>
+              <li>
+                <a
+                  href="mailto:support@elemantra.in"
+                  className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-brand-primary transition-colors"
+                >
+                  <Mail className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                  <span>support@elemantra.in</span>
+                </a>
+              </li>
             </ul>
           </div>
         </div>

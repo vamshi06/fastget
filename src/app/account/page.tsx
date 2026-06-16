@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser } from '@/components/UserContext';
+import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import {
   ClipboardList,
   MapPin,
@@ -261,6 +262,11 @@ export default function AccountPage() {
           <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">Log Out</span>
           <ChevronRight className="w-4 h-4 text-brand-steel" />
         </button>
+      </div>
+
+      {/* Delete Account */}
+      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
+        <DeleteAccountButton variant="card" />
       </div>
 
       <p className="text-center text-xs text-brand-steel mt-8">FastGet v1.0.0</p>
