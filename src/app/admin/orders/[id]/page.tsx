@@ -2,7 +2,7 @@ import { getOrderById } from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS } from '@/types';
-import { cookies } from 'next/headers';
+import { requireAdminPage } from '@/lib/auth';
 
 interface OrderDetailPageProps {
   params: {
@@ -11,9 +11,8 @@ interface OrderDetailPageProps {
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+  await requireAdminPage();
   const order = await getOrderById(params.id);
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
 
   if (!order) {
     notFound();
@@ -46,7 +45,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </p>
         </div>
         <Link
-          href={(token ? `/admin/orders?token=${token}` : '/admin/orders') as any}
+          href="/admin/orders"
           className="btn-secondary px-4 py-2 text-sm"
         >
           ← Back

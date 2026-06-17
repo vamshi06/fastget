@@ -1,13 +1,12 @@
 import { getRecentOrders } from '@/lib/db';
 import { OrdersListClient } from '../components/OrdersListClient';
-import { cookies } from 'next/headers';
+import { requireAdminPage } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OrdersPage() {
+  await requireAdminPage();
   const orders = await getRecentOrders(1000);
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_token')?.value;
 
   return (
     <div className="space-y-6">
@@ -16,7 +15,7 @@ export default async function OrdersPage() {
         <p className="text-brand-slate text-sm">{orders.length} orders total</p>
       </div>
 
-      <OrdersListClient orders={orders} token={token} />
+      <OrdersListClient orders={orders} />
     </div>
   );
 }

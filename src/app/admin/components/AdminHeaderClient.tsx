@@ -1,14 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 export function AdminHeaderClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const pathname = usePathname();
-  const token = searchParams.get('token');
   const [showLogout, setShowLogout] = useState(false);
 
   const handleLogout = async () => {
@@ -24,16 +22,16 @@ export function AdminHeaderClient() {
     <header className="bg-white border-b border-neutral-100 shadow-sm sticky top-0 z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href={(token ? `/admin?token=${token}` : '/admin') as any} className="group">
+          <Link href="/admin" className="group">
             <h1 className="text-2xl font-black text-brand-charcoal group-hover:text-brand-primary transition-colors duration-200">
               FastGet <span className="text-brand-primary">Admin</span>
             </h1>
           </Link>
           <nav className="flex gap-6">
             {[
-              { label: 'Dashboard', href: token ? `/admin?token=${token}` : '/admin', active: isDashboard },
-              { label: 'Orders', href: token ? `/admin/orders?token=${token}` : '/admin/orders', active: isOrders },
-              { label: 'Products', href: token ? `/admin/products?token=${token}` : '/admin/products', active: isProducts },
+              { label: 'Dashboard', href: '/admin', active: isDashboard },
+              { label: 'Orders', href: '/admin/orders', active: isOrders },
+              { label: 'Products', href: '/admin/products', active: isProducts },
             ].map(({ label, href, active }) => (
               <Link
                 key={label}

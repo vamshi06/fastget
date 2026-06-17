@@ -6,6 +6,7 @@ import {
 } from '@/lib/products';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ function generateProductCode(categorySlug: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const start = Date.now();
   logger.info('API', 'POST /admin/api/products');
   try {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/products';
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { requireRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ type Ctx = { params: Promise<{ productCode: string }> };
 // ── GET /admin/api/products/[productCode] ─────────────────────────────────────
 // Returns the raw row data needed to pre-fill the edit form.
 export async function GET(_req: NextRequest, ctx: Ctx) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const { productCode } = await ctx.params;
   try {
     const row = await getProductRawRow(productCode);
@@ -68,6 +71,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 // ── PATCH /admin/api/products/[productCode] ───────────────────────────────────
 // Updates the category table row and (if products_id present) the products table.
 export async function PATCH(req: NextRequest, ctx: Ctx) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const { productCode } = await ctx.params;
   try {
     const body = await req.json();
@@ -148,6 +153,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 // Hard-deletes the product from its category table, product_variants, inventory,
 // and (if linked) the normalised products table.
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const { productCode } = await ctx.params;
   try {
     const row = await getProductRawRow(productCode);

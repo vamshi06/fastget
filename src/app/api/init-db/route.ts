@@ -1,6 +1,7 @@
 import { initializeDatabase } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { requireRole } from '@/lib/auth';
 
 /**
  * GET /api/init-db
@@ -8,6 +9,8 @@ import { logger } from '@/lib/logger';
  * Safe to call multiple times.
  */
 export async function GET() {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const start = Date.now();
   logger.info('API', 'GET /api/init-db');
   try {

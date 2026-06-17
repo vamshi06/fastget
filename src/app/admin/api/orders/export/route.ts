@@ -2,11 +2,14 @@ import { getRecentOrders, getOrdersByStatus } from '@/lib/db';
 import { Order, OrderStatus } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { requireRole } from '@/lib/auth';
 
 // Force dynamic rendering to allow search params
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const start = Date.now();
   try {
     // Get filter parameters

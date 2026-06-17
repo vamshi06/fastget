@@ -7,12 +7,11 @@ import { useSearchParams } from 'next/navigation';
 
 interface OrdersListProps {
   orders: Order[];
-  token?: string;
 }
 
 const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-brand-charcoal font-medium text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary transition-all duration-200';
 
-export function OrdersListClient({ orders, token }: OrdersListProps) {
+export function OrdersListClient({ orders }: OrdersListProps) {
   const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
     (searchParams.get('status') as OrderStatus | 'all') || 'all'
@@ -128,7 +127,7 @@ export function OrdersListClient({ orders, token }: OrdersListProps) {
             Orders <span className="text-brand-primary">({filteredOrders.length})</span>
           </h3>
           <Link
-            href={`/admin/api/orders/export?status=${statusFilter}&name=${nameFilter}&dateFrom=${dateFromFilter}&dateTo=${dateToFilter}${token ? `&token=${token}` : ''}`}
+            href={`/admin/api/orders/export?status=${statusFilter}&name=${nameFilter}&dateFrom=${dateFromFilter}&dateTo=${dateToFilter}`}
             className="btn-primary text-sm py-2"
           >
             Export CSV
@@ -177,7 +176,7 @@ export function OrdersListClient({ orders, token }: OrdersListProps) {
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        href={`/admin/orders/${order.id}${token ? `?token=${token}` : ''}`}
+                        href={`/admin/orders/${order.id}`}
                         className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200"
                       >
                         View →

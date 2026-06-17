@@ -1,4 +1,5 @@
 import { getRecentOrders } from '@/lib/db';
+import { requireAdminPage } from '@/lib/auth';
 import Link from 'next/link';
 import { Order, OrderStatus } from '@/types';
 import {
@@ -26,6 +27,7 @@ async function getMetrics() {
 }
 
 export default async function AdminDashboard() {
+  await requireAdminPage();
   const { totalOrders, totalRevenue, statusCounts } = await getMetrics();
 
   const statCards = [
