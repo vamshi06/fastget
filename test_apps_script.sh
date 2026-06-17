@@ -1,6 +1,9 @@
 #!/bin/bash
 
-SCRIPT_URL="https://script.google.com/macros/s/AKfycbx55K5HphzTev19Op53ubmPoB3tePeHlYJCCaM36HADvuRQQzUpw3bFZ-n8MrZi9p2L/exec"
+# Apps Script is deprecated (orders now live in Neon). To run this test, supply the
+# deployment URL via env so it is never hardcoded/committed:
+#   GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/XXXX/exec" ./test_apps_script.sh
+SCRIPT_URL="${GOOGLE_SCRIPT_URL:?Set GOOGLE_SCRIPT_URL to the Apps Script deployment URL}"
 
 TEST_PAYLOAD='{
   "action": "createOrder",
