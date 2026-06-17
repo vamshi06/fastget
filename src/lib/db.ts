@@ -566,33 +566,6 @@ export async function getOrderByStatusToken(token: string): Promise<Order | null
 }
 
 /**
- * Retrieve an order by its update token (agent-facing).
- *
- * @param {string} token - The update_token from order creation response
- * @returns {Promise<Order | null>}
- */
-export async function getOrderByUpdateToken(token: string): Promise<Order | null> {
-  const sql = getUnpooledClient();
-  try {
-    const normalizedToken = token.toLowerCase();
-
-    const result = await sql`
-      SELECT * FROM orders WHERE LOWER(update_token) = ${normalizedToken} LIMIT 1
-    `;
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    const dbRow = result[0] as DbOrder;
-    return dbOrderToOrder(dbRow);
-  } catch (error) {
-    logger.error('DB', 'Failed to get order by update token', { error: error instanceof Error ? error.message : String(error) });
-    return null;
-  }
-}
-
-/**
  * Update an order's status with PIN authentication and transition validation.
  *
  * @param {string} updateToken
@@ -602,7 +575,7 @@ export async function getOrderByUpdateToken(token: string): Promise<Order | null
  * @returns {Promise<{success: boolean, error?: string, orderId?: string}>}
  */
 export async function updateOrderStatus(
-  updateToken: string,
+  orderId: string,
   newStatus: OrderStatus,
   pin: string,
   eta?: string
@@ -622,10 +595,8 @@ export async function updateOrderStatus(
       return { success: false, error: 'Invalid PIN' };
     }
 
-    const normalizedUpdateToken = updateToken.toLowerCase();
-
     // Fetch current order to validate transition
-    const currentOrder = await getOrderByUpdateToken(normalizedUpdateToken);
+    const currentOrder = await getOrderById(orderId);
 
     if (!currentOrder) {
       return { success: false, error: 'Order not found' };
@@ -648,14 +619,14 @@ export async function updateOrderStatus(
       result = await sqlConn`
         UPDATE orders
         SET status = ${newStatus}, eta = ${eta}
-        WHERE LOWER(update_token) = ${normalizedUpdateToken} AND status = ${currentOrder.status}
+        WHERE id = ${orderId} AND status = ${currentOrder.status}
         RETURNING id
       `;
     } else {
       result = await sqlConn`
         UPDATE orders
         SET status = ${newStatus}
-        WHERE LOWER(update_token) = ${normalizedUpdateToken} AND status = ${currentOrder.status}
+        WHERE id = ${orderId} AND status = ${currentOrder.status}
         RETURNING id
       `;
     }

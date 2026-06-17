@@ -142,7 +142,7 @@ export default function AgentDashboard() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <Link key={order.id} href={`/agent/${order.updateToken}`}>
+              <Link key={order.id} href={`/agent/${order.id}`}>
                 <div className={`border rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer ${statusCardColors[order.status]}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">

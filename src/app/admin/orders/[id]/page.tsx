@@ -186,14 +186,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </p>
                 </div>
               )}
-              {order.updateToken && (
-                <div className="hover:bg-primary-50 p-3 rounded-xl transition-colors duration-200">
-                  <p className="text-xs text-brand-steel font-semibold uppercase tracking-wide">Update Token</p>
-                  <p className="text-xs font-mono text-brand-slate break-all mt-1 bg-brand-fog p-2 rounded-lg">
-                    {order.updateToken}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>

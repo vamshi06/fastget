@@ -20,7 +20,7 @@ import {
 export default function AgentUpdatePage() {
   const params = useParams();
   const router = useRouter();
-  const token = (params.token as string).toLowerCase();
+  const orderId = params.id as string;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
@@ -33,10 +33,10 @@ export default function AgentUpdatePage() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await fetch(`/api/orders/agent-token/${token}`, { cache: 'no-store' });
+        const response = await fetch(`/api/orders/by-id/${orderId}`, { cache: 'no-store' });
         if (!response.ok) throw new Error('Order not found');
         const data = await response.json();
-        setOrder(data);
+        setOrder(data.order);
         setSelectedStatus('');
         setEta('');
         setPin('');
@@ -50,7 +50,7 @@ export default function AgentUpdatePage() {
     };
 
     fetchOrder();
-  }, [token]);
+  }, [orderId]);
 
   const validNextStatuses = order ? VALID_STATUS_TRANSITIONS[order.status] : [];
 
@@ -91,7 +91,7 @@ export default function AgentUpdatePage() {
       const response = await fetch('/api/orders/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateToken: token, status: selectedStatus, pin, eta: eta || undefined }),
+        body: JSON.stringify({ orderId, status: selectedStatus, pin, eta: eta || undefined }),
       });
 
       const data = await response.json();

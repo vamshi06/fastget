@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrderByUpdateToken, updateOrderStatus } from '@/lib/db';
+import { updateOrderStatus } from '@/lib/db';
+import { requireRole } from '@/lib/auth';
 import { OrderStatus } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -11,19 +12,19 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   logger.info('API', 'POST /api/orders/update');
   try {
     const body = await request.json();
-    const { updateToken, status, pin, eta } = body;
-
-    const normalizedToken = updateToken?.toLowerCase();
+    const { orderId, status, pin, eta } = body;
 
     // Validate required fields
-    if (!normalizedToken || !status || !pin) {
+    if (!orderId || !status || !pin) {
       logger.warn('API', 'POST /api/orders/update — missing required fields');
       logger.api('POST', '/api/orders/update', 400, Date.now() - start);
       return NextResponse.json(
-        { error: 'Missing required fields: updateToken, status, pin' },
+        { error: 'Missing required fields: orderId, status, pin' },
         { status: 400 }
       );
     }
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Call update function with PIN authentication
     const result = await updateOrderStatus(
-      normalizedToken,
+      orderId,
       status as OrderStatus,
       pin,
       eta

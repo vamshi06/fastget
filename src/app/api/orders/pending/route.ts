@@ -65,9 +65,7 @@ export async function GET(request: NextRequest) {
         total,
         payment_method,
         status,
-        eta,
-        update_token,
-        status_token
+        eta
       FROM orders
       WHERE status = ${statusFilter}
       ORDER BY created_at ASC
@@ -90,8 +88,6 @@ export async function GET(request: NextRequest) {
       paymentMethod: order.payment_method,
       status: order.status,
       eta: order.eta,
-      updateToken: order.update_token,
-      statusToken: order.status_token,
     }));
 
     logger.debug('API', 'GET /api/orders/pending — orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount });

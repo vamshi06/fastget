@@ -6,13 +6,13 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/session';
 // Back-office surfaces — the admin panel, the agent dashboard, the all-orders
 // APIs, and the DB-init route — all require an authenticated admin session.
 //
-// NOTE: per-order agent links (/agent/[token]) are intentionally NOT matched.
-// They authorize via an unguessable capability token validated by the route
-// itself, so a delivery agent can open their single order without an account.
+// The agent management screens are staff-only — orders are processed by
+// logged-in admins, not via account-less capability links (C4).
 export const config = {
   matcher: [
     '/admin/:path*',
     '/agent-dashboard',
+    '/agent/:path*',
     '/api/orders/pending',
     '/api/init-db',
   ],
