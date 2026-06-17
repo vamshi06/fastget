@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { removeFromWishlist } from '@/lib/db';
+import { requireSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { productId: string } }
 ) {
   const start = Date.now();
-  const userId = request.nextUrl.searchParams.get('userId');
+  const auth = await requireSession();
+  if ('response' in auth) return auth.response;
   const productId = decodeURIComponent(params.productId);
 
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-  }
-
   try {
-    const success = await removeFromWishlist(userId, productId);
+    // removeFromWishlist matches on (user_id AND product_id) — IDOR fix (C3).
+    const success = await removeFromWishlist(auth.session.userId, productId);
     if (!success) {
       logger.api('DELETE', '/api/wishlist/[productId]', 500, Date.now() - start);
       return NextResponse.json({ error: 'Failed to remove from wishlist' }, { status: 500 });

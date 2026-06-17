@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWishlistByUserId, addToWishlist } from '@/lib/db';
+import { requireSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+// User is derived from the verified session cookie, never the request (IDOR fix, C3).
+export async function GET(_request: NextRequest) {
   const start = Date.now();
-  const userId = request.nextUrl.searchParams.get('userId');
-
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-  }
+  const auth = await requireSession();
+  if ('response' in auth) return auth.response;
 
   try {
-    const items = await getWishlistByUserId(userId);
+    const items = await getWishlistByUserId(auth.session.userId);
     logger.api('GET', '/api/wishlist', 200, Date.now() - start);
     return NextResponse.json({ items });
   } catch (error) {
@@ -25,16 +24,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const start = Date.now();
+  const auth = await requireSession();
+  if ('response' in auth) return auth.response;
 
   try {
     const body = await request.json();
-    const { userId, productId, productData } = body;
+    const { productId, productData } = body;
 
-    if (!userId || !productId) {
-      return NextResponse.json({ error: 'userId and productId are required' }, { status: 400 });
+    if (!productId) {
+      return NextResponse.json({ error: 'productId is required' }, { status: 400 });
     }
 
-    const success = await addToWishlist(userId, productId, productData ?? {});
+    const success = await addToWishlist(auth.session.userId, productId, productData ?? {});
     if (!success) {
       logger.api('POST', '/api/wishlist', 500, Date.now() - start);
       return NextResponse.json({ error: 'Failed to add to wishlist' }, { status: 500 });

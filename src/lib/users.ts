@@ -392,6 +392,7 @@ export async function getPrimaryAddress(userId: string): Promise<UserAddress | n
  */
 export async function updateUserAddress(
   addressId: string,
+  userId: string,
   updates: {
     type?: AddressType;
     street?: string;
@@ -410,7 +411,7 @@ export async function updateUserAddress(
         landmark = COALESCE(${updates.landmark}, landmark),
         city = COALESCE(${updates.city}, city),
         phone = COALESCE(${updates.phone}, phone)
-      WHERE id = ${addressId}
+      WHERE id = ${addressId} AND user_id = ${userId}
       RETURNING *
     `;
 
@@ -425,12 +426,12 @@ export async function updateUserAddress(
 /**
  * Delete a user's address.
  */
-export async function deleteUserAddress(addressId: string): Promise<boolean> {
+export async function deleteUserAddress(addressId: string, userId: string): Promise<boolean> {
   const sql = getClient();
   try {
     const result = await sql`
       DELETE FROM user_addresses
-      WHERE id = ${addressId}
+      WHERE id = ${addressId} AND user_id = ${userId}
       RETURNING id
     `;
 

@@ -42,6 +42,23 @@ export async function requireRole(
 }
 
 /**
+ * Route-handler guard for "must be logged in" (any role). Returns the verified
+ * session, or a ready-to-return 401. Used by customer-owned data endpoints so
+ * the user id comes from the cookie, never from the request (IDOR fix).
+ */
+export async function requireSession(): Promise<
+  { session: SessionPayload } | { response: NextResponse }
+> {
+  const session = await getSession();
+  if (!session) {
+    return {
+      response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }),
+    };
+  }
+  return { session };
+}
+
+/**
  * Server-component guard. Redirects to the admin login when the visitor is not
  * an authenticated admin; otherwise returns the session.
  */
