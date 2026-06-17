@@ -9,7 +9,6 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronLeft,
-  Lock,
   ArrowRight,
   Loader,
   Phone,
@@ -24,7 +23,7 @@ export default function AgentUpdatePage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
-  const [pin, setPin] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | ''>('');
   const [eta, setEta] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +38,6 @@ export default function AgentUpdatePage() {
         setOrder(data.order);
         setSelectedStatus('');
         setEta('');
-        setPin('');
         setResult(null);
       } catch (error) {
         console.error('Failed to fetch order:', error);
@@ -65,9 +63,11 @@ export default function AgentUpdatePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // First stage: validate the chosen transition, then ask for confirmation
+  // instead of firing the update on a single click.
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStatus || !pin) return;
+    if (!selectedStatus) return;
 
     if (selectedStatus === order?.status) {
       setResult({ success: false, message: 'Cannot transition to the same status. Please select a different action.' });
@@ -84,6 +84,14 @@ export default function AgentUpdatePage() {
       return;
     }
 
+    setResult(null);
+    setConfirmOpen(true);
+  };
+
+  // Second stage: actually perform the update (admin session is the auth).
+  const doUpdate = async () => {
+    if (!selectedStatus) return;
+    setConfirmOpen(false);
     setLoading(true);
     setResult(null);
 
@@ -91,14 +99,13 @@ export default function AgentUpdatePage() {
       const response = await fetch('/api/orders/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, status: selectedStatus, pin, eta: eta || undefined }),
+        body: JSON.stringify({ orderId, status: selectedStatus, eta: eta || undefined }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
         setResult({ success: true, message: `Order updated to "${ORDER_STATUS_LABELS[selectedStatus]}" successfully!` });
-        setPin('');
         setSelectedStatus('');
         setEta('');
 
@@ -320,32 +327,11 @@ export default function AgentUpdatePage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                    4-Digit PIN
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel" />
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={4}
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                      className={`${inputCls} pl-10`}
-                      placeholder="Enter PIN"
-                      required
-                    />
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={
                     loading ||
                     !selectedStatus ||
-                    pin.length !== 4 ||
                     selectedStatus === order?.status ||
                     !VALID_STATUS_TRANSITIONS[order?.status || 'received'].includes(selectedStatus)
                   }
@@ -376,6 +362,41 @@ export default function AgentUpdatePage() {
             </div>
           )}
         </div>
+
+        {confirmOpen && order && selectedStatus && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => !loading && setConfirmOpen(false)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+              <div>
+                <h2 className="font-bold text-brand-charcoal">Confirm status change</h2>
+                <p className="text-sm text-brand-slate mt-1">
+                  Change <span className="font-semibold text-brand-charcoal">{order.customerName}</span>&apos;s order from{' '}
+                  <strong>{ORDER_STATUS_LABELS[order.status]}</strong> to{' '}
+                  <strong>{ORDER_STATUS_LABELS[selectedStatus]}</strong>?
+                </p>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  disabled={loading}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-brand-charcoal hover:bg-brand-fog transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={doUpdate}
+                  disabled={loading}
+                  className="flex-1 btn-primary justify-center py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Updating…' : 'Yes, update'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

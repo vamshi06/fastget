@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 /**
  * POST /api/orders/update
  *
- * Update an order's status with PIN authentication.
+ * Update an order's status. Requires an authenticated admin session.
  * Status transitions are validated against VALID_STATUS_TRANSITIONS.
  */
 export async function POST(request: NextRequest) {
@@ -17,42 +17,24 @@ export async function POST(request: NextRequest) {
   logger.info('API', 'POST /api/orders/update');
   try {
     const body = await request.json();
-    const { orderId, status, pin, eta } = body;
+    const { orderId, status, eta } = body;
 
     // Validate required fields
-    if (!orderId || !status || !pin) {
+    if (!orderId || !status) {
       logger.warn('API', 'POST /api/orders/update — missing required fields');
       logger.api('POST', '/api/orders/update', 400, Date.now() - start);
       return NextResponse.json(
-        { error: 'Missing required fields: orderId, status, pin' },
+        { error: 'Missing required fields: orderId, status' },
         { status: 400 }
       );
     }
 
-    // Validate PIN format (4 digits)
-    if (typeof pin !== 'string' || !/^\d{4}$/.test(pin)) {
-      logger.warn('API', 'POST /api/orders/update — invalid PIN format');
-      logger.api('POST', '/api/orders/update', 400, Date.now() - start);
-      return NextResponse.json(
-        { error: 'Invalid PIN format (must be 4 digits)' },
-        { status: 400 }
-      );
-    }
-
-    // Call update function with PIN authentication
+    // Caller is an authenticated admin (enforced above) — no shared PIN needed.
     const result = await updateOrderStatus(
       orderId,
       status as OrderStatus,
-      pin,
       eta
     );
-
-    // Handle authentication failure (wrong PIN)
-    if (!result.success && result.error === 'Invalid PIN') {
-      logger.warn('API', 'POST /api/orders/update — invalid PIN attempt');
-      logger.api('POST', '/api/orders/update', 401, Date.now() - start);
-      return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
-    }
 
     // Handle order not found
     if (!result.success && result.error === 'Order not found') {

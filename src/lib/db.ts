@@ -1,5 +1,4 @@
 import { neon } from '@neondatabase/serverless';
-import { timingSafeEqual } from 'crypto';
 import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -8,7 +7,6 @@ import { logger } from '@/lib/logger';
  *
  * Environment:
  * - DATABASE_URL or fastget_DATABASE_URL: Neon connection string (required)
- * - AGENT_PIN: 4-digit PIN for agent authentication (required for status updates)
  *
  * @module lib/db
  */
@@ -40,9 +38,6 @@ function getUnpooledClient() {
   const unpooledUrl = databaseUrl.replace('-pooler', '');
   return neon(unpooledUrl);
 }
-
-// PIN constant for agent verification (4-digit) – loaded at module init
-const AGENT_PIN = process.env.AGENT_PIN;
 
 /**
  * Helper – returns an unpooled sql client (direct primary access).
@@ -566,36 +561,22 @@ export async function getOrderByStatusToken(token: string): Promise<Order | null
 }
 
 /**
- * Update an order's status with PIN authentication and transition validation.
+ * Update an order's status (transition validated against VALID_STATUS_TRANSITIONS).
+ * Authorization is enforced by the calling route (admin session).
  *
- * @param {string} updateToken
+ * @param {string} orderId
  * @param {OrderStatus} newStatus
- * @param {string} pin
  * @param {string} [eta]
  * @returns {Promise<{success: boolean, error?: string, orderId?: string}>}
  */
 export async function updateOrderStatus(
   orderId: string,
   newStatus: OrderStatus,
-  pin: string,
   eta?: string
 ): Promise<{ success: boolean; error?: string; orderId?: string }> {
   try {
-    // Verify PIN is configured
-    if (!AGENT_PIN) {
-      logger.error('DB', 'AGENT_PIN env var not configured — status updates blocked');
-      return { success: false, error: 'Authentication not configured' };
-    }
-
-    // Verify PIN using constant-time comparison to prevent timing attacks
-    const pinMatch =
-      pin.length === AGENT_PIN.length &&
-      timingSafeEqual(Buffer.from(pin), Buffer.from(AGENT_PIN));
-    if (!pinMatch) {
-      return { success: false, error: 'Invalid PIN' };
-    }
-
-    // Fetch current order to validate transition
+    // Authorization is handled by the route (admin session) — no shared PIN.
+    // Fetch current order to validate transition.
     const currentOrder = await getOrderById(orderId);
 
     if (!currentOrder) {
