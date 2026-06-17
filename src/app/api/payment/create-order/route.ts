@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRazorpayOrder } from '@/lib/razorpay';
 import { createOrder } from '@/lib/db';
-import { setRazorpayOrderId, deleteOrder } from '@/lib/payment-db';
+import { setRazorpayOrderId } from '@/lib/payment-db';
 import { generateUUID, generateToken, formatPhoneNumber, validateOrderForm } from '@/lib/utils';
 import { Order } from '@/types';
 import { logger } from '@/lib/logger';
@@ -95,12 +95,15 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       logger.error('Payment', 'Razorpay order creation failed', {
         orderId,
-        error: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err.message : JSON.stringify(err),
       });
-      // Clean up the DB order so it doesn't sit as an orphaned 'received' order
-      await deleteOrder(orderId);
+      // Keep the DB order — the user can still see their order details even though
+      // payment couldn't be initiated. paymentStatus stays NULL (unpaid).
       logger.api('POST', '/api/payment/create-order', 502, Date.now() - start);
-      return NextResponse.json({ error: 'Payment gateway unavailable. Please try again.' }, { status: 502 });
+      return NextResponse.json(
+        { error: 'Payment gateway unavailable. Please try again.', statusToken },
+        { status: 502 }
+      );
     }
 
     // Persist the Razorpay order ID so verify-payment can cross-reference it

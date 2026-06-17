@@ -1,6 +1,27 @@
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
+// Run once per server lifetime — idempotent on repeat calls (IF NOT EXISTS).
+let columnsEnsured = false;
+
+async function ensurePaymentColumns(): Promise<void> {
+  if (columnsEnsured) return;
+  const sql = getUnpooledConnection();
+  try {
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status        VARCHAR(20)`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id     TEXT`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id   TEXT`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_signature     TEXT`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_captured_at   TIMESTAMP WITH TIME ZONE`;
+    columnsEnsured = true;
+    logger.info('DB', 'Payment columns verified / added');
+  } catch (error) {
+    logger.error('DB', 'ensurePaymentColumns failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 /**
  * Stores the Razorpay order ID on an existing DB order right after the Razorpay
  * order is created, so it can be reconciled during verification.
@@ -9,6 +30,7 @@ export async function setRazorpayOrderId(
   orderId: string,
   razorpayOrderId: string
 ): Promise<boolean> {
+  await ensurePaymentColumns();
   const sql = getUnpooledConnection();
   try {
     await sql`
@@ -36,6 +58,7 @@ export async function confirmOrderPayment(
   razorpayOrderId: string,
   razorpaySignature: string
 ): Promise<boolean> {
+  await ensurePaymentColumns();
   const sql = getUnpooledConnection();
   try {
     const result = await sql`
@@ -63,6 +86,7 @@ export async function confirmOrderPayment(
  * call multiple times — it only cancels if payment has not been captured yet.
  */
 export async function cancelUnpaidOrder(orderId: string): Promise<boolean> {
+  await ensurePaymentColumns();
   const sql = getUnpooledConnection();
   try {
     const result = await sql`

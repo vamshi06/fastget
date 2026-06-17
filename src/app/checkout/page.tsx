@@ -259,6 +259,13 @@ export default function CheckoutPage() {
 
       if (!createRes.ok) {
         const data = await createRes.json();
+        // Order was saved but gateway failed — navigate to order page so the user
+        // can see their order details even though payment couldn't be initiated.
+        if (data.statusToken) {
+          clearCart();
+          router.push(`/order/${data.statusToken}`);
+          return;
+        }
         throw new Error(data.error || 'Failed to initiate payment');
       }
 
@@ -267,14 +274,9 @@ export default function CheckoutPage() {
       setPaymentState('processing');
 
       // Step 2 — open Razorpay checkout.
-      // callback_url is used instead of a JS handler so that Razorpay POSTs the
-      // payment result to our server even when the user leaves the app (e.g. GPay).
-      // The server verifies the payment and redirects to success or failure.
-      const callbackUrl =
-        `${window.location.origin}/api/payment/callback` +
-        `?orderId=${encodeURIComponent(orderId)}` +
-        `&statusToken=${encodeURIComponent(statusToken)}`;
-
+      // We use a JS handler (not callback_url) so navigation back to the order page
+      // happens in the same JS context — callback_url causes a server redirect inside
+      // Razorpay's iframe and the main WebView frame never navigates.
       await openCheckout({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount,
@@ -282,7 +284,34 @@ export default function CheckoutPage() {
         name: 'FastGet',
         description: 'Order payment',
         order_id: razorpayOrderId,
-        callback_url: callbackUrl,
+        handler: async (response) => {
+          setPaymentState('verifying');
+          try {
+            const verifyRes = await fetch('/api/payment/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.statusToken) {
+              clearCart();
+              router.push(`/order/${verifyData.statusToken}`);
+            } else {
+              setPaymentState('failed');
+              setIsSubmitting(false);
+              setError(verifyData.error || 'Payment verification failed. Please contact support.');
+            }
+          } catch {
+            setPaymentState('failed');
+            setIsSubmitting(false);
+            setError('Payment verification failed. Please contact support.');
+          }
+        },
         prefill: {
           name: formData.customerName,
           contact: formatPhoneNumber(formData.customerPhone),
@@ -290,7 +319,6 @@ export default function CheckoutPage() {
         theme: { color: '#F5A623' },
         modal: {
           ondismiss: () => {
-            // Best-effort: mark the DB order cancelled so it doesn't show as "received"
             fetch('/api/payment/cancel-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

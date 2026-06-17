@@ -36,16 +36,11 @@
       ]
     },
     "plugins": [
-      "expo-updates",
       "expo-asset"
     ],
-    "updates": {
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/your-eas-project-id"
-    },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "c0d97975-5b74-4354-8261-16a9a5c49b35"
       }
     }
   }

@@ -18,7 +18,7 @@ export interface RazorpayCheckoutOptions {
   // callback_url is the server-side redirect approach (required for WebView/mobile).
   // When set, Razorpay POSTs payment result to this URL instead of calling handler.
   callback_url?: string;
-  handler?: (response: RazorpayResponse) => void;
+  handler?: (response: RazorpayResponse) => void | Promise<void>;
   prefill?: {
     name?: string;
     contact?: string;
