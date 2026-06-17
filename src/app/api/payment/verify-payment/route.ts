@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
-import { confirmOrderPayment, getStatusToken } from '@/lib/payment-db';
+import { confirmOrderPayment, getStatusToken, getOrderRazorpayOrderId } from '@/lib/payment-db';
 import { logger } from '@/lib/logger';
 
 /**
@@ -46,6 +46,20 @@ export async function POST(request: NextRequest) {
       logger.warn('Payment', 'verify-payment — invalid signature', { orderId, razorpay_order_id });
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Payment verification failed. Signature mismatch.' }, { status: 400 });
+    }
+
+    // Bind the Razorpay order to OUR order (same check the callback route does).
+    // A valid signature only proves the (order_id, payment_id) pair came from
+    // Razorpay — NOT that this razorpay_order_id belongs to the internal orderId
+    // the client supplied. Without this, an attacker could confirm an expensive
+    // order using a valid signature from a cheap payment they made on a different
+    // order. Razorpay fixes a payment's amount to its order, so binding the order
+    // also locks the amount.
+    const storedRazorpayOrderId = await getOrderRazorpayOrderId(orderId);
+    if (!storedRazorpayOrderId || storedRazorpayOrderId !== razorpay_order_id) {
+      logger.warn('Payment', 'verify-payment — razorpay_order_id does not match order', { orderId, razorpay_order_id });
+      logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
+      return NextResponse.json({ error: 'Payment order reference mismatch.' }, { status: 400 });
     }
 
     // Signature only proves the response came from Razorpay — NOT that the payment
