@@ -29,31 +29,29 @@ export function generateUUID(): string {
   });
 }
 
+const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'; // 36 chars (lookups are case-insensitive)
+const TOKEN_LENGTH = 16;
+
 export function generateToken(): string {
-  // Use cryptographically-secure randomness when available
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => (b % 36).toString(36)).join('');
+  // Cryptographically-secure, unbiased token. globalThis.crypto is available in
+  // Node 18+, the Edge runtime, and all modern browsers — the only runtimes this
+  // app targets — so there is no insecure Math.random fallback.
+  const rng = globalThis.crypto;
+  if (!rng || typeof rng.getRandomValues !== 'function') {
+    throw new Error('Secure RNG (crypto.getRandomValues) is unavailable');
   }
-  // Fallback
-  return Array.from({ length: 16 }, () =>
-    Math.floor(Math.random() * 36).toString(36)
-  ).join('');
-}
-
-export function generatePin(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-export function hashPin(pin: string): string {
-  let hash = 0;
-  for (let i = 0; i < pin.length; i++) {
-    const char = pin.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+  // Rejection sampling removes modulo bias: 252 is the largest multiple of 36
+  // that is <= 255, so bytes >= 252 are discarded rather than skewing 0..3.
+  const MAX = 252;
+  const out: string[] = [];
+  while (out.length < TOKEN_LENGTH) {
+    const bytes = new Uint8Array(TOKEN_LENGTH);
+    rng.getRandomValues(bytes);
+    for (let i = 0; i < bytes.length && out.length < TOKEN_LENGTH; i++) {
+      if (bytes[i] < MAX) out.push(TOKEN_ALPHABET[bytes[i] % 36]);
+    }
   }
-  return Math.abs(hash).toString(16);
+  return out.join('');
 }
 
 export function validateOrderForm(data: OrderFormData): string | null {
