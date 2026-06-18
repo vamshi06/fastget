@@ -73,6 +73,11 @@ const nextConfig = {
         source: '/api/invoice/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
+      // Keep the admin panel out of search indexes (L3).
+      {
+        source: '/admin/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
     ];
   },
 };
