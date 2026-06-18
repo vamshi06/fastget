@@ -49,7 +49,7 @@ function ResendVerificationForm() {
           <h2 className="text-xl font-bold text-brand-charcoal">Check your inbox</h2>
           <p className="mt-2 text-sm text-brand-slate">
             If <span className="font-semibold text-brand-charcoal">{email}</span> is registered and unverified,
-            a new verification link has been sent. Check your spam folder if you don't see it.
+            a new verification link has been sent. Check your spam folder if you don&apos;t see it.
           </p>
           <Link
             href="/login"

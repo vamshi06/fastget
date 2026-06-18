@@ -92,7 +92,7 @@ export function Footer() {
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
           <span>© {new Date().getFullYear()} FastGet. All rights reserved.</span>
           <span className="flex items-center gap-1.5">
-            Built for Mumbai's construction sites
+            Built for Mumbai&apos;s construction sites
             <span className="text-brand-primary">⚡</span>
           </span>
         </div>

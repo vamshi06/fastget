@@ -86,7 +86,6 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
           {toast.action && (
             <div className="mt-0.5">
               {toast.action.href ? (
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 <Link
                   href={toast.action.href as any}
                   onClick={dismiss}

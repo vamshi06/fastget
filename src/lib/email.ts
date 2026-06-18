@@ -164,8 +164,7 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
 
   try {
     // Dynamic import so the build doesn't fail when nodemailer isn't installed
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nodemailer = require('nodemailer');
+    const nodemailer = require('nodemailer'); // eslint-disable-line
     const transporter = nodemailer.createTransport({
       host,
       port,

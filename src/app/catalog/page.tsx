@@ -160,8 +160,7 @@ function CatalogPageContent() {
   }, [searchParams]);
 
   // ── URL builder ───────────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buildUrl = (cat: string, q: string, page: number, minP: number, maxP: number): any => {
+  const buildUrl = (cat: string, q: string, page: number, minP: number, maxP: number): string => {
     const p = new URLSearchParams();
     if (cat)              p.set('category',  cat);
     if (q)                p.set('q',         q);
