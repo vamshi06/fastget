@@ -30,7 +30,10 @@ export function generateUUID(): string {
 }
 
 const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'; // 36 chars (lookups are case-insensitive)
-const TOKEN_LENGTH = 16;
+// 32 chars of base36 ≈ 165 bits of entropy — an unguessable capability token
+// (M6). Stays lowercase so the case-insensitive status_token lookups keep working
+// and pre-existing 16-char tokens remain valid. Fits the VARCHAR(32) columns.
+const TOKEN_LENGTH = 32;
 
 export function generateToken(): string {
   // Cryptographically-secure, unbiased token. globalThis.crypto is available in

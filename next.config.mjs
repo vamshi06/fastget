@@ -57,6 +57,22 @@ const nextConfig = {
         source: '/:path*',
         headers: securityHeaders,
       },
+      // Capability-token surfaces (M6): the status/update token sits in the URL,
+      // so send no Referer at all from these pages/routes (defense-in-depth on
+      // top of the global strict-origin-when-cross-origin policy). A later
+      // matching rule overrides the global Referrer-Policy for these paths.
+      {
+        source: '/order/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        source: '/api/orders/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        source: '/api/invoice/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
     ];
   },
 };
