@@ -19,13 +19,12 @@ export async function GET() {
     logger.api('GET', '/api/init-db', 200, Date.now() - start);
     return NextResponse.json({ success: true, message: 'Database initialized' });
   } catch (error) {
+    // Log the real cause server-side; never leak the exception message to the
+    // client (H4 / M4 — avoid disclosing schema/driver internals).
     logger.error('API', 'GET /api/init-db — initialization failed', { error: error instanceof Error ? error.message : String(error) });
     logger.api('GET', '/api/init-db', 500, Date.now() - start);
     return NextResponse.json(
-      {
-        error: 'Failed to initialize database',
-        details: error instanceof Error ? error.message : String(error)
-      },
+      { error: 'Failed to initialize database' },
       { status: 500 }
     );
   }
