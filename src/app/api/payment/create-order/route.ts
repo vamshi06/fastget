@@ -3,6 +3,7 @@ import { createRazorpayOrder } from '@/lib/razorpay';
 import { createOrder } from '@/lib/db';
 import { setRazorpayOrderId } from '@/lib/payment-db';
 import { generateUUID, generateToken, formatPhoneNumber, validateOrderForm } from '@/lib/utils';
+import { getSession } from '@/lib/auth';
 import { Order } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -24,7 +25,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { currency = 'INR', items, subtotal, convenienceFee, total, userId, ...formFields } = body;
+    // userId is intentionally NOT read from the body — identity comes from the
+    // verified session cookie only (IDOR fix, consistent with C3). A stray
+    // userId in the body is ignored.
+    const { currency = 'INR', items, subtotal, convenienceFee, total, userId: _ignoredUserId, ...formFields } = body;
 
     // Re-use the same form validation as the COD orders flow
     const validationError = validateOrderForm(formFields);
@@ -48,6 +52,10 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: 'Invalid order totals' }, { status: 400 });
     }
+
+    // Attribute the order to the logged-in user via the verified session cookie.
+    // Guests (no session) get an unattributed order (user_id NULL).
+    const session = await getSession();
 
     // Create the DB order first — this locks in the amount before Razorpay sees it
     const orderId = generateUUID();
@@ -78,7 +86,7 @@ export async function POST(request: NextRequest) {
       status: 'received',
       statusToken,
       updateToken,
-      userId: typeof userId === 'string' ? userId : undefined,
+      userId: session?.userId,
     };
 
     const dbSuccess = await createOrder(order);

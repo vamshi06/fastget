@@ -5,7 +5,16 @@ const enc = new TextEncoder();
 const dec = new TextDecoder();
 
 export const SESSION_COOKIE_NAME = 'fastget_session';
-export const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
+
+// Admin sessions stay short-lived for security. Customer sessions are long-lived
+// and slide-refreshed on each app load (see GET /api/auth/me) so an active
+// shopper is never silently logged out mid-checkout.
+export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
+export const CUSTOMER_SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+export function sessionMaxAge(role: string): number {
+  return role === 'admin' ? ADMIN_SESSION_MAX_AGE : CUSTOMER_SESSION_MAX_AGE;
+}
 
 export interface SessionPayload {
   userId: string;
@@ -73,10 +82,16 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   }
 }
 
-export const SESSION_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  path: '/',
-  maxAge: SESSION_MAX_AGE,
-};
+/**
+ * Cookie options for a session, with the maxAge derived from the user's role
+ * (customers get a long-lived, slide-refreshed cookie; admins stay at 8h).
+ */
+export function sessionCookieOptions(role: string) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: sessionMaxAge(role),
+  };
+}

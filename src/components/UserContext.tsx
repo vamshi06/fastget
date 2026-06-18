@@ -23,8 +23,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load user from localStorage once on mount
+  // On mount: paint instantly from localStorage, then reconcile against the
+  // server session (the source of truth). localStorage has no expiry, so without
+  // this step the UI can show a "logged-in" user whose session cookie has already
+  // expired — and their orders would silently be saved unattributed.
   useEffect(() => {
+    let cancelled = false;
+
+    // 1. Optimistic paint from cached state.
     try {
       const user = localStorage.getItem('fastget_currentUser');
       if (user) {
@@ -34,6 +40,37 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('fastget_currentUser');
     }
     setIsLoaded(true);
+
+    // 2. Reconcile with (and slide-refresh) the real session.
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.user) {
+            const u = {
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              phone: data.user.phone,
+            };
+            setCurrentUser(u);
+            localStorage.setItem('fastget_currentUser', JSON.stringify(u));
+          }
+        } else if (res.status === 401) {
+          // Session is gone/expired — drop the stale logged-in state.
+          setCurrentUser(null);
+          localStorage.removeItem('fastget_currentUser');
+        }
+      } catch {
+        // Network/offline — keep the optimistic state rather than logging out.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSetCurrentUser = useCallback((user: CurrentUser | null) => {
@@ -48,6 +85,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('fastget_currentUser');
+    // Clear the server session cookie too — otherwise the next /api/auth/me
+    // reconcile would re-hydrate the user from the still-valid cookie.
+    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);
 
   const handleDeleteAccount = useCallback(async (userId: string, password: string): Promise<boolean> => {

@@ -7,6 +7,7 @@ import {
   validateOrderForm,
 } from '@/lib/utils';
 import { createOrder } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 /**
@@ -54,6 +55,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid order totals' }, { status: 400 });
     }
 
+    // Attribute the order to the logged-in user via the verified session cookie
+    // (never the request body — IDOR fix, consistent with C3). Guests get an
+    // unattributed order (user_id NULL).
+    const session = await getSession();
+
     // Generate tokens and IDs
     const orderId = generateUUID();
     const statusToken = generateToken();
@@ -84,7 +90,7 @@ export async function POST(request: NextRequest) {
       status: 'received' as OrderStatus,
       statusToken,
       updateToken,
-      userId: typeof body.userId === 'string' ? body.userId : undefined,
+      userId: session?.userId,
     };
 
     // Save to Neon database

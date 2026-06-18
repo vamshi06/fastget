@@ -503,6 +503,39 @@ export async function createOrder(order: Order): Promise<boolean> {
       error: error instanceof Error ? error.message : String(error),
     });
 
+    // If the user_id FK is violated (stale/deleted user attribution), don't lose
+    // the sale — retry once as an unattributed order (user_id NULL). The schema
+    // explicitly allows a null user_id (guest orders, ON DELETE SET NULL).
+    if (error instanceof Error && error.message.includes('fk_orders_user_id')) {
+      logger.warn('DB', 'Order user_id has no matching user — saving order unattributed', {
+        orderId: order.id,
+        userId: order.userId,
+      });
+      try {
+        await sql`
+          INSERT INTO orders (
+            id, created_at, customer_name, customer_phone, site_address, landmark,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            payment_method, status, eta, status_token, update_token, user_id
+          ) VALUES (
+            ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
+            ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
+            ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
+            ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
+            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${null}
+          )
+        `;
+        logger.info('DB', 'Order created successfully (unattributed)', { orderId: order.id });
+        return true;
+      } catch (retryError) {
+        logger.error('DB', 'Failed to create order unattributed after FK violation', {
+          orderId: order.id,
+          error: retryError instanceof Error ? retryError.message : String(retryError),
+        });
+        return false;
+      }
+    }
+
     // If table doesn't exist, try to initialize it once
     if (error instanceof Error && error.message.includes('relation "orders" does not exist')) {
       logger.warn('DB', 'Orders table missing — attempting auto-init');

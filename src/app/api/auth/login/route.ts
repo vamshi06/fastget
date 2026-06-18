@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
-import { createSessionToken, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/session';
+import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/session';
 import type { User } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, SESSION_COOKIE_OPTIONS);
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, sessionCookieOptions(user.role));
     return response;
   } catch (error) {
     logger.error('Auth', 'login — unhandled error', {
