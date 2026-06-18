@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.elemantra.fastget",
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
+          "NSAllowsLocalNetworking": true
         }
       }
     },
