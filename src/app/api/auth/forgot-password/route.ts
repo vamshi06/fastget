@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserByEmail, setResetPasswordOtp } from '@/lib/users';
 import { sendEmail } from '@/lib/email';
 import { passwordResetOtpTemplate } from '@/lib/email-templates';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 /**
@@ -26,6 +27,18 @@ export async function POST(request: NextRequest) {
     }
 
     const email = body.email.toLowerCase().trim();
+
+    // Throttle reset requests per IP and per account (H3) — limits reset-email
+    // spam and OTP regeneration churn.
+    const limited = await limitOrResponse([
+      { key: `forgot:ip:${getClientIp(request)}`, limit: 6, windowSec: 3600 },
+      { key: `forgot:acct:${email}`, limit: 4, windowSec: 3600 },
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'forgot-password — rate limited', { email });
+      logger.api('POST', '/api/auth/forgot-password', 429, Date.now() - start);
+      return limited;
+    }
     const user = await getUserByEmail(email);
 
     // Always respond with the same message to prevent enumeration

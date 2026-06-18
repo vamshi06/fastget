@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyUserEmailByOtp } from '@/lib/users';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 /**
@@ -22,6 +23,18 @@ export async function POST(request: NextRequest) {
     if (!body.otp || typeof body.otp !== 'string' || !/^\d{6}$/.test(body.otp.trim())) {
       logger.api('POST', '/api/auth/verify-email', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Enter the 6-digit code from your email' }, { status: 400 });
+    }
+
+    // Cap OTP guesses per IP and per account (H3) — 6-digit OTP brute-force guard.
+    const email = body.email.toLowerCase().trim();
+    const limited = await limitOrResponse([
+      { key: `verifyemail:ip:${getClientIp(request)}`, limit: 12, windowSec: 900 },
+      { key: `verifyemail:acct:${email}`, limit: 8, windowSec: 900 },
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'verify-email — rate limited', { email });
+      logger.api('POST', '/api/auth/verify-email', 429, Date.now() - start);
+      return limited;
     }
 
     const user = await verifyUserEmailByOtp(body.email.trim(), body.otp.trim());

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyResetOtp } from '@/lib/users';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 /**
@@ -26,6 +27,20 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Enter the 6-digit code from your email' },
         { status: 400 },
       );
+    }
+
+    // Cap OTP guesses per IP and per account (H3) — a 6-digit OTP is otherwise
+    // brute-forceable. With these limits an attacker can't realistically try
+    // enough codes before the 10-minute OTP expires.
+    const email = body.email.toLowerCase().trim();
+    const limited = await limitOrResponse([
+      { key: `verifyreset:ip:${getClientIp(request)}`, limit: 12, windowSec: 900 },
+      { key: `verifyreset:acct:${email}`, limit: 6, windowSec: 900 },
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'verify-reset-otp — rate limited', { email });
+      logger.api('POST', '/api/auth/verify-reset-otp', 429, Date.now() - start);
+      return limited;
     }
 
     const token = await verifyResetOtp(body.email.trim(), body.otp.trim());

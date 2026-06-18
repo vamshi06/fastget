@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createUser, setVerificationOtp } from '@/lib/users';
 import { sendEmail } from '@/lib/email';
 import { otpVerificationEmailTemplate } from '@/lib/email-templates';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 /**
@@ -15,6 +16,16 @@ export async function POST(request: NextRequest) {
   const start = Date.now();
   logger.info('Auth', '[AUTH] Signup — POST /api/auth/signup');
   try {
+    // Throttle account creation per IP (H3).
+    const limited = await limitOrResponse([
+      { key: `signup:ip:${getClientIp(request)}`, limit: 6, windowSec: 3600 },
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'signup — rate limited');
+      logger.api('POST', '/api/auth/signup', 429, Date.now() - start);
+      return limited;
+    }
+
     const body = await request.json();
 
     if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {

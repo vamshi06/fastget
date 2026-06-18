@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
 import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/session';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import type { User } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -24,6 +25,24 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Password is required' },
         { status: 400 },
       );
+    }
+
+    // Brute-force protection (H3): cap attempts per IP and per account.
+    const ip = getClientIp(request);
+    const acct =
+      typeof body.phone === 'string'
+        ? `phone:${body.phone.replace(/\D/g, '').slice(-10)}`
+        : typeof body.email === 'string'
+          ? `email:${body.email.toLowerCase().trim()}`
+          : null;
+    const limited = await limitOrResponse([
+      { key: `login:ip:${ip}`, limit: 20, windowSec: 600 },
+      ...(acct ? [{ key: `login:acct:${acct}`, limit: 6, windowSec: 900 }] : []),
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'login — rate limited', { ip });
+      logger.api('POST', '/api/auth/login', 429, Date.now() - start);
+      return limited;
     }
 
     let user: User | null = null;
