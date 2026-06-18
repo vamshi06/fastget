@@ -51,9 +51,14 @@ async function getKey(): Promise<CryptoKey> {
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
   const key = await getKey();
+  const iat = Math.floor(Date.now() / 1000);
+  // Bake the expiry into the signed token (H2) so it is enforced server-side,
+  // not just by the browser's cookie Max-Age. exp matches the role's lifetime
+  // (admin 8h, customer 30d) and is refreshed when /api/auth/me re-issues.
+  const exp = iat + sessionMaxAge(payload.role);
   const header = b64urlEncode(enc.encode(JSON.stringify({ alg: 'HS256' })));
   const body = b64urlEncode(
-    enc.encode(JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) })),
+    enc.encode(JSON.stringify({ userId: payload.userId, role: payload.role, iat, exp })),
   );
   const signing = `${header}.${body}`;
   const sig = await globalThis.crypto.subtle.sign('HMAC', key, enc.encode(signing));
@@ -76,6 +81,10 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     if (!valid) return null;
     const parsed = JSON.parse(dec.decode(b64urlDecode(body)));
     if (!parsed.userId || !parsed.role) return null;
+    // Enforce expiry (H2). Tokens issued before exp existed are treated as
+    // expired, forcing a one-time re-login.
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof parsed.exp !== 'number' || parsed.exp <= now) return null;
     return { userId: parsed.userId as string, role: parsed.role as string };
   } catch {
     return null;
