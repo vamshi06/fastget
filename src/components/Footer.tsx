@@ -47,7 +47,7 @@ export function Footer() {
               ].map(({ href, label }) => (
                 <li key={href}>
                   <Link
-                    href={href}
+                    href={href as any}
                     className="text-sm text-neutral-400 hover:text-brand-primary transition-colors duration-150 flex items-center gap-1.5 group"
                   >
                     <span className="w-1 h-1 rounded-full bg-brand-primary opacity-0 group-hover:opacity-100 transition-opacity" />

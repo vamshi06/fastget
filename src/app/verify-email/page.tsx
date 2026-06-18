@@ -182,7 +182,7 @@ function VerifyEmailContent() {
         <p className="mt-4 text-center text-sm text-brand-slate">
           Didn&apos;t receive a code?{' '}
           <Link
-            href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+            href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}` as any}
             className="text-brand-primary font-semibold hover:text-brand-dark"
           >
             Resend

@@ -160,7 +160,7 @@ function CatalogPageContent() {
   }, [searchParams]);
 
   // ── URL builder ───────────────────────────────────────────────────────────
-  const buildUrl = (cat: string, q: string, page: number, minP: number, maxP: number): string => {
+  const buildUrl = (cat: string, q: string, page: number, minP: number, maxP: number) => {
     const p = new URLSearchParams();
     if (cat)              p.set('category',  cat);
     if (q)                p.set('q',         q);
@@ -168,7 +168,8 @@ function CatalogPageContent() {
     if (minP > 0)         p.set('min_price', String(minP));
     if (maxP < MAX_PRICE) p.set('max_price', String(maxP));
     const qs = p.toString();
-    return `/catalog${qs ? '?' + qs : ''}`;
+    // Cast needed: typedRoutes strict check doesn't cover dynamic catalog URLs
+    return `/catalog${qs ? '?' + qs : ''}` as any;
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────

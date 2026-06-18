@@ -19,9 +19,9 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const buffer = await renderToBuffer(React.createElement(InvoicePDF, { order }));
+    const buffer = await renderToBuffer(React.createElement(InvoicePDF, { order }) as any);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

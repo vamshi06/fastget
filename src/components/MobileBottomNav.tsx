@@ -58,7 +58,7 @@ export function MobileBottomNav() {
     } else {
       document.documentElement.style.setProperty('--bottom-nav-space', '0px');
     }
-    return () => document.documentElement.style.removeProperty('--bottom-nav-space');
+    return () => { document.documentElement.style.removeProperty('--bottom-nav-space'); };
   }, [isVisible]);
 
   if (!isVisible) return null;
