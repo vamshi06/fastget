@@ -8,6 +8,28 @@ import { APP_URL } from '../constants/config';
 
 const SCHEME = 'fastget://';
 
+// Only these non-web schemes may be handed to the OS (M3). This is the UPI /
+// payment-app + Android intent set Razorpay uses — NOT a blanket "open anything
+// that isn't http", which would let a page launch tel:, sms:, file:, or arbitrary
+// custom-scheme apps.
+const ALLOWED_EXTERNAL_SCHEMES = [
+  'upi://',
+  'intent://',
+  'tez://', // Google Pay
+  'phonepe://',
+  'paytmmp://',
+  'gpay://',
+  'credpay://',
+  'bhim://',
+];
+
+// A page-supplied URL (e.g. the invoice PDF) may only be opened externally if it
+// belongs to our own origin — blocks file://, javascript:, data: and third-party
+// links. Checking the APP_URL prefix + '/' avoids the fastget.in.evil.com bypass.
+function isOwnOriginUrl(url: unknown): url is string {
+  return typeof url === 'string' && url.startsWith(`${APP_URL}/`);
+}
+
 export default function WebViewScreen() {
   const webViewRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -71,8 +93,12 @@ export default function WebViewScreen() {
     ) {
       return true; // let WebView handle normal URLs
     }
-    // UPI, intent, and other app deep links — open via OS
-    Linking.openURL(url).catch(() => {});
+    // Hand off only known UPI / payment-app / intent schemes to the OS. Any other
+    // scheme (file:, javascript:, tel:, unknown custom apps) is ignored.
+    const lower = url.toLowerCase();
+    if (ALLOWED_EXTERNAL_SCHEMES.some((scheme) => lower.startsWith(scheme))) {
+      Linking.openURL(url).catch(() => {});
+    }
     return false;
   };
 
@@ -115,8 +141,8 @@ export default function WebViewScreen() {
             onMessage={(event) => {
               try {
                 const msg = JSON.parse(event.nativeEvent.data);
-                if (msg.type === 'DOWNLOAD_PDF' && msg.url) {
-                  // Opens the PDF URL via the OS:
+                if (msg.type === 'DOWNLOAD_PDF' && isOwnOriginUrl(msg.url)) {
+                  // Opens the PDF URL via the OS (only our own-origin URLs):
                   // Android → Download Manager saves the file to Downloads
                   // iOS → Safari opens it as a PDF with share/print options
                   Linking.openURL(msg.url);
