@@ -31,16 +31,49 @@ function shouldLog(level: Level): boolean {
   return LEVELS[level] >= MIN_LEVEL;
 }
 
-// Sanitise meta: strip keys that may hold secrets.
+// Sanitise meta: fully redact secrets, partially mask PII (M4).
 const SENSITIVE_KEYS = new Set([
   'password', 'passwordHash', 'token', 'secret', 'authorization',
   'pin', 'updateToken', 'statusToken', 'apiKey', 'accessToken',
 ]);
 
+// PII is masked (not dropped) so logs stay useful for correlation/debugging
+// without storing the raw identifier.
+function maskEmail(v: unknown): string {
+  const s = String(v);
+  const at = s.indexOf('@');
+  return at > 0 ? `${s[0]}***${s.slice(at)}` : '[redacted]';
+}
+
+function maskPhone(v: unknown): string {
+  const digits = String(v).replace(/\D/g, '');
+  return digits.length >= 4 ? `***${digits.slice(-4)}` : '[redacted]';
+}
+
+function maskId(v: unknown): string {
+  const s = String(v);
+  return s.length > 8 ? `${s.slice(0, 8)}…` : '[redacted]';
+}
+
+function maskName(v: unknown): string {
+  const s = String(v).trim();
+  return s ? `${s[0]}***` : '[redacted]';
+}
+
+function maskValue(key: string, value: unknown): unknown {
+  if (value == null) return value;
+  if (SENSITIVE_KEYS.has(key)) return '[REDACTED]';
+  if (key.includes('email')) return maskEmail(value);
+  if (key.includes('phone')) return maskPhone(value);
+  if (key === 'userid' || key === 'customerid') return maskId(value);
+  if (key === 'customername') return maskName(value);
+  return value;
+}
+
 function sanitise(meta: object): object {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(meta)) {
-    out[k] = SENSITIVE_KEYS.has(k.toLowerCase()) ? '[REDACTED]' : v;
+    out[k] = maskValue(k.toLowerCase(), v);
   }
   return out;
 }
