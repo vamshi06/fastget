@@ -8,6 +8,7 @@ import {
 } from '@/lib/utils';
 import { createOrder } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { logger } from '@/lib/logger';
 
 /**
@@ -33,27 +34,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const { items, subtotal, convenienceFee, total } = body;
+    const { items, total } = body;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      logger.warn('API', 'POST /api/orders — empty cart');
-      logger.api('POST', '/api/orders', 400, Date.now() - start);
-      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    // Recompute line items and totals from the trusted catalog (H1). Client
+    // item prices / subtotal / convenienceFee / total are never trusted; the
+    // client total is only used to detect (and reject) a tampered/stale cart.
+    const pricing = await priceOrderFromCatalog(items, typeof total === 'number' ? total : undefined);
+    if (!pricing.ok) {
+      logger.warn('API', 'POST /api/orders — pricing rejected', { reason: pricing.error });
+      logger.api('POST', '/api/orders', pricing.status, Date.now() - start);
+      return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
-
-    // Basic numeric validation to prevent garbage data in DB
-    if (
-      typeof subtotal !== 'number' ||
-      typeof convenienceFee !== 'number' ||
-      typeof total !== 'number' ||
-      subtotal < 0 ||
-      convenienceFee < 0 ||
-      total < 0
-    ) {
-      logger.warn('API', 'POST /api/orders — invalid totals', { subtotal, convenienceFee, total });
-      logger.api('POST', '/api/orders', 400, Date.now() - start);
-      return NextResponse.json({ error: 'Invalid order totals' }, { status: 400 });
-    }
+    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal } = pricing.priced;
 
     // Attribute the order to the logged-in user via the verified session cookie
     // (never the request body — IDOR fix, consistent with C3). Guests get an
@@ -75,17 +67,10 @@ export async function POST(request: NextRequest) {
       landmark: body.landmark?.trim() || undefined,
       deliveryType: body.deliveryType,
       scheduledTime: body.scheduledTime || undefined,
-      items: items.map(
-        (item: { product: { id: string; name: string; price: number }; quantity: number }) => ({
-          sku: item.product.id,
-          name: item.product.name,
-          quantity: item.quantity,
-          price: item.product.price,
-        })
-      ),
+      items: pricedItems,
       subtotal,
       convenienceFee,
-      total,
+      total: serverTotal,
       paymentMethod: 'cod',
       status: 'received' as OrderStatus,
       statusToken,

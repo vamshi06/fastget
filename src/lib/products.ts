@@ -329,6 +329,61 @@ export async function getProductsFromCategoryTables(
 }
 
 /**
+ * Trusted server-side price lookup for checkout (H1).
+ *
+ * Given the public product ids (product_code), returns the authoritative unit
+ * price in RUPEES straight from the catalog — never trust a client-supplied
+ * price. Prices are stored in paise and the storefront displays
+ * Math.round(paise / 100), so we mirror that rounding exactly to stay
+ * consistent with what the shopper saw.
+ *
+ * Reads from products_catalog_view (the same source as GET /api/products), with
+ * a fallback to the normalised products table for any codes not found there
+ * (e.g. when LEGACY_PRODUCTS_TABLE=1). Codes missing from both are simply absent
+ * from the returned map, and the caller must reject them.
+ */
+export async function getTrustedUnitPrices(
+  productCodes: string[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const codes = Array.from(new Set(productCodes.filter(Boolean)));
+  if (codes.length === 0) return out;
+
+  const sql = getUnpooledClient();
+  try {
+    const rows = (await sql.query(
+      `SELECT product_code, price
+         FROM products_catalog_view
+        WHERE product_code = ANY($1::text[])`,
+      [codes],
+    )) as any[];
+    for (const r of rows) {
+      out.set(r.product_code as string, Math.round(Number(r.price) / 100));
+    }
+
+    const missing = codes.filter((c) => !out.has(c));
+    if (missing.length > 0) {
+      const legacy = (await sql.query(
+        `SELECT COALESCE(product_code, id::text) AS product_code, price
+           FROM products
+          WHERE COALESCE(product_code, id::text) = ANY($1::text[])`,
+        [missing],
+      )) as any[];
+      for (const r of legacy) {
+        const code = r.product_code as string;
+        if (!out.has(code)) out.set(code, Math.round(Number(r.price) / 100));
+      }
+    }
+  } catch (error) {
+    logger.error('Products', 'getTrustedUnitPrices failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Return whatever we have; unmatched codes cause the caller to reject.
+  }
+  return out;
+}
+
+/**
  * Fetch a single product with ALL its variants and inventory data.
  */
 export interface VariantWithStock {

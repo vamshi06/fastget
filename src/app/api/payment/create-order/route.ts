@@ -4,6 +4,7 @@ import { createOrder } from '@/lib/db';
 import { setRazorpayOrderId } from '@/lib/payment-db';
 import { generateUUID, generateToken, formatPhoneNumber, validateOrderForm } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
+import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { Order } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -15,7 +16,10 @@ import { logger } from '@/lib/logger';
  * modal.  The DB order is created first so its total is the authoritative amount
  * — any frontend tampering after this point has no effect on what is charged.
  *
- * Body: { ...orderFormData, items, subtotal, convenienceFee, total, currency? }
+ * Prices and totals are recomputed server-side from the trusted catalog (H1);
+ * client-supplied item prices / subtotal / total are never trusted.
+ *
+ * Body: { ...orderFormData, items, total?, currency? }
  *
  * Response: { razorpayOrderId, amount (paise), currency, orderId, statusToken }
  */
@@ -27,8 +31,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     // userId is intentionally NOT read from the body — identity comes from the
     // verified session cookie only (IDOR fix, consistent with C3). A stray
-    // userId in the body is ignored.
-    const { currency = 'INR', items, subtotal, convenienceFee, total, userId: _ignoredUserId, ...formFields } = body;
+    // userId in the body is ignored. Prices/totals are recomputed server-side,
+    // so client-supplied subtotal/convenienceFee/total are ignored too (H1).
+    const { currency = 'INR', items, total, ...formFields } = body;
 
     // Re-use the same form validation as the COD orders flow
     const validationError = validateOrderForm(formFields);
@@ -38,20 +43,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    // Recompute line items and totals from the trusted catalog (H1). The client
+    // total is only used to detect a tampered/stale cart and reject it.
+    const pricing = await priceOrderFromCatalog(items, typeof total === 'number' ? total : undefined);
+    if (!pricing.ok) {
+      logger.warn('Payment', 'create-order — pricing rejected', { reason: pricing.error });
+      logger.api('POST', '/api/payment/create-order', pricing.status, Date.now() - start);
+      return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
-
-    if (
-      typeof subtotal !== 'number' ||
-      typeof convenienceFee !== 'number' ||
-      typeof total !== 'number' ||
-      subtotal < 0 ||
-      convenienceFee < 0 ||
-      total <= 0
-    ) {
-      return NextResponse.json({ error: 'Invalid order totals' }, { status: 400 });
-    }
+    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal } = pricing.priced;
 
     // Attribute the order to the logged-in user via the verified session cookie.
     // Guests (no session) get an unattributed order (user_id NULL).
@@ -71,17 +71,10 @@ export async function POST(request: NextRequest) {
       landmark: formFields.landmark?.trim() || undefined,
       deliveryType: formFields.deliveryType,
       scheduledTime: formFields.scheduledTime || undefined,
-      items: items.map(
-        (item: { product: { id: string; name: string; price: number }; quantity: number }) => ({
-          sku: item.product.id,
-          name: item.product.name,
-          quantity: item.quantity,
-          price: item.product.price,
-        })
-      ),
+      items: pricedItems,
       subtotal,
       convenienceFee,
-      total,
+      total: serverTotal,
       paymentMethod: 'razorpay',
       status: 'received',
       statusToken,
@@ -99,7 +92,7 @@ export async function POST(request: NextRequest) {
     // Now create the Razorpay order using the DB order ID as the receipt reference
     let razorpayOrder;
     try {
-      razorpayOrder = await createRazorpayOrder(total, currency, orderId);
+      razorpayOrder = await createRazorpayOrder(serverTotal, currency, orderId);
     } catch (err) {
       logger.error('Payment', 'Razorpay order creation failed', {
         orderId,
