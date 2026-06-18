@@ -5,7 +5,7 @@
 // see Next.js CVE-2025-29927). They read the same HMAC-signed `fastget_session`
 // cookie that middleware checks.
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
 import { verifySessionToken, SESSION_COOKIE_NAME, type SessionPayload } from '@/lib/session';
@@ -20,6 +20,38 @@ export async function getSession(): Promise<SessionPayload | null> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
   return verifySessionToken(token);
+}
+
+/**
+ * CSRF defense-in-depth (M7). The session cookie is SameSite=Lax (so it isn't
+ * sent on cross-site POST/PUT/DELETE in the first place), but we also reject any
+ * request a browser tags as cross-site. Same-origin / same-site / user-initiated
+ * (`none`) requests pass; older browsers without Sec-Fetch-Site fall back to an
+ * Origin-vs-Host comparison. Returns a 403 to return, or null when allowed.
+ *
+ * Applied inside requireRole/requireSession, so every cookie-authed endpoint
+ * (admin CRUD, order status, addresses, wishlist) is covered in one place.
+ */
+async function crossOriginResponse(): Promise<NextResponse | null> {
+  const h = await headers();
+  const forbidden = () =>
+    NextResponse.json({ success: false, error: 'Cross-origin request blocked' }, { status: 403 });
+
+  const site = h.get('sec-fetch-site');
+  if (site) {
+    return site === 'cross-site' ? forbidden() : null;
+  }
+
+  // Fallback for clients that don't send Sec-Fetch-Site.
+  const origin = h.get('origin');
+  if (!origin) return null; // no Origin (non-browser / same-origin nav) — SameSite cookie is the backstop
+  try {
+    const host = h.get('host');
+    if (host && new URL(origin).host === host) return null;
+  } catch {
+    /* malformed Origin → treat as cross-origin */
+  }
+  return forbidden();
 }
 
 /**
@@ -38,6 +70,8 @@ export async function requireRole(
       response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }),
     };
   }
+  const csrf = await crossOriginResponse();
+  if (csrf) return { response: csrf };
   return { session };
 }
 
@@ -55,6 +89,8 @@ export async function requireSession(): Promise<
       response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }),
     };
   }
+  const csrf = await crossOriginResponse();
+  if (csrf) return { response: csrf };
   return { session };
 }
 
