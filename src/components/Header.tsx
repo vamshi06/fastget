@@ -3,6 +3,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+
+function CategoryNavRow() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get("category");
+  const isCategoryActive = (categoryId: string) =>
+    pathname === "/catalog" && currentCategory === categoryId;
+  return (
+    <nav className="hidden md:flex items-center gap-0.5 py-1 border-t border-neutral-100 overflow-x-auto hide-scrollbar">
+      {NAV_CATEGORIES.map((cat) => (
+        <Link
+          key={cat.id}
+          href={`/catalog?category=${cat.id}`}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
+            "hover:bg-primary-50 hover:text-brand-primary",
+            isCategoryActive(cat.id)
+              ? "bg-primary-50 text-brand-primary font-semibold"
+              : "text-brand-graphite font-medium",
+          )}
+        >
+          {cat.name}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 import { useCart } from "./CartContext";
 import { useUser } from "./UserContext";
 import {
@@ -24,7 +51,7 @@ import {
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const NAV_CATEGORIES = [
@@ -45,11 +72,6 @@ export function Header() {
   const { selectedLocation, openSplash } = useLocationSplash();
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentCategory = searchParams.get("category");
-
-  const isCategoryActive = (categoryId: string) =>
-    pathname === "/catalog" && currentCategory === categoryId;
 
   const itemCount = getItemCount();
 
@@ -441,24 +463,9 @@ export function Header() {
         </div>
 
         {/* ── Category Nav Row (desktop) ── */}
-        <nav className="hidden md:flex items-center gap-0.5 py-1 border-t border-neutral-100 overflow-x-auto hide-scrollbar">
-          
-          {NAV_CATEGORIES.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/catalog?category=${cat.id}`}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
-                "hover:bg-primary-50 hover:text-brand-primary",
-                isCategoryActive(cat.id)
-                  ? "bg-primary-50 text-brand-primary font-semibold"
-                  : "text-brand-graphite font-medium",
-              )}
-            >
-              {cat.name}
-            </Link>
-          ))}
-        </nav>
+        <Suspense fallback={<nav className="hidden md:flex h-8 border-t border-neutral-100" />}>
+          <CategoryNavRow />
+        </Suspense>
       </div>
     </header>
   );

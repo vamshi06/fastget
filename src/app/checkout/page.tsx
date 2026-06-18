@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/components/CartContext';
@@ -19,7 +19,7 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: 
 };
 const ADDRESS_TYPE_LABELS: Record<AddressType, string> = { home: 'Home', work: 'Work', other: 'Other' };
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter();
   const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
   const { currentUser } = useUser();
@@ -733,5 +733,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
