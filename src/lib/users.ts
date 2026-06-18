@@ -443,43 +443,24 @@ export async function deleteUserAddress(addressId: string, userId: string): Prom
 }
 
 /**
- * Delete a user account (and all associated data).
- * Uses unpooled connection to ensure fresh reads after deletion.
+ * Delete a user account and all associated data.
+ *
+ * Runs as a single transaction (L2): addresses and wishlists are removed
+ * explicitly (and also cascade via their ON DELETE CASCADE FKs), while orders
+ * keep their history with user_id set NULL (ON DELETE SET NULL). The user
+ * DELETE's RETURNING tells us authoritatively whether the account existed, so
+ * the old setTimeout + unpooled re-read verification hack is gone.
  */
 export async function deleteUser(userId: string): Promise<boolean> {
   const sql = getClient();
-  const sqlUnpooled = getUnpooledClient();
-  
   try {
-    // Delete all user data in cascade order (respecting foreign keys)
-    // 1. Delete wishlists for this user's variants (not needed - cascade handles it)
-    // 2. Delete addresses
-    await sql`DELETE FROM user_addresses WHERE user_id = ${userId}`;
-    
-    // 3. Delete user
-    const result = await sql`
-      DELETE FROM users
-      WHERE id = ${userId}
-      RETURNING id
-    `;
-
-    if (result.length === 0) return false;
-
-    // Force fresh read from unpooled connection to verify deletion
-    // This bypasses connection pooling cache
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const verify = await sqlUnpooled`
-      SELECT id FROM users WHERE id = ${userId} LIMIT 1
-    `;
-
-    const deleted = verify.length === 0;
-    
-    if (!deleted) {
-      logger.warn('Users', 'User deletion verification failed — record still exists after delete', { userId });
-    }
-
-    return deleted;
+    const results = await sql.transaction([
+      sql`DELETE FROM wishlists WHERE user_id = ${userId}`,
+      sql`DELETE FROM user_addresses WHERE user_id = ${userId}`,
+      sql`DELETE FROM users WHERE id = ${userId} RETURNING id`,
+    ]);
+    const userRows = results[results.length - 1] as { id: string }[];
+    return userRows.length > 0;
   } catch (error) {
     logger.error('Users', 'Failed to delete user', { userId, error: error instanceof Error ? error.message : String(error) });
     return false;
