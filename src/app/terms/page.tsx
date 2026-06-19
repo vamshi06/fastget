@@ -78,7 +78,7 @@ export default function TermsPage() {
 
       <LegalSection heading="8. Intellectual property">
         <p>
-          The FastGet name, logo, and app content are owned by Elemantra and may
+          The FastGet name, logo, and app content are owned by FastGet and may
           not be used without permission.
         </p>
       </LegalSection>
@@ -86,7 +86,7 @@ export default function TermsPage() {
       <LegalSection heading="9. Limitation of liability">
         <p>
           FastGet is provided &ldquo;as is&rdquo;. To the extent permitted by
-          law, Elemantra is not liable for indirect or consequential losses
+          law, FastGet is not liable for indirect or consequential losses
           arising from delays, stock unavailability, or third-party payment
           processing issues outside our reasonable control.
         </p>

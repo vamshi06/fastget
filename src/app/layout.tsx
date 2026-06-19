@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'FastGet',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
