@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   description:
     'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
   keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
+  manifest: '/manifest.webmanifest',
+  themeColor: '#f97316',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'FastGet',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
