@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         error: err instanceof Error ? err.message : String(err),
       });
       logger.api('POST', '/api/payment/verify-payment', 500, Date.now() - start);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
     }
 
     if (!isValid) {
@@ -110,6 +110,6 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/payment/verify-payment', 500, Date.now() - start);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }

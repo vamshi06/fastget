@@ -36,6 +36,25 @@ export interface RateLimitResult {
   retryAfterSec: number;
 }
 
+/**
+ * Read the current count for a bucket WITHOUT incrementing it. Windows that
+ * have already elapsed are reported as 0 (the next hit would reset them anyway).
+ * Used for pre-checks where we must not count the request itself (e.g. so a
+ * server-side 500 or a successful login never burns a rate-limit slot).
+ */
+async function peek(key: string, windowSec: number): Promise<{ count: number; resetIn: number }> {
+  const sql = getClient();
+  const rows = (await sql`
+    SELECT count,
+      EXTRACT(EPOCH FROM (window_start + (${windowSec} * INTERVAL '1 second') - NOW()))::int AS reset_in
+    FROM auth_rate_limits
+    WHERE bucket = ${key}
+      AND window_start >= NOW() - (${windowSec} * INTERVAL '1 second')
+  `) as { count: number; reset_in: number }[];
+  if (rows.length === 0) return { count: 0, resetIn: 0 };
+  return { count: Number(rows[0].count), resetIn: Number(rows[0].reset_in) };
+}
+
 async function hit(key: string, windowSec: number): Promise<{ count: number; resetIn: number }> {
   const sql = getClient();
   const rows = (await sql`
@@ -99,9 +118,20 @@ export interface RateRule {
   windowSec: number;
 }
 
+function tooManyResponse(retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'Too many attempts. Please try again later.' },
+    { status: 429, headers: { 'Retry-After': String(retryAfterSec) } },
+  );
+}
+
 /**
  * Apply several rate rules; returns a ready-to-return 429 if any is exceeded,
  * otherwise null. Buckets are evaluated independently (e.g. per-IP + per-account).
+ *
+ * NOTE: this INCREMENTS every bucket, so the request itself counts. Endpoints
+ * where a server error or success must not count toward the limit should use
+ * peekLimit() + recordFailedAttempt() instead (see the login route).
  */
 export async function limitOrResponse(rules: RateRule[]): Promise<NextResponse | null> {
   let worst = 0;
@@ -109,11 +139,54 @@ export async function limitOrResponse(rules: RateRule[]): Promise<NextResponse |
     const { allowed, retryAfterSec } = await rateLimit(r.key, r.limit, r.windowSec);
     if (!allowed) worst = Math.max(worst, retryAfterSec);
   }
-  if (worst > 0) {
-    return NextResponse.json(
-      { success: false, error: 'Too many attempts. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': String(worst) } },
-    );
+  return worst > 0 ? tooManyResponse(worst) : null;
+}
+
+/**
+ * Read-only check: returns a 429 if any bucket is ALREADY at/over its limit,
+ * without incrementing anything. Fails OPEN on DB errors.
+ *
+ * Pair with recordFailedAttempt(): only genuine failed attempts get counted, so
+ * a server-side 500 or a successful login can never lock a user out.
+ */
+export async function peekLimit(rules: RateRule[]): Promise<NextResponse | null> {
+  let worst = 0;
+  for (const r of rules) {
+    try {
+      const { count, resetIn } = await peek(r.key, r.windowSec);
+      if (count >= r.limit) worst = Math.max(worst, Math.max(1, resetIn));
+    } catch (error) {
+      logger.error('RateLimit', 'peek error — failing open', {
+        key: r.key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
-  return null;
+  return worst > 0 ? tooManyResponse(worst) : null;
+}
+
+/**
+ * Record one failed attempt against each bucket (increments the counters).
+ * Best-effort: never throws, so it can't turn a 401 into a 500.
+ */
+export async function recordFailedAttempt(rules: RateRule[]): Promise<void> {
+  await Promise.all(
+    rules.map((r) => rateLimit(r.key, r.limit, r.windowSec).then(() => undefined)),
+  );
+}
+
+/**
+ * Clear buckets (e.g. on a successful login) so earlier failed attempts don't
+ * leave a legitimate user near the limit. Best-effort; never throws.
+ */
+export async function clearBuckets(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  try {
+    const sql = getClient();
+    await sql`DELETE FROM auth_rate_limits WHERE bucket = ANY(${keys})`;
+  } catch (error) {
+    logger.error('RateLimit', 'clearBuckets error — ignoring', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

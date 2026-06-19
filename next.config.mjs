@@ -41,6 +41,9 @@ if (isProd) {
 const nextConfig = {
   experimental: {
     typedRoutes: true,
+    // Run src/instrumentation.ts at server startup (validates required env vars).
+    // Stable/default in Next 15; opt-in on Next 14.
+    instrumentationHook: true,
   },
   // Allow Next.js Image component to serve external URLs if needed in future
   images: {

@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/wishlist', 500, Date.now() - start);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }
 
@@ -48,6 +48,6 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/wishlist', 500, Date.now() - start);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }
