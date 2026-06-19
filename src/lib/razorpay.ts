@@ -23,17 +23,18 @@ function getInstance(): Razorpay {
  * Creates a Razorpay order.
  * @param amountInRupees - Order total in rupees (converted to paise internally)
  * @param currency - e.g. 'INR'
- * @param receipt - Our internal order ID used as the Razorpay receipt reference
+ * @param receipt - Optional reference shown in the Razorpay dashboard
  */
 export async function createRazorpayOrder(
   amountInRupees: number,
   currency: string,
-  receipt: string
+  receipt?: string
 ) {
   const rz = getInstance();
   const amountInPaise = Math.round(amountInRupees * 100);
+  const ref = receipt ?? `fg_${Date.now()}`;
 
-  return rz.orders.create({ amount: amountInPaise, currency, receipt });
+  return rz.orders.create({ amount: amountInPaise, currency, receipt: ref });
 }
 
 /**

@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
-import { confirmOrderPayment, getStatusToken, getOrderRazorpayOrderId } from '@/lib/payment-db';
+import { confirmOrderPayment, deleteOrder } from '@/lib/payment-db';
+import { verifyOrderToken } from '@/lib/order-token';
+import { createOrder } from '@/lib/db';
+import { generateUUID, generateToken } from '@/lib/utils';
+import { Order } from '@/types';
 import { logger } from '@/lib/logger';
 
 /**
  * POST /api/payment/verify-payment
  *
- * Verifies the Razorpay payment signature using HMAC SHA256, then marks the
- * order as paid by storing the razorpay_payment_id.
+ * Verifies the Razorpay payment and, only on confirmed capture, creates the
+ * order in the DB.  No DB record exists before this point — the `orderToken`
+ * carries the HMAC-signed, server-validated order data from `create-order`.
  *
- * Body: { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderId }
+ * Body: { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderToken }
  *
  * Response: { success: true, statusToken } | { error: string }
- *
- * SECURITY: The secret key never leaves this route handler.  Signature
- * verification uses constant-time comparison to prevent timing attacks.
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
@@ -22,15 +24,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderId } = body;
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderToken } = body;
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !orderId) {
-      logger.warn('Payment', 'verify-payment — missing fields', { orderId });
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !orderToken) {
+      logger.warn('Payment', 'verify-payment — missing fields');
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Missing required payment fields' }, { status: 400 });
     }
 
-    // Verify Razorpay HMAC SHA256 signature
+    // Verify HMAC signature from Razorpay
     let isValid: boolean;
     try {
       isValid = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
@@ -43,34 +45,42 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValid) {
-      logger.warn('Payment', 'verify-payment — invalid signature', { orderId, razorpay_order_id });
+      logger.warn('Payment', 'verify-payment — invalid signature', { razorpay_order_id });
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Payment verification failed. Signature mismatch.' }, { status: 400 });
     }
 
-    // Bind the Razorpay order to OUR order (same check the callback route does).
-    // A valid signature only proves the (order_id, payment_id) pair came from
-    // Razorpay — NOT that this razorpay_order_id belongs to the internal orderId
-    // the client supplied. Without this, an attacker could confirm an expensive
-    // order using a valid signature from a cheap payment they made on a different
-    // order. Razorpay fixes a payment's amount to its order, so binding the order
-    // also locks the amount.
-    const storedRazorpayOrderId = await getOrderRazorpayOrderId(orderId);
-    if (!storedRazorpayOrderId || storedRazorpayOrderId !== razorpay_order_id) {
-      logger.warn('Payment', 'verify-payment — razorpay_order_id does not match order', { orderId, razorpay_order_id });
+    // Verify and decode the server-signed order token
+    const orderData = verifyOrderToken(orderToken);
+    if (!orderData) {
+      logger.warn('Payment', 'verify-payment — invalid or expired orderToken');
+      logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
+      return NextResponse.json(
+        { error: 'Order session expired or invalid. Please start a new checkout.' },
+        { status: 400 }
+      );
+    }
+
+    // Bind the Razorpay order to the order data we signed (anti-swap protection).
+    // The signature only proves the (order_id, payment_id) pair came from Razorpay;
+    // this check confirms the payment is for exactly the order the user initiated.
+    if (orderData.razorpayOrderId !== razorpay_order_id) {
+      logger.warn('Payment', 'verify-payment — razorpay_order_id does not match orderToken', {
+        razorpay_order_id,
+        tokenOrderId: orderData.razorpayOrderId,
+      });
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Payment order reference mismatch.' }, { status: 400 });
     }
 
-    // Signature only proves the response came from Razorpay — NOT that the payment
-    // was successful. Cancelled/failed UPI payments also produce a valid signature.
-    // Fetch the actual payment status from Razorpay before recording anything.
+    // Signature proves the response came from Razorpay — NOT that payment succeeded.
+    // Cancelled/failed UPI payments also produce a valid signature, so fetch the
+    // actual payment status.
     let payment: Awaited<ReturnType<typeof fetchPayment>>;
     try {
       payment = await fetchPayment(razorpay_payment_id);
     } catch (err) {
       logger.error('Payment', 'verify-payment — Razorpay payment fetch failed', {
-        orderId,
         razorpay_payment_id,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -80,7 +90,6 @@ export async function POST(request: NextRequest) {
 
     if (payment.status !== 'captured' && payment.status !== 'authorized') {
       logger.warn('Payment', 'verify-payment — payment not captured', {
-        orderId,
         razorpay_payment_id,
         status: payment.status,
       });
@@ -91,17 +100,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark order as paid
+    // Payment confirmed — now create the order in the DB
+    const orderId = generateUUID();
+    const statusToken = generateToken();
+    const updateToken = generateToken();
+
+    const order: Order = {
+      id: orderId,
+      createdAt: new Date().toISOString(),
+      customerName: orderData.customerName,
+      customerPhone: orderData.customerPhone,
+      siteAddress: orderData.siteAddress,
+      landmark: orderData.landmark,
+      deliveryType: orderData.deliveryType,
+      scheduledTime: orderData.scheduledTime,
+      items: orderData.items,
+      subtotal: orderData.subtotal,
+      convenienceFee: orderData.convenienceFee,
+      total: orderData.total,
+      paymentMethod: 'razorpay',
+      status: 'received',
+      statusToken,
+      updateToken,
+      userId: orderData.userId,
+    };
+
+    const dbSuccess = await createOrder(order);
+    if (!dbSuccess) {
+      logger.error('Payment', 'verify-payment — DB write failed', { orderId });
+      logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
+      return NextResponse.json({ error: 'Failed to save order. Please contact support.' }, { status: 502 });
+    }
+
     const confirmed = await confirmOrderPayment(orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature);
     if (!confirmed) {
-      logger.error('Payment', 'verify-payment — DB update failed', { orderId });
+      logger.error('Payment', 'verify-payment — payment confirmation DB update failed', { orderId });
+      await deleteOrder(orderId);
       logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
       return NextResponse.json({ error: 'Failed to record payment. Contact support.' }, { status: 502 });
     }
 
-    const statusToken = await getStatusToken(orderId);
-
-    logger.info('Payment', 'Payment verified and recorded', { orderId, razorpay_payment_id });
+    logger.info('Payment', 'Payment verified and order created', { orderId, razorpay_payment_id });
     logger.api('POST', '/api/payment/verify-payment', 200, Date.now() - start);
 
     return NextResponse.json({ success: true, statusToken });

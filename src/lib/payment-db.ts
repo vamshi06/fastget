@@ -23,31 +23,6 @@ async function ensurePaymentColumns(): Promise<void> {
 }
 
 /**
- * Stores the Razorpay order ID on an existing DB order right after the Razorpay
- * order is created, so it can be reconciled during verification.
- */
-export async function setRazorpayOrderId(
-  orderId: string,
-  razorpayOrderId: string
-): Promise<boolean> {
-  await ensurePaymentColumns();
-  const sql = getUnpooledConnection();
-  try {
-    await sql`
-      UPDATE orders SET razorpay_order_id = ${razorpayOrderId}
-      WHERE id = ${orderId}
-    `;
-    return true;
-  } catch (error) {
-    logger.error('DB', 'Failed to set razorpay_order_id', {
-      orderId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
-}
-
-/**
  * Records payment confirmation after successful signature verification.
  * Stores all three Razorpay identifiers, marks payment_status = 'captured',
  * and timestamps when capture occurred.
@@ -78,54 +53,6 @@ export async function confirmOrderPayment(
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
-  }
-}
-
-/**
- * Cancels an unpaid Razorpay order. Uses a conditional WHERE so it is safe to
- * call multiple times — it only cancels if payment has not been captured yet.
- */
-export async function cancelUnpaidOrder(orderId: string): Promise<boolean> {
-  await ensurePaymentColumns();
-  const sql = getUnpooledConnection();
-  try {
-    const result = await sql`
-      UPDATE orders
-      SET status = 'cancelled'
-      WHERE id           = ${orderId}
-        AND payment_method = 'razorpay'
-        AND payment_status IS NULL
-      RETURNING id
-    `;
-    return result.length > 0;
-  } catch (error) {
-    logger.error('DB', 'Failed to cancel unpaid order', {
-      orderId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
-}
-
-/**
- * Fetches the razorpay_order_id stored during create-order so the callback can
- * cross-validate what Razorpay POSTs against what we originally issued.
- */
-export async function getOrderRazorpayOrderId(orderId: string): Promise<string | null> {
-  const sql = getUnpooledConnection();
-  try {
-    const result = await sql`
-      SELECT razorpay_order_id FROM orders WHERE id = ${orderId} LIMIT 1
-    `;
-    return result.length > 0
-      ? (result[0] as { razorpay_order_id: string | null }).razorpay_order_id
-      : null;
-  } catch (error) {
-    logger.error('DB', 'Failed to get razorpay_order_id', {
-      orderId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
   }
 }
 

@@ -8,7 +8,7 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, CreditCard, Banknote, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType } from '@/types';
 
@@ -28,8 +28,7 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('cod');
-  const [paymentState, setPaymentState] = useState<'idle' | 'creating' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
+  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'verifying' | 'failed'>('idle');
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
   useEffect(() => {
@@ -182,50 +181,6 @@ function CheckoutPageContent() {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const validationError = validateOrderForm(formData);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          customerPhone: formatPhoneNumber(formData.customerPhone),
-          items: state.items,
-          subtotal: getSubtotal(),
-          convenienceFee: getConvenienceFee(),
-          total: getTotal(),
-          userId: currentUser?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create order');
-      }
-
-      const data = await response.json();
-      clearCart();
-      router.push(`/order/${data.statusToken}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleRazorpayPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -237,11 +192,10 @@ function CheckoutPageContent() {
     }
 
     setIsSubmitting(true);
-    setPaymentState('creating');
-    showToast('Creating order…', 'success');
+    setPaymentState('processing');
 
     try {
-      // Step 1 — create DB order + Razorpay order on the server
+      // Step 1 — validate, reprice, and get a Razorpay order + signed orderToken
       const createRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -259,24 +213,12 @@ function CheckoutPageContent() {
 
       if (!createRes.ok) {
         const data = await createRes.json();
-        // Order was saved but gateway failed — navigate to order page so the user
-        // can see their order details even though payment couldn't be initiated.
-        if (data.statusToken) {
-          clearCart();
-          router.push(`/order/${data.statusToken}`);
-          return;
-        }
         throw new Error(data.error || 'Failed to initiate payment');
       }
 
-      const { razorpayOrderId, amount, currency, orderId, statusToken } = await createRes.json();
-
-      setPaymentState('processing');
+      const { razorpayOrderId, amount, currency, orderToken } = await createRes.json();
 
       // Step 2 — open Razorpay checkout.
-      // We use a JS handler (not callback_url) so navigation back to the order page
-      // happens in the same JS context — callback_url causes a server redirect inside
-      // Razorpay's iframe and the main WebView frame never navigates.
       await openCheckout({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount,
@@ -294,7 +236,7 @@ function CheckoutPageContent() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                orderId,
+                orderToken,
               }),
             });
             const verifyData = await verifyRes.json();
@@ -319,14 +261,9 @@ function CheckoutPageContent() {
         theme: { color: '#F5A623' },
         modal: {
           ondismiss: () => {
-            fetch('/api/payment/cancel-order', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId }),
-            }).catch(() => { });
             setPaymentState('idle');
             setIsSubmitting(false);
-            showToast('Payment was cancelled', 'error');
+            setError('Payment not completed. Tap "Proceed to Pay" to complete your order.');
           },
         },
       });
@@ -363,7 +300,7 @@ function CheckoutPageContent() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={paymentMethod === 'razorpay' ? handleRazorpayPayment : handleSubmit} className="card p-6 space-y-6">
+            <form onSubmit={handleRazorpayPayment} className="card p-6 space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-brand-primary" />
@@ -607,76 +544,18 @@ function CheckoutPageContent() {
                 </div>
               </div>
 
-              {/* Payment method selection */}
-              <div className="border-t border-neutral-100 pt-6">
-                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-brand-primary" />
-                  Payment Method
-                </h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <label
-                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'razorpay'
-                        ? 'border-brand-primary bg-primary-50'
-                        : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="razorpay"
-                      checked={paymentMethod === 'razorpay'}
-                      onChange={() => setPaymentMethod('razorpay')}
-                      className="w-4 h-4 accent-brand-primary"
-                    />
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-brand-slate" />
-                      <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Pay Online</p>
-                        <p className="text-xs text-brand-slate">UPI / Card / Net Banking</p>
-                      </div>
-                    </div>
-                  </label>
-                  <label
-                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'cod'
-                        ? 'border-brand-primary bg-primary-50'
-                        : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={paymentMethod === 'cod'}
-                      onChange={() => setPaymentMethod('cod')}
-                      className="w-4 h-4 accent-brand-primary"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Banknote className="w-4 h-4 text-brand-slate" />
-                      <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
-                        <p className="text-xs text-brand-slate">Pay when delivered</p>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting
-                  ? paymentState === 'creating'
-                    ? 'Creating order…'
-                    : paymentState === 'processing'
-                      ? 'Complete payment in popup…'
-                      : paymentState === 'verifying'
-                        ? 'Verifying payment…'
-                        : 'Placing Order…'
-                  : paymentMethod === 'razorpay'
-                    ? 'Proceed to Pay'
-                    : 'Place Order'}
+                  ? paymentState === 'processing'
+                    ? 'Complete payment in popup…'
+                    : paymentState === 'verifying'
+                      ? 'Verifying payment…'
+                      : 'Initiating payment…'
+                  : 'Proceed to Pay'}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
             </form>
@@ -717,9 +596,7 @@ function CheckoutPageContent() {
 
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
                 <p className="text-sm text-green-800 font-semibold mb-1">Payment Method</p>
-                <p className="text-sm text-green-700">
-                  {paymentMethod === 'razorpay' ? 'Online Payment (Razorpay)' : 'Cash on Delivery'}
-                </p>
+                <p className="text-sm text-green-700">Online Payment (UPI / Card / Net Banking)</p>
               </div>
 
               {formData.deliveryType === 'urgent' && (
@@ -743,3 +620,4 @@ export default function CheckoutPage() {
     </Suspense>
   );
 }
+
