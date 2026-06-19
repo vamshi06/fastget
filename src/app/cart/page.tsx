@@ -93,7 +93,7 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {state.items.map((item) => (
-              <div key={item.product.id} className="card p-4 flex gap-4">
+              <div key={item.product.id} className="card p-4 flex gap-4 min-w-0 overflow-hidden">
                 {/* Product image */}
                 <div
                   className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"

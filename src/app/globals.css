@@ -49,12 +49,16 @@
 
   * { box-sizing: border-box; }
 
-  body {
-    @apply bg-brand-fog text-brand-charcoal font-sans antialiased;
+  html {
+    scroll-behavior: smooth;
     overflow-x: hidden;
   }
 
-  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-brand-fog text-brand-charcoal font-sans antialiased;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 
   input, textarea, select { color: var(--fg-charcoal); }
 
