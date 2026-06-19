@@ -25,7 +25,7 @@ export default function SupportPage() {
           </a>
           <div className="flex items-center gap-3 text-brand-charcoal">
             <Phone className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            +91 9870660913
+            +91 9167119131
           </div>
         </div>
         <p className="mt-3">

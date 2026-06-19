@@ -123,7 +123,7 @@ export default function TermsPage() {
           >
             support@elemantra.in
           </a>{" "}
-          or call +91 9870660913. Elemantra, Office no - 17, 2nd Floor,
+          or call +91 9167119131. Elemantra, Office no - 17, 2nd Floor,
           Bhavan&apos;s Campus, Sardar Patel Technology Business Incubator, Old
           D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058.
         </p>
