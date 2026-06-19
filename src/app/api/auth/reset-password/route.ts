@@ -3,6 +3,7 @@ import { getUserByResetToken, resetUserPasswordByToken } from '@/lib/users';
 import { sendEmail } from '@/lib/email';
 import { passwordChangedTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
+import { ValidationError, requirePassword } from '@/lib/validation';
 
 /**
  * POST /api/auth/reset-password
@@ -25,13 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.password || typeof body.password !== 'string' || body.password.length < 8) {
-      logger.api('POST', '/api/auth/reset-password', 400, Date.now() - start);
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 8 characters' },
-        { status: 400 },
-      );
-    }
+    const password = requirePassword(body.password);
 
     const token = body.token.trim();
 
@@ -46,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updated = await resetUserPasswordByToken(token, body.password);
+    const updated = await resetUserPasswordByToken(token, password);
     if (!updated) {
       logger.error('Auth', 'reset-password — update failed', { userId: tokenUser.id });
       logger.api('POST', '/api/auth/reset-password', 500, Date.now() - start);
@@ -65,6 +60,11 @@ export async function POST(request: NextRequest) {
       message: 'Password has been reset successfully. You can now log in.',
     });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      logger.warn('Auth', 'reset-password — validation failed', { error: error.message });
+      logger.api('POST', '/api/auth/reset-password', 400, Date.now() - start);
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     logger.error('Auth', 'reset-password — unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });

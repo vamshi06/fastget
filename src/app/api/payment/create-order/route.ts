@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
     // so client-supplied subtotal/convenienceFee/total are ignored too (H1).
     const { currency = 'INR', items, total, ...formFields } = body;
 
+    // Only INR is supported; reject anything else before it reaches Razorpay.
+    if (currency !== 'INR') {
+      logger.warn('Payment', 'create-order — unsupported currency', { currency: String(currency).slice(0, 16) });
+      logger.api('POST', '/api/payment/create-order', 400, Date.now() - start);
+      return NextResponse.json({ error: 'Only INR payments are supported.' }, { status: 400 });
+    }
+
     // Re-use the same form validation as the COD orders flow
     const validationError = validateOrderForm(formFields);
     if (validationError) {

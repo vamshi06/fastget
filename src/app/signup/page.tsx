@@ -54,13 +54,21 @@ function SignupForm() {
     e.preventDefault();
     setError(null);
 
-    const nameRegex = /^[a-zA-Z\s]{3,}$/;
+    // Mirrors the server rules (src/lib/validation.ts + utils.ts NAME_REGEX).
+    const nameRegex = new RegExp(String.raw`^[\p{L}\p{M}'.\-\s]{2,}$`, 'u');
     if (!formData.name.trim()) { setError('Full name is required'); return; }
-    if (!nameRegex.test(formData.name.trim())) { setError('Name must be at least 3 characters and contain only letters'); return; }
+    if (formData.name.trim().length > 120) { setError('Name must be at most 120 characters'); return; }
+    if (!nameRegex.test(formData.name.trim())) { setError('Please enter a valid name (letters, spaces, apostrophes and hyphens only)'); return; }
     if (!formData.email.includes('@')) { setError('Please enter a valid email address'); return; }
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) { setError('Please enter a valid 10-digit phone number'); return; }
-    if (formData.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    const pw = formData.password;
+    const strongPassword =
+      pw.length >= 8 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+    if (!strongPassword) {
+      setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
 
     setIsLoading(true);
@@ -161,7 +169,7 @@ function SignupForm() {
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
-              placeholder="At least 8 characters"
+              placeholder="8+ chars: upper, lower, number & symbol"
               className="w-full px-4 py-2.5 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
             />
             <button

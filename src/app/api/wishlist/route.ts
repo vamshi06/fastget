@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWishlistByUserId, addToWishlist } from '@/lib/db';
 import { requireSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { ValidationError, requireString, jsonObject } from '@/lib/validation';
 
 // User is derived from the verified session cookie, never the request (IDOR fix, C3).
 export async function GET(_request: NextRequest) {
@@ -29,13 +30,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { productId, productData } = body;
+    const productId = requireString(body.productId, 'product', { max: 128 });
+    const productData =
+      body.productData === undefined || body.productData === null
+        ? {}
+        : jsonObject(body.productData, 'product data', { maxBytes: 4096 });
 
-    if (!productId) {
-      return NextResponse.json({ error: 'productId is required' }, { status: 400 });
-    }
-
-    const success = await addToWishlist(auth.session.userId, productId, productData ?? {});
+    const success = await addToWishlist(auth.session.userId, productId, productData);
     if (!success) {
       logger.api('POST', '/api/wishlist', 500, Date.now() - start);
       return NextResponse.json({ error: 'Failed to add to wishlist' }, { status: 500 });
@@ -44,6 +45,10 @@ export async function POST(request: NextRequest) {
     logger.api('POST', '/api/wishlist', 200, Date.now() - start);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      logger.api('POST', '/api/wishlist', 400, Date.now() - start);
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     logger.error('API', 'POST /api/wishlist — unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });

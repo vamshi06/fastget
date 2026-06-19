@@ -57,32 +57,52 @@ export function generateToken(): string {
   return out.join('');
 }
 
+// Allows letters (any script), combining marks, spaces, apostrophes, hyphens and
+// periods so real names like O'Brien, Mary-Jane, and non-Latin names pass.
+// Built via RegExp(...,'u') so the unicode flag doesn't require a higher TS target.
+export const NAME_REGEX = new RegExp(String.raw`^[\p{L}\p{M}'.\-\s]{2,}$`, 'u');
+
 export function validateOrderForm(data: OrderFormData): string | null {
-  // Validate customer name
-  const nameRegex = /^[a-zA-Z\s]{3,}$/;
-  if (!data.customerName.trim()) {
+  // Type-guard fields first: a malformed body (missing/non-string field) must
+  // produce a clean validation message, not a .trim()-of-undefined crash.
+  if (typeof data?.customerName !== 'string' || !data.customerName.trim()) {
     return 'Customer name is required';
   }
-  if (!nameRegex.test(data.customerName.trim())) {
-    return 'Name must be at least 3 characters and contain only letters and spaces';
+  const name = data.customerName.trim();
+  if (name.length > 120) {
+    return 'Name must be at most 120 characters';
   }
-  
-  if (!validatePhoneNumber(data.customerPhone)) {
+  if (!NAME_REGEX.test(name)) {
+    return 'Please enter a valid name (letters, spaces, apostrophes and hyphens only)';
+  }
+
+  if (typeof data.customerPhone !== 'string' || !validatePhoneNumber(data.customerPhone)) {
     return 'Please enter a valid 10-digit phone number';
   }
-  
+
   // Validate site address
-  if (!data.siteAddress.trim()) {
+  if (typeof data.siteAddress !== 'string' || !data.siteAddress.trim()) {
     return 'Site address is required';
   }
   if (data.siteAddress.trim().length < 10) {
     return 'Site address must be at least 10 characters';
   }
-  
+  if (data.siteAddress.trim().length > 500) {
+    return 'Site address must be at most 500 characters';
+  }
+
+  if (data.landmark !== undefined && typeof data.landmark === 'string' && data.landmark.length > 200) {
+    return 'Landmark must be at most 200 characters';
+  }
+
+  // Whitelist deliveryType so a bad value can't reach the DB CHECK constraint.
+  if (data.deliveryType !== 'urgent' && data.deliveryType !== 'scheduled') {
+    return 'Please select a valid delivery type';
+  }
   if (data.deliveryType === 'scheduled' && !data.scheduledTime) {
     return 'Please select a delivery time';
   }
-  
+
   return null;
 }
 
