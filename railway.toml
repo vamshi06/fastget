@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "NODE_ENV=production npm run build"
 
 [deploy]
 startCommand = "next start -p $PORT"
