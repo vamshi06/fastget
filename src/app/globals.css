@@ -51,6 +51,7 @@
 
   body {
     @apply bg-brand-fog text-brand-charcoal font-sans antialiased;
+    overflow-x: hidden;
   }
 
   html { scroll-behavior: smooth; }
