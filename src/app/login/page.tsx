@@ -199,7 +199,7 @@ function LoginForm() {
             href="/forgot-password"
             className="text-xs text-brand-primary hover:text-brand-dark font-semibold transition-colors"
           >
-            Forget Password?
+            Forgot Password?
           </Link>
         </div>
 
