@@ -85,7 +85,7 @@ export async function DELETE(request: NextRequest) {
     logger.error('API', 'DELETE /api/auth/delete — unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('DELETE', '/api/auth/delete', 500, Date.now() - start);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Something went wrong on our end. Please try again in a few moments.' },
       { status: 500 }
     );
   }

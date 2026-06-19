@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
 import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/session';
-import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
+import { getClientIp, peekLimit, recordFailedAttempt, clearBuckets, type RateRule } from '@/lib/rate-limit';
 import type { User } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Brute-force protection (H3): cap attempts per IP and per account.
+    // Only FAILED attempts are counted (see recordFailedAttempt below), so a
+    // server-side error or a successful login never burns a slot — a transient
+    // 500 can't lock a legitimate user out.
     const ip = getClientIp(request);
     const acct =
       typeof body.phone === 'string'
@@ -35,10 +38,12 @@ export async function POST(request: NextRequest) {
         : typeof body.email === 'string'
           ? `email:${body.email.toLowerCase().trim()}`
           : null;
-    const limited = await limitOrResponse([
+    const acctKey = acct ? `login:acct:${acct}` : null;
+    const rules: RateRule[] = [
       { key: `login:ip:${ip}`, limit: 20, windowSec: 600 },
-      ...(acct ? [{ key: `login:acct:${acct}`, limit: 6, windowSec: 900 }] : []),
-    ]);
+      ...(acctKey ? [{ key: acctKey, limit: 6, windowSec: 900 }] : []),
+    ];
+    const limited = await peekLimit(rules);
     if (limited) {
       logger.warn('Auth', 'login — rate limited', { ip });
       logger.api('POST', '/api/auth/login', 429, Date.now() - start);
@@ -50,6 +55,7 @@ export async function POST(request: NextRequest) {
     if (body.phone && typeof body.phone === 'string') {
       user = await authenticateUserByPhone(body.phone.trim(), body.password);
       if (!user) {
+        await recordFailedAttempt(rules);
         logger.warn('Auth', 'login — phone auth failed', { phone: body.phone });
         logger.api('POST', '/api/auth/login', 401, Date.now() - start);
         return NextResponse.json(
@@ -61,6 +67,7 @@ export async function POST(request: NextRequest) {
       const email = body.email.toLowerCase().trim();
       user = await authenticateUser(email, body.password);
       if (!user) {
+        await recordFailedAttempt(rules);
         logger.warn('Auth', 'login — email auth failed', { email });
         logger.api('POST', '/api/auth/login', 401, Date.now() - start);
         return NextResponse.json(
@@ -76,6 +83,12 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Credentials were correct — clear this account's failed-attempt counter so
+    // a few earlier typos don't leave the legitimate owner near the lockout
+    // threshold. Only the per-account bucket is cleared, never the shared per-IP
+    // one (otherwise an attacker could reset it by logging into their own account).
+    if (acctKey) await clearBuckets([acctKey]);
 
     // Block login for accounts that have explicitly NOT verified their email.
     // emailVerified defaults to true (via migration) for all pre-existing users,
@@ -126,6 +139,6 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/login', 500, Date.now() - start);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     if (!updated) {
       logger.error('Auth', 'reset-password — update failed', { userId: tokenUser.id });
       logger.api('POST', '/api/auth/reset-password', 500, Date.now() - start);
-      return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
     }
 
     // Send "password changed" confirmation email (fire-and-forget)
@@ -69,6 +69,6 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/reset-password', 500, Date.now() - start);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }

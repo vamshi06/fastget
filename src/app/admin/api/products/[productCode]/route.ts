@@ -64,7 +64,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     logger.error('API', `GET /admin/api/products/${productCode} failed`, {
       error: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }
 
@@ -145,7 +145,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     logger.error('API', `PATCH /admin/api/products/${productCode} failed`, {
       error: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }
 
@@ -179,6 +179,6 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     logger.error('API', `DELETE /admin/api/products/${productCode} failed`, {
       error: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }
 }

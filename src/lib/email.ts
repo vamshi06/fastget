@@ -68,7 +68,11 @@ async function sendViaMock(msg: EmailMessage): Promise<boolean> {
 async function sendViaResend(msg: EmailMessage): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    logger.warn('Email', 'RESEND_API_KEY not set — falling back to mock');
+    logger.error(
+      'Email',
+      'EMAIL_PROVIDER=resend but RESEND_API_KEY is not set — NO real email delivered (mock fallback). Set RESEND_API_KEY in the hosting env.',
+      { to: msg.to },
+    );
     return sendViaMock(msg);
   }
   try {
@@ -203,7 +207,16 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
 
 export async function sendEmail(msg: EmailMessage): Promise<boolean> {
   const provider = getProvider();
-  logger.debug('Email', `Dispatching via ${provider}`, { to: msg.to, subject: msg.subject });
+  // INFO (not debug) so the active provider is visible in production logs —
+  // this is the first thing to check when "emails aren't arriving".
+  logger.info('Email', `Dispatching via ${provider}`, { to: msg.to, subject: msg.subject });
+  if (provider === 'mock' && process.env.NODE_ENV === 'production') {
+    logger.error(
+      'Email',
+      'EMAIL_PROVIDER is unset/"mock" in production — emails are logged, NOT delivered. Set EMAIL_PROVIDER=resend and RESEND_API_KEY.',
+      { to: msg.to, subject: msg.subject },
+    );
+  }
   switch (provider) {
     case 'resend':   return sendViaResend(msg);
     case 'sendgrid': return sendViaSendGrid(msg);
