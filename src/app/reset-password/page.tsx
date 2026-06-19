@@ -83,8 +83,15 @@ function ResetPasswordForm() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    // Mirrors the server rule (requirePassword in src/lib/validation.ts).
+    const strongPassword =
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[^A-Za-z0-9]/.test(password);
+    if (!strongPassword) {
+      setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.');
       return;
     }
     if (password !== confirmPassword) {
@@ -122,7 +129,7 @@ function ResetPasswordForm() {
       <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-6 pb-6 shadow-xl flex flex-col justify-center">
         <div className="text-center mb-5">
           <LockKeyhole className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <p className="text-sm text-brand-slate">Choose a strong password of at least 8 characters.</p>
+          <p className="text-sm text-brand-slate">Use 8+ characters with an uppercase letter, a lowercase letter, a number, and a symbol.</p>
         </div>
 
         {(error || state === 'error') && (

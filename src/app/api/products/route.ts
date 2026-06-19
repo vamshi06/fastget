@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProductsFromCategoryTables, getProductCatalog } from '@/lib/products';
 import { logger } from '@/lib/logger';
 
+// Public browse endpoint: sanitize/clamp query params rather than reject, so a
+// malformed param degrades gracefully instead of breaking the catalog.
+function clampInt(raw: string | null, def: number, min: number, max: number): number {
+  const n = parseInt(raw ?? '', 10);
+  if (!Number.isFinite(n)) return def;
+  return Math.min(Math.max(n, min), max);
+}
+
+function clampPrice(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === '') return undefined;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n;
+}
+
 /**
  * GET /api/products
  *
@@ -20,12 +35,17 @@ export async function GET(request: NextRequest) {
   const start = Date.now();
   try {
     const sp       = request.nextUrl.searchParams;
-    const category = sp.get('category')  || undefined;
-    const search   = sp.get('q')         || undefined;
-    const limit    = Math.min(parseInt(sp.get('limit')  ?? '24',  10), 500);
-    const offset   = Math.max(parseInt(sp.get('offset') ?? '0',   10), 0);
-    const minPrice = sp.get('min_price') ? parseFloat(sp.get('min_price')!) : undefined;
-    const maxPrice = sp.get('max_price') ? parseFloat(sp.get('max_price')!) : undefined;
+    const category = sp.get('category')?.slice(0, 80) || undefined;
+    const search   = sp.get('q')?.slice(0, 100) || undefined;
+    const limit    = clampInt(sp.get('limit'), 24, 1, 500);
+    const offset   = clampInt(sp.get('offset'), 0, 0, 1_000_000);
+    let   minPrice = clampPrice(sp.get('min_price'));
+    let   maxPrice = clampPrice(sp.get('max_price'));
+    // Drop an inverted range rather than silently returning nothing.
+    if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+      minPrice = undefined;
+      maxPrice = undefined;
+    }
 
     logger.info('API', 'GET /api/products', { category, search, limit, offset, minPrice, maxPrice });
 

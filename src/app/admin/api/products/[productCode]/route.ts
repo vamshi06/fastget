@@ -10,8 +10,22 @@ import {
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { requireRole } from '@/lib/auth';
+import {
+  ValidationError,
+  requireString,
+  requireNumber,
+  requireInt,
+  requireEnum,
+  httpUrl,
+} from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
+
+const PRODUCT_STATUSES = ['active', 'inactive', 'discontinued'] as const;
+
+function isBlank(v: unknown): boolean {
+  return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+}
 
 type Ctx = { params: Promise<{ productCode: string }> };
 
@@ -77,13 +91,32 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const body = await req.json();
 
-    // Basic validation
-    if (body.name !== undefined && (!body.name || !String(body.name).trim())) {
-      return NextResponse.json({ success: false, error: 'Name cannot be empty' }, { status: 400 });
+    // ── Validate provided fields (partial update — only what's present) ──
+    const name = body.name !== undefined ? requireString(body.name, 'name', { max: 200 }) : undefined;
+    const price = body.price !== undefined ? requireNumber(body.price, 'price', { min: 0.01 }) : undefined;
+    const moq = body.moq !== undefined ? requireInt(body.moq, 'minimum order quantity', { min: 1 }) : undefined;
+    const stock = body.stockQuantity !== undefined
+      ? requireInt(body.stockQuantity, 'stock quantity', { min: 0 })
+      : undefined;
+    const status = body.status !== undefined ? requireEnum(body.status, PRODUCT_STATUSES, 'status') : undefined;
+
+    // Fields that support clearing: present-but-blank → null, present-with-value → validated.
+    const brandProvided = 'brand' in body;
+    const brand = brandProvided ? (isBlank(body.brand) ? null : requireString(body.brand, 'brand', { max: 120 })) : undefined;
+    const descProvided = 'description' in body;
+    const description = descProvided ? (isBlank(body.description) ? null : requireString(body.description, 'description', { max: 2000 })) : undefined;
+    const uomProvided = 'uom' in body;
+    const uom = uomProvided ? (isBlank(body.uom) ? null : requireString(body.uom, 'unit of measure', { max: 32 })) : undefined;
+    const imageUrlProvided = 'imageUrl' in body;
+    const imageUrl = imageUrlProvided ? (isBlank(body.imageUrl) ? null : httpUrl(body.imageUrl, 'image URL')) : undefined;
+    const mrpProvided = 'mrpPrice' in body;
+    const mrp = mrpProvided ? (isBlank(body.mrpPrice) ? undefined : requireNumber(body.mrpPrice, 'MRP', { min: 0 })) : undefined;
+    if (mrp !== undefined && price !== undefined && mrp < price) {
+      throw new ValidationError('MRP must be greater than or equal to price.');
     }
-    if (body.price !== undefined && (isNaN(Number(body.price)) || Number(body.price) <= 0)) {
-      return NextResponse.json({ success: false, error: 'Price must be greater than 0' }, { status: 400 });
-    }
+
+    const priceInPaise = price !== undefined ? Math.round(price * 100) : undefined;
+    const mrpInPaise = mrpProvided ? (mrp !== undefined ? Math.round(mrp * 100) : null) : undefined;
 
     // Fetch current row to get source_table and products_id
     const row = await getProductRawRow(productCode);
@@ -93,15 +126,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     // Build update payload for category table (prices in paise)
     const catUpdates: Parameters<typeof updateProductInCategoryTable>[2] = {};
-    if (body.name        !== undefined) catUpdates.name        = String(body.name).trim();
-    if ('brand'       in body)          catUpdates.brand        = body.brand       ? String(body.brand).trim()       : null;
-    if ('description' in body)          catUpdates.description  = body.description ? String(body.description).trim() : null;
-    if (body.price       !== undefined) catUpdates.price        = Math.round(Number(body.price) * 100);
-    if ('mrpPrice'    in body)          catUpdates.mrpPrice     = body.mrpPrice    ? Math.round(Number(body.mrpPrice) * 100) : null;
-    if (body.moq         !== undefined) catUpdates.moq          = Number(body.moq);
-    if ('uom'         in body)          catUpdates.uom          = body.uom         ? String(body.uom).trim()         : null;
-    if ('imageUrl'    in body)          catUpdates.imageUrl     = body.imageUrl    ? String(body.imageUrl).trim()    : null;
-    if (body.status      !== undefined) catUpdates.status       = String(body.status);
+    if (name !== undefined) catUpdates.name = name;
+    if (brandProvided) catUpdates.brand = brand;
+    if (descProvided) catUpdates.description = description;
+    if (priceInPaise !== undefined) catUpdates.price = priceInPaise;
+    if (mrpProvided) catUpdates.mrpPrice = mrpInPaise;
+    if (moq !== undefined) catUpdates.moq = moq;
+    if (uomProvided) catUpdates.uom = uom;
+    if (imageUrlProvided) catUpdates.imageUrl = imageUrl;
+    if (status !== undefined) catUpdates.status = status;
 
     const catOk = await updateProductInCategoryTable(row.source_table, productCode, catUpdates);
     if (!catOk) {
@@ -111,13 +144,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     // Also update normalised products table if linked
     if (row.products_id) {
       const normUpdates: Parameters<typeof updateNormalisedProduct>[1] = {};
-      if (body.name        !== undefined) normUpdates.name        = String(body.name).trim();
-      if ('brand'       in body)          normUpdates.brand        = body.brand       ? String(body.brand).trim()       : null;
-      if ('description' in body)          normUpdates.description  = body.description ? String(body.description).trim() : null;
-      if (body.price       !== undefined) normUpdates.price        = Math.round(Number(body.price) * 100);
-      if ('uom'         in body)          normUpdates.uom          = body.uom         ? String(body.uom).trim()         : null;
-      if ('imageUrl'    in body)          normUpdates.imageUrl     = body.imageUrl    ? String(body.imageUrl).trim()    : null;
-      if (body.status      !== undefined) normUpdates.status       = body.status as 'active' | 'inactive' | 'discontinued';
+      if (name !== undefined) normUpdates.name = name;
+      if (brandProvided) normUpdates.brand = brand;
+      if (descProvided) normUpdates.description = description;
+      if (priceInPaise !== undefined) normUpdates.price = priceInPaise;
+      if (uomProvided) normUpdates.uom = uom;
+      if (imageUrlProvided) normUpdates.imageUrl = imageUrl;
+      if (status !== undefined) normUpdates.status = status;
       await updateNormalisedProduct(row.products_id, normUpdates);
     }
 
@@ -125,23 +158,25 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     // the new price/mrp/moq immediately (it reads from price_override, not products.price).
     if (row.variant_id) {
       const varUpdates: Parameters<typeof updateVariantFields>[1] = {};
-      if (body.price    !== undefined) varUpdates.priceOverride = Math.round(Number(body.price) * 100);
-      if ('mrpPrice' in body)          varUpdates.mrpPrice      = body.mrpPrice ? Math.round(Number(body.mrpPrice) * 100) : null;
-      if (body.moq      !== undefined) varUpdates.moq           = Number(body.moq);
+      if (priceInPaise !== undefined) varUpdates.priceOverride = priceInPaise;
+      if (mrpProvided) varUpdates.mrpPrice = mrpInPaise;
+      if (moq !== undefined) varUpdates.moq = moq;
       if (Object.keys(varUpdates).length > 0) {
         await updateVariantFields(row.variant_id, varUpdates);
       }
 
       // Update stock in inventory table (product_variants.stock_quantity doesn't exist in prod)
-      if (body.stockQuantity !== undefined) {
-        const qty = Math.max(0, Math.round(Number(body.stockQuantity)));
-        await upsertInventoryStock(row.variant_id, qty);
+      if (stock !== undefined) {
+        await upsertInventoryStock(row.variant_id, stock);
       }
     }
 
     logger.info('API', `PATCH /admin/api/products/${productCode} — updated`);
     return NextResponse.json({ success: true, productCode });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     logger.error('API', `PATCH /admin/api/products/${productCode} failed`, {
       error: error instanceof Error ? error.message : String(error),
     });

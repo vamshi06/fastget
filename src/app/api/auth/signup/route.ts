@@ -4,6 +4,14 @@ import { sendEmail } from '@/lib/email';
 import { otpVerificationEmailTemplate } from '@/lib/email-templates';
 import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { NAME_REGEX } from '@/lib/utils';
+import {
+  ValidationError,
+  requireString,
+  requireEmail,
+  requirePassword,
+  requirePhone10,
+} from '@/lib/validation';
 
 /**
  * POST /api/auth/signup
@@ -28,52 +36,22 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
-      logger.warn('Auth', 'signup — missing name');
-      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
-      return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 });
-    }
-
-    if (!body.email || typeof body.email !== 'string') {
-      logger.warn('Auth', 'signup — missing email');
-      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
-      return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email.trim())) {
-      logger.warn('Auth', 'signup — invalid email format');
-      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
-      return NextResponse.json(
-        { success: false, error: 'Please enter a valid email address' },
-        { status: 400 },
-      );
-    }
-
-    if (!body.password || typeof body.password !== 'string' || body.password.length < 8) {
-      logger.warn('Auth', 'signup — weak password');
-      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 8 characters' },
-        { status: 400 },
-      );
-    }
-
-    if (!body.phone || typeof body.phone !== 'string') {
-      logger.warn('Auth', 'signup — missing phone');
-      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
-      return NextResponse.json({ success: false, error: 'Phone number is required' }, { status: 400 });
-    }
-
-    const email = body.email.toLowerCase().trim();
+    const name = requireString(body.name, 'name', {
+      max: 120,
+      pattern: NAME_REGEX,
+      patternMsg: 'Please enter a valid name (letters, spaces, apostrophes and hyphens only).',
+    });
+    const email = requireEmail(body.email);
+    const password = requirePassword(body.password);
+    const phone = requirePhone10(body.phone);
 
     // Create user with email_verified = false
     const user = await createUser(
       email,
-      body.phone.trim(),
+      phone,
       'customer',
-      body.password,
-      body.name.trim(),
+      password,
+      name,
       false, // emailVerified = false — must verify before logging in
     );
 
@@ -122,6 +100,11 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (error) {
+    if (error instanceof ValidationError) {
+      logger.warn('Auth', 'signup — validation failed', { error: error.message });
+      logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     logger.error('Auth', 'signup — unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });

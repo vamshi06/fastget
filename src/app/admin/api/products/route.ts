@@ -7,8 +7,21 @@ import {
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { requireRole } from '@/lib/auth';
+import {
+  ValidationError,
+  requireString,
+  optionalString,
+  requireNumber,
+  optionalNumber,
+  requireInt,
+  optionalEnum,
+  httpUrl,
+} from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
+
+const PRODUCT_STATUSES = ['active', 'inactive', 'discontinued'] as const;
+const SLUG_PATTERN = /^[a-z0-9_-]+$/i;
 
 /** Generate a short unique product code: e.g. CARP-A1B2C3 */
 function generateProductCode(categorySlug: string): string {
@@ -26,48 +39,69 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // ── Validation ────────────────────────────────────────────────
-    if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
-      return NextResponse.json({ success: false, error: 'Product name is required' }, { status: 400 });
+    const name = requireString(body.name, 'product name', { max: 200 });
+    const price = requireNumber(body.price, 'price', { min: 0.01 });
+    const categorySlug = requireString(body.categorySlug, 'category', {
+      max: 80,
+      pattern: SLUG_PATTERN,
+      patternMsg: 'Category has an invalid format.',
+    });
+    const categoryNameInput = optionalString(body.categoryName, 'category name', { max: 120 });
+    const categoryDescription = optionalString(body.categoryDescription, 'category description', { max: 500 });
+    const mrpPrice = optionalNumber(body.mrpPrice, 'MRP', { min: 0 });
+    if (mrpPrice !== undefined && mrpPrice < price) {
+      throw new ValidationError('MRP must be greater than or equal to price.');
     }
-    if (!body.price || typeof body.price !== 'number' || body.price <= 0) {
-      return NextResponse.json({ success: false, error: 'Price must be a number greater than 0' }, { status: 400 });
-    }
-    if (!body.categorySlug || typeof body.categorySlug !== 'string') {
-      return NextResponse.json({ success: false, error: 'Category is required' }, { status: 400 });
-    }
+    const status = optionalEnum(body.status, PRODUCT_STATUSES, 'status') ?? 'active';
+    const moq = body.moq === undefined || body.moq === null
+      ? 1
+      : requireInt(body.moq, 'minimum order quantity', { min: 1 });
+    const stock = body.stockQuantity === undefined || body.stockQuantity === null
+      ? 0
+      : requireInt(body.stockQuantity, 'stock quantity', { min: 0 });
+    const brand = optionalString(body.brand, 'brand', { max: 120 });
+    const description = optionalString(body.description, 'description', { max: 2000 });
+    const uom = optionalString(body.uom, 'unit of measure', { max: 32 });
+    const imageUrl =
+      body.imageUrl === undefined || body.imageUrl === null || String(body.imageUrl).trim() === ''
+        ? undefined
+        : httpUrl(body.imageUrl, 'image URL');
+    const productCodeInput = optionalString(body.productCode, 'product code', {
+      max: 64,
+      pattern: SLUG_PATTERN,
+      patternMsg: 'Product code has an invalid format.',
+    });
+    const skuInput = optionalString(body.sku, 'SKU', { max: 64 });
 
     // ── Resolve category ──────────────────────────────────────────
     const categoryName =
-      body.categoryName ||
-      body.categorySlug.replace(/[_-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-    const category = await getOrCreateCategory(categoryName, body.categorySlug, body.categoryDescription);
+      categoryNameInput ||
+      categorySlug.replace(/[_-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const category = await getOrCreateCategory(categoryName, categorySlug, categoryDescription);
 
     if (!category) {
-      logger.error('API', 'POST /admin/api/products — failed to resolve category', { slug: body.categorySlug });
+      logger.error('API', 'POST /admin/api/products — failed to resolve category', { slug: categorySlug });
       logger.api('POST', '/admin/api/products', 500, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Failed to resolve category' }, { status: 500 });
     }
 
     // ── Prices (rupees → paise) ───────────────────────────────────
-    const priceInPaise = Math.round(body.price * 100);
-    const mrpInPaise   = body.mrpPrice ? Math.round(body.mrpPrice * 100) : undefined;
-    const status       = ['active', 'inactive', 'discontinued'].includes(body.status) ? body.status : 'active';
-    const moq          = typeof body.moq === 'number' && body.moq > 0 ? body.moq : 1;
-    const stock        = typeof body.stockQuantity === 'number' ? body.stockQuantity : 0;
+    const priceInPaise = Math.round(price * 100);
+    const mrpInPaise   = mrpPrice !== undefined ? Math.round(mrpPrice * 100) : undefined;
 
     // product_code is the PK of every category table — must never be empty
-    const productCode = body.productCode?.trim() || generateProductCode(body.categorySlug);
+    const productCode = productCodeInput || generateProductCode(categorySlug);
 
     // ── Insert into products table ────────────────────────────────
     const product = await createProduct(
-      body.name.trim(),
+      name,
       priceInPaise,
-      body.description?.trim() || undefined,
+      description,
       category.id,
       {
-        brand:       body.brand?.trim()    || undefined,
-        uom:         body.uom?.trim()      || undefined,
-        imageUrl:    body.imageUrl?.trim() || undefined,
+        brand,
+        uom,
+        imageUrl,
         productCode,
         status,
       }
@@ -80,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Insert variant ────────────────────────────────────────────
-    const sku     = body.sku?.trim() || productCode;
+    const sku     = skuInput || productCode;
     const variant = await createProductVariant(product.id, sku, stock, {}, undefined, mrpInPaise, moq);
 
     if (!variant) {
@@ -88,16 +122,16 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Insert into category-specific table (makes it visible in catalog/admin list) ──
-    const catalogInserted = await insertProductIntoCategoryTable(body.categorySlug, {
+    const catalogInserted = await insertProductIntoCategoryTable(categorySlug, {
       productCode,
-      name:        body.name.trim(),
-      brand:       body.brand?.trim()        || undefined,
-      description: body.description?.trim()  || undefined,
+      name,
+      brand,
+      description,
       price:       priceInPaise,
       mrpPrice:    mrpInPaise,
       moq,
-      uom:         body.uom?.trim()          || undefined,
-      imageUrl:    body.imageUrl?.trim()     || undefined,
+      uom,
+      imageUrl,
       status,
       variantId:   variant?.id,
       productsId:  product.id,
@@ -106,7 +140,7 @@ export async function POST(request: NextRequest) {
     if (!catalogInserted) {
       logger.warn('Products', 'Category table insert failed; product exists in products table only', {
         productId: product.id,
-        categorySlug: body.categorySlug,
+        categorySlug,
       });
     }
 
@@ -129,6 +163,11 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof ValidationError) {
+      logger.warn('API', 'POST /admin/api/products — validation failed', { error: error.message });
+      logger.api('POST', '/admin/api/products', 400, Date.now() - start);
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     logger.error('API', 'POST /admin/api/products — unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
