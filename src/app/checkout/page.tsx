@@ -355,12 +355,13 @@ function CheckoutPageContent() {
                         type="tel"
                         value={formData.customerPhone}
                         onChange={(e) => {
-                          const value = e.target.value;
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                           if (useAccountPhone && value !== currentUser?.phone) setUseAccountPhone(false);
                           setFormData({ ...formData, customerPhone: value });
                         }}
                         className={`${inputCls} pl-10`}
                         placeholder="10-digit mobile number"
+                        maxLength={10}
                       />
                     </div>
                   </div>
