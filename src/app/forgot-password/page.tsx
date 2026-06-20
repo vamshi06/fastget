@@ -4,12 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, KeyRound } from 'lucide-react';
-import { FloatingInput } from '@/components/FloatingInput';
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 
 function AuthHero({ title }: { title: string }) {
   return (
-    <div className="relative h-[28vh] min-h-[180px] flex-shrink-0">
+    <div className="relative h-[38vh] min-h-[240px] flex-shrink-0">
       <Image
         src="/construction-background.jpg"
         alt=""
@@ -24,7 +23,7 @@ function AuthHero({ title }: { title: string }) {
       >
         <ChevronLeft className="w-5 h-5 text-white" />
       </Link>
-      <h1 className="absolute bottom-6 left-6 text-2xl font-black text-white tracking-tight">{title}</h1>
+      <h1 className="absolute bottom-6 left-6 text-3xl font-black text-white tracking-tight">{title}</h1>
     </div>
   );
 }
@@ -47,7 +46,6 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.toLowerCase().trim() }),
       });
-      // Always navigate regardless of API response (prevent enumeration)
       router.push(`/verify-reset-otp?email=${encodeURIComponent(email.toLowerCase().trim())}`);
     } catch {
       setError('A network error occurred. Please try again.');
@@ -58,40 +56,44 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex-1 flex flex-col">
       <AuthHero title="Forgot password?" />
-      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-6 pb-6 shadow-xl flex flex-col justify-center">
-        <div className="text-center mb-5">
-          <p className="text-sm text-brand-slate">
-            Enter your email and we&apos;ll send a 6-digit reset code.
-          </p>
-        </div>
+      <div className="flex-1 bg-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col">
+        <p className="text-sm text-brand-slate mb-6">Enter your email and we&apos;ll send a 6-digit reset code.</p>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-red-800 text-sm">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <FloatingInput
-            label="Email"
-            name="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-xs font-semibold text-brand-graphite mb-1.5">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="w-full px-4 py-3.5 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={state === 'loading'}
-            className="w-full py-3.5 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm disabled:opacity-50 flex items-center justify-center transition-colors mt-1"
+            className="w-full py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
           >
             {state === 'loading' ? 'Sending…' : 'Send Code'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-brand-slate">
+        <p className="mt-4 text-center text-sm text-brand-slate pb-2">
           Remembered it?{' '}
-          <Link href="/login" className="text-brand-primary font-semibold hover:text-brand-dark">
-            Log in
+          <Link href="/login" className="text-brand-primary font-bold hover:text-brand-dark transition-colors">
+            Log In
           </Link>
         </p>
       </div>
