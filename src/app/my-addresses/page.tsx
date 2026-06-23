@@ -183,7 +183,8 @@ function AddressForm({
           label="Phone *"
           name="phone"
           value={form.phone}
-          onChange={(e) => set('phone', e.target.value)}
+          
+          onChange={(e) => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
           required
           maxLength={10}
         />

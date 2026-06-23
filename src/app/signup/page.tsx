@@ -47,7 +47,8 @@ function SignupForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const sanitized = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
+    setFormData((prev) => ({ ...prev, [name]: sanitized }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,6 +155,7 @@ function SignupForm() {
             value={formData.phone}
             onChange={handleChange}
             placeholder="10-digit mobile number"
+            maxLength={10}
             className="w-full px-4 py-2.5 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
           />
         </div>

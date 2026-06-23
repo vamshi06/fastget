@@ -1,16 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cancelUnpaidOrder } from '@/lib/payment-db';
-import { logger } from '@/lib/logger';
+import { NextResponse } from 'next/server';
 
 /**
  * POST /api/payment/cancel-order
  *
- * Called by the client when the user closes the Razorpay modal without paying
- * (modal.ondismiss). Marks the DB order as 'cancelled' so the order page shows
- * the correct state rather than "Order Received" with no payment.
- *
- * The DB update is conditional (payment_status IS NULL) so it is safe to call
- * even if a payment callback races in — a captured payment won't be cancelled.
+ * No longer in use — orders are only created in the DB after payment is
+ * confirmed, so there is nothing to cancel when the user dismisses the modal.
  */
 export async function POST(request: NextRequest) {
   try {
