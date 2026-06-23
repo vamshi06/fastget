@@ -1,0 +1,20 @@
+import { NextResponse } from 'next/server'
+
+const assetlinks = [
+  {
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: 'com.elemantra.fastget',
+      sha256_cert_fingerprints: ['51:3D:D4:71:B2:8B:5D:3A:83:13:8E:C0:5F:E6:E3:C8:9B:C4:CB:CB:14:D6:98:05:76:99:A4:9E:67:7B:8E:0C'],
+    },
+  },
+]
+
+export async function GET() {
+  return NextResponse.json(assetlinks)
+}
+
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 })
+}

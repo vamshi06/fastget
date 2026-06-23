@@ -1,12 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import WebView, { WebViewNavigation, WebViewRequest } from 'react-native-webview';
+import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
 import { APP_URL } from '../constants/config';
 
 const SCHEME = 'fastget://';
+
+type WebViewRequest = {
+  url: string;
+};
+
+function getInternalPath(rawUrl: string): string | null {
+  if (rawUrl.startsWith(SCHEME)) {
+    return rawUrl.slice(SCHEME.length);
+  }
+
+  if (rawUrl.startsWith(`${APP_URL}/`)) {
+    return rawUrl.slice(APP_URL.length + 1);
+  }
+
+  if (rawUrl.startsWith('exp://') && rawUrl.includes('/--/')) {
+    return rawUrl.split('/--/')[1] ?? null;
+  }
+
+  return null;
+}
 
 // Only these non-web schemes may be handed to the OS (M3). This is the UPI /
 // payment-app + Android intent set Razorpay uses — NOT a blanket "open anything
@@ -39,14 +59,7 @@ export default function WebViewScreen() {
 
   useEffect(() => {
     const handleDeepLink = (rawUrl: string) => {
-      let path: string | null = null;
-      if (rawUrl.startsWith(SCHEME)) {
-        // Production deep link: fastget://verify-email?token=TOKEN
-        path = rawUrl.slice(SCHEME.length);
-      } else if (rawUrl.includes('/--/')) {
-        // Expo Go dev link: exp://192.168.x.x:8081/--/verify-email?token=TOKEN
-        path = rawUrl.split('/--/')[1] ?? null;
-      }
+      const path = getInternalPath(rawUrl);
       if (path) setWebViewSource({ uri: `${APP_URL}/${path}` });
     };
 
@@ -86,6 +99,12 @@ export default function WebViewScreen() {
   // detects the WebView environment and hides the UPI payment option entirely.
   const handleShouldStartLoadWithRequest = (request: WebViewRequest): boolean => {
     const { url } = request;
+
+    // Keep fastget.in URLs in the WebView (including target="_blank" and window.open)
+    if (url.startsWith(`${APP_URL}/`) || url === APP_URL) {
+      return true;
+    }
+
     if (
       url.startsWith('http://') ||
       url.startsWith('https://') ||
@@ -110,6 +129,20 @@ export default function WebViewScreen() {
     'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 ' +
     '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
 
+  // Injected JavaScript to intercept window.open() and target="_blank" links,
+  // keeping all fastget.in URLs within the WebView instead of opening external browser.
+  const injectedJavaScript = `
+    (function() {
+      // Override window.open to navigate in the same window
+      window.open = function(url, target, features) {
+        if (url) {
+          window.location.href = url;
+        }
+      };
+    })();
+    true;
+  `;
+
   return (
     // edges={['top']} keeps the status bar area clear while letting the WebView
     // extend edge-to-edge at the bottom so the site's own layout can manage it.
@@ -123,6 +156,8 @@ export default function WebViewScreen() {
             source={webViewSource}
             style={styles.webView}
             userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
+            injectedJavaScript={injectedJavaScript}
+            javaScriptCanOpenWindowsAutomatically={false}
             onLoadStart={() => setHasError(false)}
             onLoadEnd={() => setInitialLoading(false)}
             onError={() => {
