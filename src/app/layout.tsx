@@ -21,14 +21,6 @@ export const metadata: Metadata = {
   keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
   manifest: '/manifest.webmanifest',
   themeColor: '#f97316',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'FastGet',
-  },
-  other: {
-    'mobile-web-app-capable': 'yes',
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
