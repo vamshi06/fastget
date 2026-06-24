@@ -65,6 +65,10 @@ const nextConfig = {
       // top of the global strict-origin-when-cross-origin policy). A later
       // matching rule overrides the global Referrer-Policy for these paths.
       {
+        source: '/.well-known/assetlinks.json',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+      {
         source: '/order/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
