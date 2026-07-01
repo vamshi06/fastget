@@ -34,3 +34,11 @@ This project uses gstack AI workflow skills. Available commands:
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design.
+
+```bash 
+npx next dev -H 0.0.0.0          
+
+
+cd mobile
+npm start -- --clear   
+```

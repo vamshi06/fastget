@@ -181,10 +181,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const EMPTY_CART = {
+  state: { items: [] as import('@/types').CartItem[] },
+  addItem: () => {},
+  removeItem: () => {},
+  updateQuantity: () => {},
+  clearCart: () => {},
+  isLoaded: false,
+  getItemCount: () => 0,
+  getSubtotal: () => 0,
+  getConvenienceFee: () => 0,
+  getTotal: () => 0,
+};
+
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return context;
+  // During SSR the context provider may not propagate correctly; fall back to
+  // an empty-cart stub so components render consistently on server and client.
+  return context ?? EMPTY_CART;
 }

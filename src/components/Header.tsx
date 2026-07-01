@@ -169,7 +169,7 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Right: Wishlist + Cart */}
+          {/* Right: Wishlist */}
           <div className="flex items-center gap-1 flex-shrink-0">
             <Link
               href={"/wishlist" as any}
@@ -187,18 +187,6 @@ export function Header() {
               {wishlistCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/cart"
-              aria-label="Cart"
-              className="relative p-2 rounded-xl hover:bg-neutral-100 transition-colors"
-            >
-              <ShoppingCart className="w-5 h-5 text-brand-charcoal" />
-              {itemCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-0.5 bg-brand-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {itemCount > 9 ? "9+" : itemCount}
                 </span>
               )}
             </Link>
