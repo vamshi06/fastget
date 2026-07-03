@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { CategoryDB, CategoryId, Product, ProductDB, ProductVariant } from '@/types';
 import { logger } from '@/lib/logger';
+import { rankByFuzzyMatch } from '@/lib/fuzzySearch';
 
 // ── Shared catalogue query fragment ──────────────────────────────────────────
 
@@ -243,30 +244,36 @@ export async function getProductsFromCategoryTables(
       return { products: [], total: 0 };
     }
 
-    const filterArgs: unknown[] = [];
-    const whereClauses: string[] = ['TRUE'];
+    // Price filter (and optionally search) as WHERE args — split out so the
+    // fuzzy fallback below can re-run price/category filters without the
+    // exact-substring search clause.
+    const buildFilters = (includeSearch: boolean) => {
+      const args: unknown[] = [];
+      const clauses: string[] = ['TRUE'];
 
-    // Search filter: name, brand, description
-    if (search?.trim()) {
-      const pat = `%${search.trim()}%`;
-      filterArgs.push(pat, pat, pat);
-      const n = filterArgs.length;
-      whereClauses.push(
-        `(name ILIKE $${n - 2} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
-      );
-    }
+      if (includeSearch && search?.trim()) {
+        const pat = `%${search.trim()}%`;
+        args.push(pat, pat, pat);
+        const n = args.length;
+        clauses.push(
+          `(name ILIKE $${n - 2} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
+        );
+      }
 
-    // Price filter: category tables store price in paise (1 rupee = 100 paise)
-    if (minPrice !== undefined && minPrice > 0) {
-      filterArgs.push(minPrice * 100);
-      whereClauses.push(`price >= $${filterArgs.length}`);
-    }
-    if (maxPrice !== undefined) {
-      filterArgs.push(maxPrice * 100);
-      whereClauses.push(`price <= $${filterArgs.length}`);
-    }
+      // Category tables store price in paise (1 rupee = 100 paise)
+      if (minPrice !== undefined && minPrice > 0) {
+        args.push(minPrice * 100);
+        clauses.push(`price >= $${args.length}`);
+      }
+      if (maxPrice !== undefined) {
+        args.push(maxPrice * 100);
+        clauses.push(`price <= $${args.length}`);
+      }
 
-    const whereStr   = whereClauses.join(' AND ');
+      return { where: clauses.join(' AND '), args };
+    };
+
+    const { where: whereStr, args: filterArgs } = buildFilters(true);
     const rowsArgs   = [...filterArgs, limit, offset];
     const countArgs  = [...filterArgs];
     const limitIdx   = rowsArgs.length - 1;
@@ -279,7 +286,6 @@ export async function getProductsFromCategoryTables(
       console.debug('[catalog] table:', tableName);
       console.debug('[catalog] query:', rowsQuery);
       console.debug('[catalog] args:', rowsArgs);
-      console.debug('[catalog] filters:', whereClauses);
     }
 
     const [rows, countRows] = await Promise.all([
@@ -287,8 +293,26 @@ export async function getProductsFromCategoryTables(
       sqlClient.query(countQuery, countArgs as any[]),
     ]);
 
-    const products = (rows as any[]).map(categoryTableRowToProduct);
-    const total    = Number((countRows as any[])[0]?.total ?? 0);
+    let products = (rows as any[]).map(categoryTableRowToProduct);
+    let total    = Number((countRows as any[])[0]?.total ?? 0);
+
+    // Exact substring search found nothing — the shopper likely mistyped the
+    // product name. Re-scan the (category/price-scoped, search-unfiltered)
+    // candidates with typo-tolerant matching instead of showing "no results".
+    if (search?.trim() && total === 0 && offset === 0) {
+      const { where: fallbackWhere, args: fallbackArgs } = buildFilters(false);
+      const candidateRows = await sqlClient.query(
+        `SELECT * FROM ${tableName} WHERE ${fallbackWhere}`,
+        fallbackArgs as any[],
+      ) as any[];
+      const candidates = candidateRows.map(categoryTableRowToProduct);
+      const fuzzyMatches = rankByFuzzyMatch(search, candidates, limit);
+
+      if (fuzzyMatches.length > 0) {
+        products = fuzzyMatches;
+        total    = fuzzyMatches.length;
+      }
+    }
 
     if (process.env.DEBUG_CATALOG === '1') {
       console.debug('[catalog] returned:', products.length, 'of total', total);

@@ -52,7 +52,82 @@ import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { Product } from "@/types";
+
+const SUGGESTION_MIN_CHARS = 2;
+const SUGGESTION_DEBOUNCE_MS = 250;
+
+function SearchSuggestions({
+  results,
+  loading,
+  query,
+  onSelect,
+  onViewAll,
+}: {
+  results: Product[];
+  loading: boolean;
+  query: string;
+  onSelect: (product: Product) => void;
+  onViewAll: () => void;
+}) {
+  if (!loading && results.length === 0) {
+    return (
+      <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 px-4 py-6 text-center text-sm text-brand-slate">
+        No products found for &quot;{query}&quot;
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 overflow-hidden">
+      {loading && results.length === 0 ? (
+        <div className="px-4 py-6 text-center text-sm text-brand-slate">Searching…</div>
+      ) : (
+        <>
+          <ul className="max-h-80 overflow-y-auto">
+            {results.map((product) => (
+              <li key={product.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(product)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-primary-50 transition-colors"
+                >
+                  <div className="relative w-9 h-9 rounded-lg bg-brand-fog flex-shrink-0 overflow-hidden">
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        sizes="36px"
+                        className="object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Search className="w-4 h-4 text-brand-steel" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-brand-charcoal truncate">{product.name}</p>
+                    <p className="text-xs text-brand-slate">{formatCurrency(product.price)}</p>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={onViewAll}
+            className="w-full px-4 py-3 text-sm font-medium text-brand-primary hover:bg-primary-50 transition-colors border-t border-neutral-100 text-left"
+          >
+            See all results for &quot;{query}&quot;
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 const NAV_CATEGORIES = [
   { id: "tools-machines", name: "Tools & Machines" },
@@ -79,7 +154,11 @@ export function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPolicies, setShowPolicies] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const suggestionsAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -101,13 +180,73 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDropdown]);
 
+  // Debounced live-search: fetch suggestions a couple of letters in, instead
+  // of waiting for form submit.
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < SUGGESTION_MIN_CHARS) {
+      suggestionsAbortRef.current?.abort();
+      setSuggestions([]);
+      setSuggestionsLoading(false);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    const timer = setTimeout(async () => {
+      suggestionsAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      suggestionsAbortRef.current = ctrl;
+
+      try {
+        const res = await fetch(
+          `/api/products?q=${encodeURIComponent(q)}&limit=6`,
+          { signal: ctrl.signal },
+        );
+        const json = await res.json();
+        if (json.success) {
+          setSuggestions(json.data.products as Product[]);
+          setShowSuggestions(true);
+        }
+      } catch (err: any) {
+        if (err.name !== "AbortError") setSuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, SUGGESTION_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClickOutsideSearch(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-search-container]")) {
+        setShowSuggestions(false);
+      }
+    }
+    if (showSuggestions)
+      document.addEventListener("mousedown", handleClickOutsideSearch);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutsideSearch);
+  }, [showSuggestions]);
+
+  const goToSearchResults = (q: string) => {
+    if (!q.trim()) return;
+    setShowSuggestions(false);
+    router.push(`/catalog?q=${encodeURIComponent(q.trim())}` as any);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(
-        `/catalog?q=${encodeURIComponent(searchQuery.trim())}` as any,
-      );
-    }
+    goToSearchResults(searchQuery);
+  };
+
+  const handleSelectSuggestion = (product: Product) => {
+    setShowSuggestions(false);
+    setSearchQuery("");
+    router.push(`/product/${product.id}` as any);
   };
 
   const handleLogout = () => {
@@ -203,18 +342,30 @@ export function Header() {
             "hidden",
         )}
       >
-        <form onSubmit={handleSearch} className="relative">
+        <form onSubmit={handleSearch} className="relative" data-search-container>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
           <input
             type="text"
             placeholder="Search products, brands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => router.push("/catalog" as any)}
+            onFocus={() => {
+              if (!pathname.startsWith("/catalog")) router.push("/catalog" as any);
+              if (suggestions.length > 0) setShowSuggestions(true);
+            }}
             className="w-full pl-9 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
                        placeholder:text-brand-steel focus:outline-none focus:ring-2 focus:ring-brand-primary/25
                        focus:border-brand-primary focus:bg-white transition-all"
           />
+          {showSuggestions && (
+            <SearchSuggestions
+              results={suggestions}
+              loading={suggestionsLoading}
+              query={searchQuery.trim()}
+              onSelect={handleSelectSuggestion}
+              onViewAll={() => goToSearchResults(searchQuery)}
+            />
+          )}
         </form>
       </div>
 
@@ -270,6 +421,7 @@ export function Header() {
           <form
             onSubmit={handleSearch}
             className="flex-1 min-w-0 hidden md:block"
+            data-search-container
           >
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-brand-steel pointer-events-none" />
@@ -278,12 +430,24 @@ export function Header() {
                 placeholder="Search for plywood, hinges, fittings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
                 className="w-full pl-11 pr-4 py-3 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
                            placeholder:text-brand-steel
                            focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white
                            transition-all duration-200"
                 style={{ fontSize: "14px" }}
               />
+              {showSuggestions && (
+                <SearchSuggestions
+                  results={suggestions}
+                  loading={suggestionsLoading}
+                  query={searchQuery.trim()}
+                  onSelect={handleSelectSuggestion}
+                  onViewAll={() => goToSearchResults(searchQuery)}
+                />
+              )}
             </div>
           </form>
 
