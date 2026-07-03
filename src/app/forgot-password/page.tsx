@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
       <AuthHero title="Forgot password?" />
-      <div className="flex-1 bg-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:justify-center md:px-14 md:py-10">
+      <div className="flex-1 bg-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col justify-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:px-14 md:py-10">
         <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">Enter your email and we&apos;ll send a 6-digit reset code.</p>
 
         {error && (
