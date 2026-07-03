@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Header } from './Header';
 
-const AUTH_ROUTES = ['/login', '/signup', '/forgot-password'];
+const AUTH_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 
 export function ConditionalHeader() {
   const pathname = usePathname();
