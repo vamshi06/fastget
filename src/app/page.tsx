@@ -23,19 +23,19 @@ export default function Home() {
           limit={10}
         />
 
-        {/* Civil materials spotlight */}
-        <ProductSection
-          title="Cement & Civil Materials"
-          subtitle="Strongest prices on site basics"
-          category="civil-materials"
-          limit={8}
-        />
-
         {/* Carpentry section */}
         <ProductSection
           title="Carpentry Essentials"
           subtitle="Plywood, hinges, screws & more"
           category="carpentry"
+          limit={8}
+        />
+
+        {/* Civil materials spotlight */}
+        <ProductSection
+          title="Cement & Civil Materials"
+          subtitle="Strongest prices on site basics"
+          category="civil-materials"
           limit={8}
         />
 
