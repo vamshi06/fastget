@@ -1,7 +1,7 @@
 // For physical Android/iOS device: use your PC's local Wi-Fi IP (e.g. 192.168.1.42).
 // For Android emulator: use 10.0.2.2 instead.
 // Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
-const DEV_URL = 'http://192.168.101.158:3000';
+const DEV_URL = 'http://192.168.1.102:3000';
 
 const PROD_URL = 'https://fastget.in';
 

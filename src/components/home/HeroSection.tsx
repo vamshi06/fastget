@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const slides = [
   {
@@ -23,13 +23,81 @@ const slides = [
   },
 ];
 
-export function HeroSection() {
-  const [current, setCurrent] = useState(0);
+// A clone of the first slide appended at the end lets the track scroll one
+// step past the last real slide, which we then jump back from invisibly —
+// giving a seamless loop from slide 3 back to slide 1.
+const extendedSlides = [...slides, slides[0]];
 
-  useEffect(() => {
-    const t = setInterval(() => setCurrent(p => (p + 1) % slides.length), 5000);
-    return () => clearInterval(t);
+export function HeroSection() {
+  const [dot, setDot] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef(0);
+  const isInteracting = useRef(false);
+  const resumeAt = useRef(0);
+  const loopTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  const scrollToIndex = useCallback((i: number) => {
+    const track = trackRef.current;
+    const child = track?.children[i] as HTMLElement | undefined;
+    child?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   }, []);
+
+  // Autoplay — pauses while the user is actively dragging/swiping the track
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (isInteracting.current || Date.now() < resumeAt.current) return;
+      const next = positionRef.current + 1;
+      positionRef.current = next;
+      setDot(next % slides.length);
+      scrollToIndex(next);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [scrollToIndex]);
+
+  // Keep the indicators in sync with manual scrolling/swiping, and loop back
+  // to the real first slide once the cloned slide at the end is reached.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    let frame: number;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const index = Math.round(track.scrollLeft / track.clientWidth);
+        positionRef.current = index;
+        setDot(index % slides.length);
+
+        if (index === slides.length && !loopTimeout.current) {
+          loopTimeout.current = setTimeout(() => {
+            track.scrollLeft = 0;
+            positionRef.current = 0;
+            loopTimeout.current = undefined;
+          }, 400);
+        }
+      });
+    };
+    track.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      track.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame);
+      clearTimeout(loopTimeout.current);
+    };
+  }, []);
+
+  const handleInteractionStart = () => {
+    isInteracting.current = true;
+  };
+  const handleInteractionEnd = () => {
+    isInteracting.current = false;
+    resumeAt.current = Date.now() + 4000;
+  };
+
+  const handleDotClick = (i: number) => {
+    resumeAt.current = Date.now() + 4000;
+    positionRef.current = i;
+    setDot(i);
+    scrollToIndex(i);
+  };
 
   return (
     <section
@@ -59,15 +127,22 @@ export function HeroSection() {
 
       <div className="page-container relative z-10 py-7 md:py-10">
 
-        {/* All slides stacked in the same grid cell — container sized to tallest */}
-        <div className="grid">
-          {slides.map((slide, i) => (
+        {/* Scrollable, snap-paged track — auto-advances but the user can swipe/drag too */}
+        <div
+          ref={trackRef}
+          className="flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onPointerDown={handleInteractionStart}
+          onPointerUp={handleInteractionEnd}
+          onPointerCancel={handleInteractionEnd}
+          onTouchStart={handleInteractionStart}
+          onTouchEnd={handleInteractionEnd}
+        >
+          {extendedSlides.map((slide, i) => (
             <div
               key={i}
-              style={{ gridArea: '1 / 1' }}
-              className={`transition-opacity duration-500 ${
-                i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
+              className="snap-start shrink-0 w-full"
+              aria-hidden={i === slides.length}
             >
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-[1.04] tracking-tight mb-4">
                 {slide.title}
@@ -81,16 +156,16 @@ export function HeroSection() {
           ))}
         </div>
 
-        {/* Indicators — outside the grid, always in the same place */}
+        {/* Indicators — outside the track, always in the same place */}
         <div className="flex items-center gap-2">
           {slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrent(i)}
+              onClick={() => handleDotClick(i)}
               className="h-1 rounded-full transition-all duration-300"
               style={{
-                width: i === current ? '28px' : '6px',
-                background: i === current ? '#F5A623' : 'rgba(255,255,255,0.18)',
+                width: i === dot ? '28px' : '6px',
+                background: i === dot ? '#F5A623' : 'rgba(255,255,255,0.18)',
               }}
               aria-label={`Slide ${i + 1}`}
             />
