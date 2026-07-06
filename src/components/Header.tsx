@@ -525,6 +525,7 @@ export function Header() {
 
                     {/* Account links */}
                     {[
+                      { href: '/my-profile',   label: 'My Profile',    Icon: User          },
                       { href: '/my-orders',    label: 'Order History', Icon: ClipboardList },
                       { href: '/my-addresses', label: 'My Addresses',  Icon: MapPin        },
                     ].map(({ href, label, Icon }) => (

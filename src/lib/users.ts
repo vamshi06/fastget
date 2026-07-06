@@ -269,6 +269,34 @@ export async function authenticateUser(
 }
 
 /**
+ * Update a user's editable profile fields (name, phone). Email is intentionally
+ * excluded — changing it would desync email_verified, so that goes through a
+ * dedicated re-verification flow instead.
+ */
+export async function updateUserProfile(
+  userId: string,
+  updates: { name?: string; phone?: string },
+): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      UPDATE users
+      SET
+        name = COALESCE(${updates.name ?? null}, name),
+        phone = COALESCE(${updates.phone ?? null}, phone),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+      RETURNING *
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to update user profile', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
  * Update user's preferred address.
  */
 export async function updatePreferredAddress(
