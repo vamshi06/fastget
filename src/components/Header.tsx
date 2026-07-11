@@ -374,12 +374,12 @@ export function Header() {
         <div className="flex items-center gap-4 h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="relative w-8 h-8 flex-shrink-0">
+            <div className="relative w-10 h-10 flex-shrink-0">
               <Image
                 src="/fastget-logo-clear.png"
                 alt="FastGet Logo"
                 fill
-                sizes="32px"
+                sizes="40px"
                 className="object-contain"
               />
             </div>

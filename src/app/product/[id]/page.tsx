@@ -6,6 +6,7 @@ import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductReviews } from '@/components/ProductReviews';
 import { Product } from '@/types';
 import {
   ArrowLeft, Plus, Minus, ShoppingCart,
@@ -395,6 +396,9 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Ratings & Reviews */}
+        <ProductReviews productCode={product.id} />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

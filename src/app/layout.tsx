@@ -21,6 +21,18 @@ export const metadata: Metadata = {
   keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
   manifest: '/manifest.webmanifest',
   themeColor: '#f97316',
+  icons: {
+    icon: [
+      { url: '/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/icons/favicon-96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/icons/favicon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/favicon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/icons/favicon-32.png',
+    apple: '/icons/favicon-180.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
