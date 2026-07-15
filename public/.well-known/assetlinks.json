@@ -3,6 +3,10 @@
   "target": {
     "namespace": "android_app",
     "package_name": "in.fastget.app",
-    "sha256_cert_fingerprints": ["51:3D:D4:71:B2:8B:5D:3A:83:13:8E:C0:5F:E6:E3:C8:9B:C4:CB:CB:14:D6:98:05:76:99:A4:9E:67:7B:8E:0C"]
+    "sha256_cert_fingerprints": [
+      "51:3D:D4:71:B2:8B:5D:3A:83:13:8E:C0:5F:E6:E3:C8:9B:C4:CB:CB:14:D6:98:05:76:99:A4:9E:67:7B:8E:0C",
+      "C1:2C:79:B2:36:8C:6B:C8:0C:5B:3D:1E:95:3B:A5:32:00:7B:2B:69:FA:DE:CC:0B:0F:B3:CA:3E:F5:F0:26:D3",
+      "3B:71:31:91:97:5A:11:0F:82:6A:15:18:C2:FC:2C:AA:EF:E8:8F:76:AA:BC:39:BA:DB:1F:97:EC:E4:66:FD:B7"
+    ]
   }
 }]
