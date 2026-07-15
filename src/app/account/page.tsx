@@ -185,6 +185,7 @@ function GuestAccount() {
 /* ─── Authenticated account page ────────────────────────────────────────── */
 
 const AUTH_ITEMS = [
+  { href: '/my-profile',   label: 'My Profile',    Icon: User          },
   { href: '/my-orders',    label: 'Order History', Icon: ClipboardList },
   { href: '/my-addresses', label: 'My Addresses',  Icon: MapPin        },
 ];

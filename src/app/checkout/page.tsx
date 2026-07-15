@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/components/CartContext';
@@ -29,6 +29,7 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'verifying' | 'failed'>('idle');
+  const errorRef = useRef<HTMLDivElement>(null);
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
   useEffect(() => {
@@ -36,12 +37,27 @@ function CheckoutPageContent() {
     if (paymentError) setError(decodeURIComponent(paymentError));
   }, [searchParams]);
 
+  // The error banner renders above the form, but the user is often scrolled
+  // down (e.g. mid-form when the Razorpay modal is dismissed) — scroll it
+  // into view so a new error is never silently off-screen. The site header
+  // is `sticky top-0`, so a plain scrollIntoView lands the banner right
+  // under it, hidden — offset by the header's real height instead.
+  useEffect(() => {
+    if (!error || !errorRef.current) return;
+    const headerHeight = document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+    const top = errorRef.current.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+    window.scrollTo({ top, behavior: 'smooth' });
+  }, [error]);
+
   const [useAccountName, setUseAccountName] = useState(false);
   const [useAccountPhone, setUseAccountPhone] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
+  const [saveAddress, setSaveAddress] = useState(false);
+  const [newAddressCity, setNewAddressCity] = useState('');
+  const [newAddressType, setNewAddressType] = useState<AddressType>('home');
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -68,6 +84,12 @@ function CheckoutPageContent() {
     }));
   };
 
+  // Manual entry fields are shown whenever there's no selected saved address —
+  // not just when the user explicitly clicked "Enter a different address" —
+  // e.g. a brand-new user with zero saved addresses never sets manualEntry
+  // but still types a fresh address into these fields.
+  const isManualEntryActive = !selectedAddress || manualEntry;
+
   const applyAddress = (addr: UserAddress) => {
     setSelectedAddress(addr);
     setShowAddressPicker(false);
@@ -90,6 +112,7 @@ function CheckoutPageContent() {
         setSavedAddresses(addrs);
         const primary = addrs.find(a => a.isPrimary) ?? addrs[0];
         if (primary) applyAddress(primary);
+        else setSaveAddress(true); // no saved addresses yet — default to saving this one
       })
       .catch(() => { });
     // applyAddress is stable — no deps needed beyond currentUser
@@ -191,6 +214,11 @@ function CheckoutPageContent() {
       return;
     }
 
+    if (isManualEntryActive && saveAddress && !newAddressCity.trim()) {
+      setError('Please enter a city to save this address');
+      return;
+    }
+
     setIsSubmitting(true);
     setPaymentState('processing');
 
@@ -241,6 +269,24 @@ function CheckoutPageContent() {
             });
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.statusToken) {
+              if (isManualEntryActive && saveAddress) {
+                try {
+                  await fetch('/api/addresses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      type: newAddressType,
+                      street: formData.siteAddress,
+                      city: newAddressCity,
+                      phone: formatPhoneNumber(formData.customerPhone),
+                      landmark: formData.landmark || undefined,
+                      isPrimary: savedAddresses.length === 0,
+                    }),
+                  });
+                } catch {
+                  // Address save is best-effort — don't block order confirmation on it
+                }
+              }
               clearCart();
               router.push(`/order/${verifyData.statusToken}`);
             } else {
@@ -291,7 +337,7 @@ function CheckoutPageContent() {
         <h1 className="text-2xl font-black text-brand-charcoal mb-8">Checkout</h1>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+          <div ref={errorRef} className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-red-800 text-sm">{error}</p>
           </div>
@@ -375,7 +421,7 @@ function CheckoutPageContent() {
                 </h2>
 
                 {/* Selected address card */}
-                {selectedAddress && !manualEntry ? (
+                {!isManualEntryActive && selectedAddress ? (
                   <div className="space-y-3">
                     <div className="flex items-start gap-3 p-4 bg-primary-50 border border-brand-primary rounded-xl">
                       <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -474,6 +520,55 @@ function CheckoutPageContent() {
                         className={inputCls}
                         placeholder="Nearby landmark for easier navigation"
                       />
+                    </div>
+
+                    <div className="pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={saveAddress}
+                          onChange={(e) => setSaveAddress(e.target.checked)}
+                          className="w-3.5 h-3.5 accent-brand-primary"
+                        />
+                        <span className="text-xs font-semibold text-brand-charcoal">Save this address for future orders</span>
+                      </label>
+
+                      {saveAddress && (
+                        <div className="mt-3 space-y-3 pl-1">
+                          <div className="flex gap-2">
+                            {(['home', 'work', 'other'] as AddressType[]).map((t) => {
+                              const Icon = ADDRESS_TYPE_ICONS[t];
+                              return (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  onClick={() => setNewAddressType(t)}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                                    newAddressType === t
+                                      ? 'bg-brand-primary text-white border-brand-primary'
+                                      : 'bg-white text-brand-slate border-neutral-200 hover:border-brand-primary hover:text-brand-primary'
+                                  }`}
+                                >
+                                  <Icon className="w-3.5 h-3.5" />
+                                  {ADDRESS_TYPE_LABELS[t]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                              City *
+                            </label>
+                            <input
+                              type="text"
+                              value={newAddressCity}
+                              onChange={(e) => setNewAddressCity(e.target.value)}
+                              className={inputCls}
+                              placeholder="e.g. Mumbai"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

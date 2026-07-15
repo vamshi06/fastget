@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Home, LayoutGrid, ClipboardList, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Home, LayoutGrid, ShoppingCart, ClipboardList, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCart } from '@/components/CartContext';
 
-const TABS = [
+const SIDE_TABS = [
   { href: '/',           label: 'Home',     Icon: Home          },
   { href: '/categories', label: 'Category', Icon: LayoutGrid    },
   { href: '/my-orders',  label: 'Orders',   Icon: ClipboardList },
@@ -47,6 +48,28 @@ export function MobileBottomNav() {
   const isKeyboardOpen = useKeyboardOpen();
   const isHiddenRoute = HIDDEN_ROUTES.some((r) => pathname.startsWith(r));
   const isVisible = !isHiddenRoute && !isKeyboardOpen;
+  const { getItemCount } = useCart();
+  const itemCount = getItemCount();
+  const isCartActive = pathname.startsWith('/cart');
+
+  // Delay rendering until after client hydration so the server output (null)
+  // matches the initial client output (null), eliminating hydration mismatches.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Restart the CSS animation on the cart circle every time an item is added.
+  // prevCountRef starts as null so the first render after mount never animates.
+  const cartCircleRef = useRef<HTMLSpanElement>(null);
+  const prevCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevCountRef.current !== null && itemCount > prevCountRef.current && cartCircleRef.current) {
+      const el = cartCircleRef.current;
+      el.classList.remove('animate-cart-pop');
+      void el.offsetWidth; // force reflow so removing + re-adding the class restarts the animation
+      el.classList.add('animate-cart-pop');
+    }
+    prevCountRef.current = itemCount;
+  }, [itemCount]);
 
   // Keep the space `main` reserves for this nav (--bottom-nav-space, set in
   // globals.css) in sync with whether the nav is actually rendered, so
@@ -61,14 +84,73 @@ export function MobileBottomNav() {
     return () => { document.documentElement.style.removeProperty('--bottom-nav-space'); };
   }, [isVisible]);
 
-  if (!isVisible) return null;
+  if (!mounted || !isVisible) return null;
+
+  const leftTabs = SIDE_TABS.slice(0, 2);
+  const rightTabs = SIDE_TABS.slice(2);
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
       <div className="flex items-stretch h-16 safe-area-inset-bottom">
-        {TABS.map(({ href, label, Icon }) => {
+        {/* Left two tabs */}
+        {leftTabs.map(({ href, label, Icon }) => {
           const isActive =
             href === '/' ? pathname === '/' : pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href as any}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
+                isActive ? 'text-brand-primary' : 'text-brand-steel'
+              )}
+            >
+              <Icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
+              <span
+                className={cn(
+                  'text-[10px]',
+                  isActive ? 'font-semibold text-brand-primary' : 'font-medium text-brand-steel'
+                )}
+              >
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+
+        {/* Centre cart button — elevated above the nav bar */}
+        <div className="flex-1 flex flex-col items-center justify-end pb-2 relative">
+          <Link
+            href={'/cart' as any}
+            className="flex flex-col items-center gap-0.5 -translate-y-3"
+          >
+            <span className="relative">
+              <span
+                ref={cartCircleRef}
+                className="flex items-center justify-center w-14 h-14 rounded-full shadow-lg bg-brand-primary"
+              >
+                <ShoppingCart className="w-6 h-6 text-white stroke-[2]" />
+              </span>
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 leading-none">
+                  {itemCount > 99 ? '99+' : itemCount}
+                </span>
+              )}
+            </span>
+            <span
+              className={cn(
+                'text-[10px]',
+                isCartActive ? 'font-semibold text-brand-primary' : 'font-medium text-brand-steel'
+              )}
+            >
+              Cart
+            </span>
+          </Link>
+        </div>
+
+        {/* Right two tabs */}
+        {rightTabs.map(({ href, label, Icon }) => {
+          const isActive = pathname.startsWith(href);
           return (
             <Link
               key={href}

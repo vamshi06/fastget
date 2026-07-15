@@ -1,6 +1,16 @@
-import { neon } from '@neondatabase/serverless';
+import { neon, neonConfig } from '@neondatabase/serverless';
 import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS } from '@/types';
 import { logger } from '@/lib/logger';
+import { REVIEW_EDIT_WINDOW_MINUTES } from '@/lib/reviewPolicy';
+
+export { REVIEW_EDIT_WINDOW_MINUTES };
+
+// The Neon HTTP driver posts every query to the same `/sql` URL, varying only
+// in the request body. Next.js's fetch Data Cache doesn't key on POST bodies,
+// so without this override it can serve a stale response from an earlier,
+// different query — silently returning wrong data from a fresh-looking call.
+neonConfig.fetchFunction = (url: string, options: RequestInit) =>
+  fetch(url, { ...options, cache: 'no-store' });
 
 /**
  * Neon Postgres database client and order CRUD operations
@@ -408,6 +418,79 @@ export async function removeFromWishlist(userId: string, productId: string): Pro
 }
 
 /**
+ * Initialize product_reviews table. A review is tied to a specific delivered
+ * order so it always represents a verified purchase — one review per
+ * (order, product) pair, editable via ON CONFLICT upsert.
+ */
+export async function initializeProductReviewsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS product_reviews (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_code VARCHAR(255) NOT NULL,
+        product_name VARCHAR(255) NOT NULL DEFAULT '',
+        order_id UUID NOT NULL,
+        user_id UUID NOT NULL,
+        rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        comment TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_product_reviews_order_id
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+        CONSTRAINT fk_product_reviews_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        CONSTRAINT uk_product_reviews_order_product UNIQUE (order_id, product_code)
+      )
+    `;
+
+    // Denormalized name snapshot — added after the table originally shipped;
+    // safe no-op on fresh installs where the CREATE TABLE above already has it.
+    await sql`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS product_name VARCHAR(255) NOT NULL DEFAULT ''`;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_product_reviews_product_code ON product_reviews(product_code)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_product_reviews_user_id ON product_reviews(user_id)`;
+
+    logger.info('DB', 'Product reviews table initialized successfully');
+  } catch (error) {
+    logger.error('DB', 'Failed to initialize product reviews table', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+/**
+ * Initialize order_feedback table. One delivery-experience rating + comment
+ * per order, editable via ON CONFLICT upsert.
+ */
+export async function initializeOrderFeedbackTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_feedback (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id UUID NOT NULL UNIQUE,
+        user_id UUID NOT NULL,
+        rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        comment TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_order_feedback_order_id
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+        CONSTRAINT fk_order_feedback_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_order_feedback_user_id ON order_feedback(user_id)`;
+
+    logger.info('DB', 'Order feedback table initialized successfully');
+  } catch (error) {
+    logger.error('DB', 'Failed to initialize order feedback table', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+/**
  * Add user_id foreign key to existing orders table.
  * Safe to call multiple times (uses ALTER TABLE IF EXISTS).
  */
@@ -461,10 +544,14 @@ export async function initializeAllTables(): Promise<void> {
     
     // Phase 4: User Preferences
     await initializeWishlistsTable();
-    
+
     // Orders table (with user_id support)
     await initializeDatabase();
     await addUserIdToOrders();
+
+    // Phase 5: Reviews & Feedback
+    await initializeProductReviewsTable();
+    await initializeOrderFeedbackTable();
     
     logger.info('DB', 'All tables initialized successfully');
   } catch (error) {
@@ -828,6 +915,375 @@ export async function cancelOrderByStatusToken(
       error: error instanceof Error ? error.message : String(error),
     });
     return { cancelled: false, reason: 'Database error' };
+  }
+}
+
+/* ─── Reviews & Feedback ────────────────────────────────────────────────── */
+
+export interface ProductReview {
+  id: string;
+  productCode: string;
+  productName: string;
+  orderId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderFeedback {
+  id: string;
+  orderId: string;
+  userId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
+function rowToProductReview(row: Record<string, unknown>): ProductReview {
+  return {
+    id: row.id as string,
+    productCode: row.product_code as string,
+    productName: (row.product_name as string) ?? '',
+    orderId: row.order_id as string,
+    userId: row.user_id as string,
+    userName: (row.user_name as string) ?? '',
+    rating: row.rating as number,
+    comment: (row.comment as string) ?? null,
+    createdAt: toIso(row.created_at as Date | string),
+    updatedAt: toIso(row.updated_at as Date | string),
+  };
+}
+
+function rowToOrderFeedback(row: Record<string, unknown>): OrderFeedback {
+  return {
+    id: row.id as string,
+    orderId: row.order_id as string,
+    userId: row.user_id as string,
+    rating: row.rating as number,
+    comment: (row.comment as string) ?? null,
+    createdAt: toIso(row.created_at as Date | string),
+    updatedAt: toIso(row.updated_at as Date | string),
+  };
+}
+
+/**
+ * Create or update a customer's review for a product on a given order
+ * (one review per order+product — callers must have already verified the
+ * order belongs to the user, is 'delivered', and contains this product).
+ */
+function isMissingRelation(error: unknown, table: string): boolean {
+  return error instanceof Error && error.message.includes(`relation "${table}" does not exist`);
+}
+
+export type UpsertReviewResult =
+  | { ok: true; review: ProductReview }
+  | { ok: false; reason: 'expired' | 'error' };
+
+export type UpsertFeedbackResult =
+  | { ok: true; feedback: OrderFeedback }
+  | { ok: false; reason: 'expired' | 'error' };
+
+/**
+ * Create or update a customer's review for a product on a given order. Edits
+ * are only accepted within REVIEW_EDIT_WINDOW_MINUTES of the review's first
+ * submission — enforced atomically via the ON CONFLICT ... WHERE clause, so a
+ * conflicting row outside the window is left untouched (0 rows returned)
+ * rather than silently overwritten.
+ */
+export async function upsertProductReview(
+  orderId: string,
+  userId: string,
+  productCode: string,
+  productName: string,
+  rating: number,
+  comment: string | null
+): Promise<UpsertReviewResult> {
+  const sql = getClient();
+  const insert = () => sql`
+    INSERT INTO product_reviews (order_id, user_id, product_code, product_name, rating, comment)
+    VALUES (${orderId}, ${userId}, ${productCode}, ${productName}, ${rating}, ${comment})
+    ON CONFLICT (order_id, product_code) DO UPDATE
+      SET rating = ${rating}, comment = ${comment}, product_name = ${productName}, updated_at = CURRENT_TIMESTAMP
+      WHERE product_reviews.created_at > CURRENT_TIMESTAMP - (${REVIEW_EDIT_WINDOW_MINUTES} * INTERVAL '1 minute')
+    RETURNING id, order_id, user_id, product_code, product_name, rating, comment, created_at, updated_at
+  `;
+  try {
+    const result = await insert();
+    if (result.length === 0) return { ok: false, reason: 'expired' };
+    return { ok: true, review: rowToProductReview(result[0] as Record<string, unknown>) };
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) {
+      await initializeProductReviewsTable();
+      const result = await insert();
+      if (result.length === 0) return { ok: false, reason: 'expired' };
+      return { ok: true, review: rowToProductReview(result[0] as Record<string, unknown>) };
+    }
+    logger.error('DB', 'Failed to upsert product review', { error: error instanceof Error ? error.message : String(error) });
+    return { ok: false, reason: 'error' };
+  }
+}
+
+/**
+ * Get all reviews for a product (public — shown on the product detail page),
+ * plus the average rating and review count.
+ */
+export async function getProductReviews(
+  productCode: string
+): Promise<{ reviews: ProductReview[]; average: number; count: number }> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT r.id, r.order_id, r.user_id, r.product_code, r.product_name, r.rating, r.comment, r.created_at, r.updated_at,
+             COALESCE(u.name, 'FastGet Customer') AS user_name
+      FROM product_reviews r
+      LEFT JOIN users u ON u.id = r.user_id
+      WHERE r.product_code = ${productCode}
+      ORDER BY r.created_at DESC
+    `;
+    const reviews = (result as Record<string, unknown>[]).map(rowToProductReview);
+    const count = reviews.length;
+    const average = count > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / count : 0;
+    return { reviews, average, count };
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) {
+      return { reviews: [], average: 0, count: 0 };
+    }
+    logger.error('DB', 'Failed to get product reviews', { error: error instanceof Error ? error.message : String(error) });
+    return { reviews: [], average: 0, count: 0 };
+  }
+}
+
+/**
+ * Get the reviews a specific user has already left for a specific order
+ * (used to render "already reviewed" state on the order/my-orders page).
+ */
+export async function getUserProductReviewsForOrder(orderId: string, userId: string): Promise<ProductReview[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, order_id, user_id, product_code, product_name, rating, comment, created_at, updated_at
+      FROM product_reviews
+      WHERE order_id = ${orderId} AND user_id = ${userId}
+    `;
+    return (result as Record<string, unknown>[]).map(rowToProductReview);
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) return [];
+    logger.error('DB', 'Failed to get user product reviews for order', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Create or update a customer's delivery-experience feedback for an order
+ * (callers must have already verified the order belongs to the user and is
+ * 'delivered').
+ */
+export async function upsertOrderFeedback(
+  orderId: string,
+  userId: string,
+  rating: number,
+  comment: string | null
+): Promise<UpsertFeedbackResult> {
+  const sql = getClient();
+  const insert = () => sql`
+    INSERT INTO order_feedback (order_id, user_id, rating, comment)
+    VALUES (${orderId}, ${userId}, ${rating}, ${comment})
+    ON CONFLICT (order_id) DO UPDATE
+      SET rating = ${rating}, comment = ${comment}, updated_at = CURRENT_TIMESTAMP
+      WHERE order_feedback.created_at > CURRENT_TIMESTAMP - (${REVIEW_EDIT_WINDOW_MINUTES} * INTERVAL '1 minute')
+    RETURNING id, order_id, user_id, rating, comment, created_at, updated_at
+  `;
+  try {
+    const result = await insert();
+    if (result.length === 0) return { ok: false, reason: 'expired' };
+    return { ok: true, feedback: rowToOrderFeedback(result[0] as Record<string, unknown>) };
+  } catch (error) {
+    if (isMissingRelation(error, 'order_feedback')) {
+      await initializeOrderFeedbackTable();
+      const result = await insert();
+      if (result.length === 0) return { ok: false, reason: 'expired' };
+      return { ok: true, feedback: rowToOrderFeedback(result[0] as Record<string, unknown>) };
+    }
+    logger.error('DB', 'Failed to upsert order feedback', { error: error instanceof Error ? error.message : String(error) });
+    return { ok: false, reason: 'error' };
+  }
+}
+
+/** Get a user's delivery feedback for a specific order, if any. */
+export async function getOrderFeedback(orderId: string, userId: string): Promise<OrderFeedback | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, order_id, user_id, rating, comment, created_at, updated_at
+      FROM order_feedback
+      WHERE order_id = ${orderId} AND user_id = ${userId}
+      LIMIT 1
+    `;
+    if (result.length === 0) return null;
+    return rowToOrderFeedback(result[0] as Record<string, unknown>);
+  } catch (error) {
+    if (isMissingRelation(error, 'order_feedback')) return null;
+    logger.error('DB', 'Failed to get order feedback', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Determine whether a user may review a given product: do they have a
+ * 'delivered' order containing it? Returns every delivered order that
+ * contains the product plus any reviews the user already left for it, so
+ * the caller can pick an unreviewed order (new review) or show an existing
+ * one (edit).
+ */
+export async function getUserReviewEligibilityForProduct(
+  userId: string,
+  productCode: string
+): Promise<{ eligibleOrderIds: string[]; reviews: ProductReview[] }> {
+  const orders = await getOrdersByUserId(userId);
+  const eligibleOrderIds = orders
+    .filter((o) => o.status === 'delivered' && o.items.some((i) => i.sku === productCode))
+    .map((o) => o.id);
+
+  if (eligibleOrderIds.length === 0) {
+    return { eligibleOrderIds: [], reviews: [] };
+  }
+
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, order_id, user_id, product_code, product_name, rating, comment, created_at, updated_at
+      FROM product_reviews
+      WHERE user_id = ${userId} AND product_code = ${productCode}
+    `;
+    return { eligibleOrderIds, reviews: (result as Record<string, unknown>[]).map(rowToProductReview) };
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) {
+      return { eligibleOrderIds, reviews: [] };
+    }
+    logger.error('DB', 'Failed to get user review eligibility for product', { error: error instanceof Error ? error.message : String(error) });
+    return { eligibleOrderIds, reviews: [] };
+  }
+}
+
+/** Get all product reviews across all products, newest first (admin dashboard). */
+export async function getAllProductReviewsForAdmin(limit: number = 200): Promise<ProductReview[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT r.id, r.order_id, r.user_id, r.product_code,
+             COALESCE(NULLIF(r.product_name, ''), r.product_code) AS product_name,
+             r.rating, r.comment, r.created_at, r.updated_at,
+             COALESCE(u.name, 'Unknown') AS user_name
+      FROM product_reviews r
+      LEFT JOIN users u ON u.id = r.user_id
+      ORDER BY r.created_at DESC
+      LIMIT ${limit}
+    `;
+    return (result as Record<string, unknown>[]).map(rowToProductReview);
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) return [];
+    logger.error('DB', 'Failed to get all product reviews for admin', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/** Get all delivery feedback across all orders, newest first (admin dashboard). */
+export async function getAllOrderFeedbackForAdmin(
+  limit: number = 200
+): Promise<(OrderFeedback & { userName: string })[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT f.id, f.order_id, f.user_id, f.rating, f.comment, f.created_at, f.updated_at,
+             COALESCE(u.name, 'Unknown') AS user_name
+      FROM order_feedback f
+      LEFT JOIN users u ON u.id = f.user_id
+      ORDER BY f.created_at DESC
+      LIMIT ${limit}
+    `;
+    return (result as Record<string, unknown>[]).map((row) => ({
+      ...rowToOrderFeedback(row),
+      userName: row.user_name as string,
+    }));
+  } catch (error) {
+    if (isMissingRelation(error, 'order_feedback')) return [];
+    logger.error('DB', 'Failed to get all order feedback for admin', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Delete a customer's own product review (no edit-window restriction —
+ * deletion is allowed anytime). Scoped by user_id so one customer can't
+ * delete another's review.
+ */
+export async function deleteProductReview(orderId: string, userId: string, productCode: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      DELETE FROM product_reviews
+      WHERE order_id = ${orderId} AND user_id = ${userId} AND product_code = ${productCode}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) return false;
+    logger.error('DB', 'Failed to delete product review', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/** Admin moderation delete — removes any product review by id, no ownership check. */
+export async function adminDeleteProductReview(reviewId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const result = await sql`DELETE FROM product_reviews WHERE id = ${reviewId} RETURNING id`;
+    return result.length > 0;
+  } catch (error) {
+    if (isMissingRelation(error, 'product_reviews')) return false;
+    logger.error('DB', 'Failed to admin-delete product review', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/**
+ * Delete a customer's own order feedback (no edit-window restriction).
+ * Scoped by user_id so one customer can't delete another's feedback.
+ */
+export async function deleteOrderFeedback(orderId: string, userId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      DELETE FROM order_feedback
+      WHERE order_id = ${orderId} AND user_id = ${userId}
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    if (isMissingRelation(error, 'order_feedback')) return false;
+    logger.error('DB', 'Failed to delete order feedback', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/** Admin moderation delete — removes any order feedback by id, no ownership check. */
+export async function adminDeleteOrderFeedback(feedbackId: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const result = await sql`DELETE FROM order_feedback WHERE id = ${feedbackId} RETURNING id`;
+    return result.length > 0;
+  } catch (error) {
+    if (isMissingRelation(error, 'order_feedback')) return false;
+    logger.error('DB', 'Failed to admin-delete order feedback', { error: error instanceof Error ? error.message : String(error) });
+    return false;
   }
 }
 

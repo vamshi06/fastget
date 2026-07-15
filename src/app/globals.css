@@ -273,6 +273,18 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* ── Cart pop animation (bottom nav) ── */
+@keyframes cart-pop {
+  0%   { transform: scale(1)    rotate(0deg); }
+  25%  { transform: scale(1.28) rotate(-8deg); }
+  50%  { transform: scale(0.92) rotate(6deg); }
+  75%  { transform: scale(1.1)  rotate(-3deg); }
+  100% { transform: scale(1)    rotate(0deg); }
+}
+.animate-cart-pop {
+  animation: cart-pop 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 /* ── Print / Invoice Styles ───────────────────────────── */
 
 /* Hide invoice on screen */

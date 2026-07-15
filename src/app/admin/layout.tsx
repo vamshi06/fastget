@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BarChart3, Package, ShoppingBag } from 'lucide-react';
+import { BarChart3, Package, ShoppingBag, Star } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'FastGet Admin Panel' };
 
@@ -8,6 +8,7 @@ const navItems = [
   { href: '/admin',          label: 'Dashboard', icon: BarChart3   },
   { href: '/admin/products', label: 'Products',  icon: Package     },
   { href: '/admin/orders',   label: 'Orders',    icon: ShoppingBag },
+  { href: '/admin/reviews',  label: 'Reviews',   icon: Star        },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

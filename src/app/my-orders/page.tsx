@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useUser } from '@/components/UserContext';
 import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { OrderReviewPanel } from '@/components/OrderReviewPanel';
 import {
   Package,
   Clock,
@@ -281,6 +282,8 @@ export default function MyOrdersPage() {
                     </span>
                     <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
                   </Link>
+
+                  {order.status === 'delivered' && <OrderReviewPanel orderId={order.id} />}
                 </div>
               );
             })}

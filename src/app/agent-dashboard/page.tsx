@@ -6,6 +6,8 @@ import { Order } from '@/types';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { AlertCircle, RefreshCw, ChevronRight, Phone, MapPin, Clock } from 'lucide-react';
 
+const STATUSES = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
+
 export default function AgentDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,8 +15,6 @@ export default function AgentDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('received');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-
-  const statuses = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
 
   const fetchOrders = useCallback(async (status: string) => {
     try {
@@ -34,7 +34,7 @@ export default function AgentDashboard() {
   const fetchStatusCounts = useCallback(async () => {
     try {
       const counts: Record<string, number> = {};
-      for (const status of statuses) {
+      for (const status of STATUSES) {
         const response = await fetch(`/api/orders/pending?status=${status}&limit=1`);
         if (!response.ok) { counts[status] = 0; continue; }
         const data = await response.json();
@@ -44,10 +44,12 @@ export default function AgentDashboard() {
     } catch (err) {
       console.error('Failed to fetch status counts:', err);
     }
-  }, [statuses]);
+  }, []);
 
-  useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);
-  useEffect(() => { fetchOrders(selectedStatus); }, [selectedStatus, fetchOrders]);
+  useEffect(() => {
+    fetchOrders(selectedStatus);
+    fetchStatusCounts();
+  }, [selectedStatus, fetchOrders, fetchStatusCounts]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -100,7 +102,7 @@ export default function AgentDashboard() {
 
         {/* Status Tabs */}
         <div className="mb-6 flex flex-wrap gap-2">
-          {statuses.map((status) => (
+          {STATUSES.map((status) => (
             <button
               key={status}
               onClick={() => { setSelectedStatus(status); setLoading(true); }}
@@ -142,7 +144,7 @@ export default function AgentDashboard() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <Link key={order.id} href={`/agent/${order.id}`}>
+              <Link key={order.id} href={`/agent/${order.id}`} className="block">
                 <div className={`border rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer ${statusCardColors[order.status]}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">

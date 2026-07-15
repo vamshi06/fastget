@@ -9,7 +9,7 @@ import { AlertCircle, ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react';
 
 function AuthHero({ title }: { title: string }) {
   return (
-    <div className="relative h-[38vh] min-h-[240px] flex-shrink-0">
+    <div className="relative h-[38vh] min-h-[240px] flex-shrink-0 md:h-auto md:min-h-[560px] md:w-[45%]">
       <Image
         src="/construction-background.jpg"
         alt=""
@@ -17,14 +17,14 @@ function AuthHero({ title }: { title: string }) {
         priority
         className="object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60 md:bg-gradient-to-t md:from-black/75 md:via-black/20 md:to-black/5" />
       <Link
         href="/"
-        className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
+        className="absolute top-4 left-4 md:top-6 md:left-6 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
       >
         <ChevronLeft className="w-5 h-5 text-white" />
       </Link>
-      <h1 className="absolute bottom-6 left-6 text-3xl font-black text-white tracking-tight">{title}</h1>
+      <h1 className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-3xl md:text-4xl font-black text-white tracking-tight">{title}</h1>
     </div>
   );
 }
@@ -101,9 +101,10 @@ function LoginForm() {
   // ── Unverified state ──────────────────────────────────────────────────────
   if (unverifiedEmail) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
+        <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
         <AuthHero title="Check your email" />
-        <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col items-center text-center">
+        <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col items-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
           <Mail className="w-12 h-12 text-brand-primary mb-3" />
           <p className="text-sm text-brand-slate max-w-xs">
             Please verify{' '}
@@ -138,16 +139,18 @@ function LoginForm() {
             </button>
           </div>
         </div>
+        </div>
       </div>
     );
   }
 
   // ── Normal login form ─────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
+      <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
       <AuthHero title="Login" />
-      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col">
-      <p className="text-sm text-brand-slate mb-6">Hello, Welcome back to our account!</p>
+      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
+      <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">Hello, Welcome back to our account!</p>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
@@ -212,9 +215,9 @@ function LoginForm() {
         </button>
       </form>
 
-      <div className="flex-1 min-h-6" />
+      <div className="flex-1 min-h-6 md:hidden" />
 
-      <p className="text-center text-sm text-brand-slate pb-2">
+      <p className="text-center text-sm text-brand-slate pb-2 md:pb-0 md:mt-8">
         Don&apos;t Have An Account?{' '}
         <Link
           href={redirect && redirect !== '/' ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'}
@@ -223,6 +226,7 @@ function LoginForm() {
           Sign Up
         </Link>
       </p>
+      </div>
       </div>
     </div>
   );

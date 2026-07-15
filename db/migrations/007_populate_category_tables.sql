@@ -2,6 +2,13 @@
 -- This is a READ-ONLY migration: it only INSERTs new rows.
 -- ON CONFLICT DO UPDATE so re-runs sync any price/description changes.
 -- The original products table is NOT modified.
+--
+-- image_url is intentionally excluded from the re-sync: once a category table
+-- row has its own image_url (set directly, e.g. via admin or a bulk image
+-- import), that value wins over whatever the legacy products.image_url holds.
+-- Without this, sync-schema.ts re-running this file on every invocation would
+-- silently null out any image manually added to a category table, since
+-- products.image_url for most non-carpentry rows is empty.
 
 -- Helper: extract attributes JSONB safely
 -- pv.attributes is stored as JSONB: {"size":"4mm","colour":"Natural","uom":"Sheet","remarks":"..."}
@@ -46,7 +53,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   size          = EXCLUDED.size,
   colour        = EXCLUDED.colour,
   remarks       = EXCLUDED.remarks,
-  image_url     = EXCLUDED.image_url,
+  image_url     = COALESCE(carpentry.image_url, EXCLUDED.image_url),
   status        = EXCLUDED.status,
   category_slug = EXCLUDED.category_slug,
   variant_id    = EXCLUDED.variant_id,
@@ -74,7 +81,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(paints_and_polish.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -99,7 +106,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(plumbing.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -124,7 +131,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(civil_materials.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -149,7 +156,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(electrical.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -174,7 +181,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(flooring_and_ceilings.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -199,7 +206,7 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(glass_and_aluminium.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
 
@@ -224,6 +231,6 @@ ON CONFLICT (product_code) DO UPDATE SET
   name=EXCLUDED.name, brand=EXCLUDED.brand, description=EXCLUDED.description,
   price=EXCLUDED.price, mrp_price=EXCLUDED.mrp_price, moq=EXCLUDED.moq,
   uom=EXCLUDED.uom, size=EXCLUDED.size, colour=EXCLUDED.colour,
-  remarks=EXCLUDED.remarks, image_url=EXCLUDED.image_url, status=EXCLUDED.status,
+  remarks=EXCLUDED.remarks, image_url=COALESCE(tools_and_machines.image_url, EXCLUDED.image_url), status=EXCLUDED.status,
   category_slug=EXCLUDED.category_slug, variant_id=EXCLUDED.variant_id,
   products_id=EXCLUDED.products_id, updated_at=NOW();
