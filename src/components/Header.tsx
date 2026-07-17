@@ -47,6 +47,7 @@ import {
   Lock,
   FileText,
   BookOpen,
+  LayoutDashboard,
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
@@ -522,6 +523,18 @@ export function Header() {
                       <p className="text-sm font-semibold text-brand-charcoal">{currentUser.name}</p>
                       <p className="text-xs text-brand-slate mt-0.5 truncate">{currentUser.email}</p>
                     </div>
+
+                    {/* Admin-only shortcut */}
+                    {currentUser.role === 'admin' && (
+                      <Link
+                        href={'/admin' as any}
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-3 px-5 py-3.5 text-sm font-medium text-brand-charcoal bg-primary-50/60 hover:bg-primary-50 transition-colors border-b border-neutral-100"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                        Admin Dashboard
+                      </Link>
+                    )}
 
                     {/* Account links */}
                     {[

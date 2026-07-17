@@ -74,7 +74,7 @@ function LoginForm() {
         return;
       }
 
-      setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone });
+      setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone, role: data.role });
       router.push(redirect as any);
     } catch {
       setError('An error occurred during login. Please try again.');

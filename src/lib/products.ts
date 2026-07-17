@@ -183,12 +183,26 @@ const VALID_CATEGORY_TABLES = new Set([
 
 // ── Category-table row → Product mapper ──────────────────────────────────────
 
+/**
+ * A row's flash sale is active when it has a sale_price and NOW() falls
+ * inside [sale_starts_at, sale_ends_at]. Computed client-side (not trusted
+ * for checkout — see the CASE expression in getTrustedUnitPrices) so it works
+ * identically whether the row came from a category table or the view.
+ */
+function isSaleActive(row: any): boolean {
+  if (row.sale_price == null || !row.sale_starts_at || !row.sale_ends_at) return false;
+  const now = Date.now();
+  return now >= new Date(row.sale_starts_at).getTime() && now <= new Date(row.sale_ends_at).getTime();
+}
+
 function categoryTableRowToProduct(row: any): Product {
-  const priceVal = Number(row.price)     || 0;
-  const mrpVal   = Number(row.mrp_price) || 0;
-  const brand    = (row.brand as string) || '';
-  const rawName  = (row.name  as string) || '';
+  const priceVal   = Number(row.price)     || 0;
+  const mrpVal     = Number(row.mrp_price) || 0;
+  const brand      = (row.brand as string) || '';
+  const rawName    = (row.name  as string) || '';
   const productCode = (row.product_code as string);
+  const saleActive = isSaleActive(row);
+  const effectivePriceVal = saleActive ? Number(row.sale_price) : priceVal;
 
   const displayName = brand && rawName.startsWith(brand + ' ')
     ? rawName.slice(brand.length + 1)
@@ -207,7 +221,7 @@ function categoryTableRowToProduct(row: any): Product {
     name:         displayName,
     brand:        brand || undefined,
     description:  row.description || '',
-    price:        Math.round(priceVal / 100),
+    price:        Math.round(effectivePriceVal / 100),
     mrpPrice:     mrpVal > 0 ? Math.round(mrpVal / 100) : undefined,
     unit:         row.uom || 'piece',
     category:     (row.category_slug || 'carpentry') as CategoryId,
@@ -217,6 +231,8 @@ function categoryTableRowToProduct(row: any): Product {
     variantId:    row.variant_id || undefined,
     moq:          Number(row.moq) || 1,
     variantCount: 1,
+    isFlashSale:  saleActive || undefined,
+    saleEndsAt:   saleActive ? new Date(row.sale_ends_at).toISOString() : undefined,
   };
 }
 
@@ -352,6 +368,55 @@ export async function getProductsFromCategoryTables(
   }
 }
 
+export interface ActiveFlashSale {
+  productCode: string;
+  name: string;
+  brand?: string;
+  imageUrl?: string;
+  salePriceRupees: number;
+  originalPriceRupees: number;
+  saleEndsAt: string; // ISO timestamp
+}
+
+/**
+ * Fetch the flash sale ending soonest that is currently active (used to
+ * drive the homepage promo banner). Returns null when nothing is running.
+ */
+export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
+  const sql = getUnpooledClient();
+  try {
+    const rows = await sql`
+      SELECT product_code, name, brand, image_url, price, sale_price, sale_ends_at
+      FROM products_catalog_view
+      WHERE sale_price IS NOT NULL
+        AND NOW() BETWEEN sale_starts_at AND sale_ends_at
+      ORDER BY sale_ends_at ASC
+      LIMIT 1
+    `;
+    if (rows.length === 0) return null;
+    const r = rows[0] as any;
+    const brand = (r.brand as string) || '';
+    const rawName = (r.name as string) || '';
+    const displayName = brand && rawName.startsWith(brand + ' ')
+      ? rawName.slice(brand.length + 1)
+      : rawName;
+    return {
+      productCode:          r.product_code,
+      name:                 displayName,
+      brand:                brand || undefined,
+      imageUrl:             r.image_url || undefined,
+      salePriceRupees:      Math.round(Number(r.sale_price) / 100),
+      originalPriceRupees:  Math.round(Number(r.price) / 100),
+      saleEndsAt:           new Date(r.sale_ends_at).toISOString(),
+    };
+  } catch (error) {
+    logger.error('Products', 'getActiveFlashSale failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 /**
  * Trusted server-side price lookup for checkout (H1).
  *
@@ -376,7 +441,13 @@ export async function getTrustedUnitPrices(
   const sql = getUnpooledClient();
   try {
     const rows = (await sql.query(
-      `SELECT product_code, price
+      `SELECT product_code,
+              CASE
+                WHEN sale_price IS NOT NULL
+                 AND NOW() BETWEEN sale_starts_at AND sale_ends_at
+                THEN sale_price
+                ELSE price
+              END AS price
          FROM products_catalog_view
         WHERE product_code = ANY($1::text[])`,
       [codes],
@@ -474,15 +545,22 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
     const variantRows = await sql`
       SELECT
         pv.id, pv.sku,
-        COALESCE(pv.price_override, p.price) AS effective_price_paise,
+        CASE
+          WHEN cv.sale_price IS NOT NULL AND NOW() BETWEEN cv.sale_starts_at AND cv.sale_ends_at
+          THEN cv.sale_price
+          ELSE COALESCE(pv.price_override, p.price)
+        END AS effective_price_paise,
         pv.mrp_price AS mrp_price_paise,
         COALESCE(pv.moq, 1) AS moq,
         COALESCE(pv.attributes, '{}') AS attributes,
         COALESCE(inv.stock_quantity, 0)    AS stock_quantity,
-        COALESCE(inv.reserved_quantity, 0) AS reserved_quantity
+        COALESCE(inv.reserved_quantity, 0) AS reserved_quantity,
+        (cv.sale_price IS NOT NULL AND NOW() BETWEEN cv.sale_starts_at AND cv.sale_ends_at) AS is_flash_sale,
+        cv.sale_ends_at
       FROM product_variants pv
       JOIN products p ON p.id = pv.product_id
       LEFT JOIN inventory inv ON inv.variant_id = pv.id
+      LEFT JOIN products_catalog_view cv ON cv.variant_id = pv.id
       WHERE pv.product_id = ${dbId}
       ORDER BY pv.created_at ASC
     `;
@@ -496,6 +574,9 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       moq:           Number(v.moq) || 1,
       stockQuantity: Math.max(0, Number(v.stock_quantity) - Number(v.reserved_quantity)),
     }));
+
+    const firstVariantRow = (variantRows as any[])[0];
+    const saleActiveOnDetail = Boolean(firstVariantRow?.is_flash_sale);
 
     const firstVariant = variants[0];
     const attrs = firstVariant?.attributes ?? {};
@@ -524,6 +605,8 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       categoryName: pr.category_name || undefined,
       imageUrl:     pr.image_url || undefined,
       stockStatus,
+      isFlashSale:  saleActiveOnDetail || undefined,
+      saleEndsAt:   saleActiveOnDetail ? new Date(firstVariantRow.sale_ends_at).toISOString() : undefined,
       sku:          firstVariant?.sku,
       variantId:    firstVariant?.id,
       moq:          firstVariant?.moq ?? 1,
@@ -1004,6 +1087,9 @@ export interface RawProductRow {
   source_table: string;
   variant_id: string | null;
   products_id: string | null;
+  sale_price: number | null;      // paise
+  sale_starts_at: string | null;  // ISO timestamp
+  sale_ends_at: string | null;    // ISO timestamp
 }
 
 /**
@@ -1015,7 +1101,8 @@ export async function getProductRawRow(productCode: string): Promise<RawProductR
   // Query category tables directly (not products_catalog_view) so admin can
   // load and edit inactive/discontinued products too.
   const cols = `product_code, name, brand, description, price, mrp_price, moq, uom,
-                size, colour, image_url, status, category_slug, variant_id, products_id`;
+                size, colour, image_url, status, category_slug, variant_id, products_id,
+                sale_price, sale_starts_at, sale_ends_at`;
   const sub = (tbl: string) =>
     `SELECT ${cols}, '${tbl}' AS source_table FROM ${tbl} WHERE product_code = $1`;
   const query = [
@@ -1050,6 +1137,9 @@ export async function updateProductInCategoryTable(
     uom?: string | null;
     imageUrl?: string | null;
     status?: string;
+    salePrice?: number | null;     // paise
+    saleStartsAt?: string | null;  // ISO timestamp
+    saleEndsAt?: string | null;    // ISO timestamp
   },
 ): Promise<boolean> {
   if (!VALID_CATEGORY_TABLES.has(tableName) || tableName === 'products_catalog_view') {
@@ -1072,6 +1162,9 @@ export async function updateProductInCategoryTable(
     if ('uom'         in updates)          push('uom',        updates.uom);
     if ('imageUrl'    in updates)          push('image_url',  updates.imageUrl);
     if (updates.status      !== undefined) push('status',     updates.status);
+    if ('salePrice'    in updates)         push('sale_price',      updates.salePrice);
+    if ('saleStartsAt' in updates)         push('sale_starts_at',  updates.saleStartsAt);
+    if ('saleEndsAt'   in updates)         push('sale_ends_at',    updates.saleEndsAt);
 
     if (vals.length === 0) return true;
 

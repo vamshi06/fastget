@@ -27,6 +27,18 @@ function isBlank(v: unknown): boolean {
   return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
 }
 
+/** Parse a date/time value into an ISO timestamp string, or throw. */
+function parseIsoDate(value: unknown, field: string): string {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    throw new ValidationError(`${field} must be a valid date/time.`);
+  }
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    throw new ValidationError(`${field} must be a valid date/time.`);
+  }
+  return d.toISOString();
+}
+
 type Ctx = { params: Promise<{ productCode: string }> };
 
 // ── GET /admin/api/products/[productCode] ─────────────────────────────────────
@@ -72,6 +84,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         sourceTable:   row.source_table,
         productsId:    row.products_id  ?? null,
         stockQuantity,
+        salePrice:     row.sale_price ? Math.round(row.sale_price / 100) : '',
+        saleStartsAt:  row.sale_starts_at ?? '',
+        saleEndsAt:    row.sale_ends_at   ?? '',
       },
     });
   } catch (error) {
@@ -118,10 +133,45 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const priceInPaise = price !== undefined ? Math.round(price * 100) : undefined;
     const mrpInPaise = mrpProvided ? (mrp !== undefined ? Math.round(mrp * 100) : null) : undefined;
 
+    // Flash sale fields — support clearing (blank -> null cancels the sale).
+    const salePriceProvided = 'salePrice' in body;
+    const salePrice = salePriceProvided
+      ? (isBlank(body.salePrice) ? null : requireNumber(body.salePrice, 'sale price', { min: 0.01 }))
+      : undefined;
+    const saleStartsAtProvided = 'saleStartsAt' in body;
+    const saleStartsAt = saleStartsAtProvided
+      ? (isBlank(body.saleStartsAt) ? null : parseIsoDate(body.saleStartsAt, 'Sale start time'))
+      : undefined;
+    const saleEndsAtProvided = 'saleEndsAt' in body;
+    const saleEndsAt = saleEndsAtProvided
+      ? (isBlank(body.saleEndsAt) ? null : parseIsoDate(body.saleEndsAt, 'Sale end time'))
+      : undefined;
+    const salePriceInPaise = salePriceProvided
+      ? (salePrice !== null ? Math.round(salePrice * 100) : null)
+      : undefined;
+
     // Fetch current row to get source_table and products_id
     const row = await getProductRawRow(productCode);
     if (!row) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+    }
+
+    // A flash sale needs price + start + end together — either newly submitted
+    // or already stored on the row. Clearing all three cancels the sale.
+    const finalSalePrice     = salePriceProvided     ? salePriceInPaise : row.sale_price;
+    const finalSaleStartsAt  = saleStartsAtProvided  ? saleStartsAt     : row.sale_starts_at;
+    const finalSaleEndsAt    = saleEndsAtProvided    ? saleEndsAt       : row.sale_ends_at;
+    const anySaleField = finalSalePrice != null || finalSaleStartsAt != null || finalSaleEndsAt != null;
+    const allSaleFields = finalSalePrice != null && finalSaleStartsAt != null && finalSaleEndsAt != null;
+    if (anySaleField && !allSaleFields) {
+      throw new ValidationError('To run a flash sale, set the sale price, start time, and end time together (or clear all three to cancel it).');
+    }
+    if (finalSaleStartsAt && finalSaleEndsAt && new Date(finalSaleEndsAt) <= new Date(finalSaleStartsAt)) {
+      throw new ValidationError('Sale end time must be after the start time.');
+    }
+    const referencePriceInPaise = priceInPaise !== undefined ? priceInPaise : row.price;
+    if (finalSalePrice != null && finalSalePrice >= referencePriceInPaise) {
+      throw new ValidationError('Sale price must be less than the regular selling price.');
     }
 
     // Build update payload for category table (prices in paise)
@@ -135,6 +185,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (uomProvided) catUpdates.uom = uom;
     if (imageUrlProvided) catUpdates.imageUrl = imageUrl;
     if (status !== undefined) catUpdates.status = status;
+    if (salePriceProvided) catUpdates.salePrice = salePriceInPaise;
+    if (saleStartsAtProvided) catUpdates.saleStartsAt = saleStartsAt;
+    if (saleEndsAtProvided) catUpdates.saleEndsAt = saleEndsAt;
 
     const catOk = await updateProductInCategoryTable(row.source_table, productCode, catUpdates);
     if (!catOk) {

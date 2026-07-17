@@ -7,6 +7,7 @@ interface CurrentUser {
   name: string;
   email: string;
   phone?: string;
+  role?: string;
 }
 
 interface UserContextType {
@@ -54,6 +55,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               name: data.user.name,
               email: data.user.email,
               phone: data.user.phone,
+              role: data.user.role,
             };
             setCurrentUser(u);
             localStorage.setItem('fastget_currentUser', JSON.stringify(u));
