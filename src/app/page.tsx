@@ -2,8 +2,12 @@ import { HeroSection } from '@/components/home/HeroSection';
 import { TrustBadges } from '@/components/home/TrustBadges';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
+import { FlashSaleBanner } from '@/components/home/FlashSaleBanner';
+import { getActiveFlashSale } from '@/lib/products';
 
-export default function Home() {
+export default async function Home() {
+  const flashSale = await getActiveFlashSale();
+
   return (
     <div className="min-h-screen bg-brand-fog">
 
@@ -12,6 +16,9 @@ export default function Home() {
 
       {/* 4. Product-heavy feed */}
       <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
+
+        {/* Flash sale — only rendered while a sale is actually running */}
+        {flashSale && <FlashSaleBanner sale={flashSale} />}
 
         {/* Category grid — right after hero */}
         <CategoryStrip />

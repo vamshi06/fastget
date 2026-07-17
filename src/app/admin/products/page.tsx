@@ -23,6 +23,7 @@ interface Product {
   moq?: number;
   stockStatus: 'in_stock' | 'low' | 'out';
   stockQuantity?: number;
+  isFlashSale?: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -221,7 +222,14 @@ export default function ProductsPage() {
 
                   {/* Name + description */}
                   <td className="px-4 py-3 max-w-[220px]">
-                    <p className="font-semibold text-brand-charcoal line-clamp-1">{product.name}</p>
+                    <p className="font-semibold text-brand-charcoal line-clamp-1 flex items-center gap-1.5">
+                      {product.name}
+                      {product.isFlashSale && (
+                        <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
+                          🔥 SALE
+                        </span>
+                      )}
+                    </p>
                     {product.description && (
                       <p className="text-xs text-brand-steel line-clamp-1 mt-0.5">
                         {product.description}

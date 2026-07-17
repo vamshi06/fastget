@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Minus, Package } from 'lucide-react';
+import { Plus, Minus, Package, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
@@ -67,8 +67,13 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
           </div>
         )}
 
-        {/* Discount badge top-left */}
-        {discountPct >= 3 && (
+        {/* Flash-sale badge takes priority over the regular discount badge */}
+        {product.isFlashSale ? (
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none animate-pulse">
+            <Zap className="w-2 h-2 fill-current" />
+            ₹{product.price} DEAL
+          </div>
+        ) : discountPct >= 3 && (
           <div className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
             {discountPct}% OFF
           </div>

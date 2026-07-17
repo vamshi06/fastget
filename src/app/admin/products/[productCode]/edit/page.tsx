@@ -20,6 +20,23 @@ interface FormData {
   imageUrl: string;
   status: 'active' | 'inactive' | 'discontinued';
   stockQuantity: string;
+  salePrice: string;
+  saleStartsAt: string; // datetime-local value, e.g. "2026-08-15T10:57"
+  saleEndsAt: string;
+}
+
+/** ISO timestamp -> local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export default function EditProductPage() {
@@ -29,6 +46,7 @@ export default function EditProductPage() {
   const [formData, setFormData]   = useState<FormData>({
     name: '', brand: '', description: '', price: '', mrpPrice: '',
     moq: '1', uom: '', imageUrl: '', status: 'active', stockQuantity: '0',
+    salePrice: '', saleStartsAt: '', saleEndsAt: '',
   });
   const [categorySlug, setCategorySlug] = useState('');
   const [loading, setLoading]     = useState(true);
@@ -55,6 +73,9 @@ export default function EditProductPage() {
           imageUrl:    d.imageUrl    ?? '',
           status:        (d.status     ?? 'active') as FormData['status'],
           stockQuantity: String(d.stockQuantity ?? 0),
+          salePrice:     d.salePrice !== '' && d.salePrice != null ? String(d.salePrice) : '',
+          saleStartsAt:  d.saleStartsAt ? toDatetimeLocal(d.saleStartsAt) : '',
+          saleEndsAt:    d.saleEndsAt   ? toDatetimeLocal(d.saleEndsAt)   : '',
         });
         setCategorySlug(d.categorySlug ?? '');
       })
@@ -77,6 +98,22 @@ export default function EditProductPage() {
     const price = parseFloat(formData.price);
     if (isNaN(price) || price <= 0) { setError('Price must be greater than 0'); return; }
 
+    const anySale = formData.salePrice || formData.saleStartsAt || formData.saleEndsAt;
+    const allSale = formData.salePrice && formData.saleStartsAt && formData.saleEndsAt;
+    if (anySale && !allSale) {
+      setError('To run a flash sale, fill in sale price, start time, and end time together (or clear all three to cancel it).');
+      return;
+    }
+    if (allSale) {
+      const salePriceNum = parseFloat(formData.salePrice);
+      if (isNaN(salePriceNum) || salePriceNum <= 0) { setError('Sale price must be greater than 0'); return; }
+      if (salePriceNum >= price) { setError('Sale price must be less than the regular selling price'); return; }
+      if (new Date(formData.saleEndsAt) <= new Date(formData.saleStartsAt)) {
+        setError('Sale end time must be after the start time');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
@@ -90,6 +127,9 @@ export default function EditProductPage() {
         imageUrl:      formData.imageUrl.trim()     || null,
         status:        formData.status,
         stockQuantity: Math.max(0, parseInt(formData.stockQuantity) || 0),
+        salePrice:     formData.salePrice ? parseFloat(formData.salePrice) : null,
+        saleStartsAt:  formData.saleStartsAt ? new Date(formData.saleStartsAt).toISOString() : null,
+        saleEndsAt:    formData.saleEndsAt   ? new Date(formData.saleEndsAt).toISOString()   : null,
       };
 
       const res = await fetch(`/admin/api/products/${encodeURIComponent(productCode)}`, {
@@ -206,6 +246,75 @@ export default function EditProductPage() {
                 placeholder="0" min="0" step="0.01" className={inputCls} disabled={saving} />
             </div>
           </div>
+        </fieldset>
+
+        {/* ── Flash Sale ──────────────────────────────── */}
+        <fieldset className="space-y-4">
+          <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full flex items-center justify-between gap-2">
+            <span>Flash Sale</span>
+            {(formData.salePrice || formData.saleStartsAt || formData.saleEndsAt) && (
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, salePrice: '', saleStartsAt: '', saleEndsAt: '' }))}
+                disabled={saving}
+                className="normal-case text-[11px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+              >
+                Clear flash sale
+              </button>
+            )}
+          </legend>
+
+          {formData.salePrice && formData.saleStartsAt && formData.saleEndsAt && (() => {
+            const now = Date.now();
+            const start = new Date(formData.saleStartsAt).getTime();
+            const end = new Date(formData.saleEndsAt).getTime();
+            if (!isNaN(start) && !isNaN(end)) {
+              if (now < start) {
+                return (
+                  <p className="text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                    Scheduled — starts {formatDateTime(new Date(start).toISOString())}
+                  </p>
+                );
+              }
+              if (now > end) {
+                return (
+                  <p className="text-xs font-medium text-brand-steel bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2">
+                    Ended {formatDateTime(new Date(end).toISOString())} — save with new dates to run it again, or clear it.
+                  </p>
+                );
+              }
+              return (
+                <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  🔥 Live now — ends {formatDateTime(new Date(end).toISOString())}
+                </p>
+              );
+            }
+            return null;
+          })()}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 sm:col-span-1">
+              <label className={labelCls}>Sale Price (₹)</label>
+              <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange}
+                placeholder="e.g. 1" min="0" step="0.01" className={inputCls} disabled={saving} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Sale Starts</label>
+              <input type="datetime-local" name="saleStartsAt" value={formData.saleStartsAt} onChange={handleChange}
+                className={inputCls} disabled={saving} />
+            </div>
+            <div>
+              <label className={labelCls}>Sale Ends</label>
+              <input type="datetime-local" name="saleEndsAt" value={formData.saleEndsAt} onChange={handleChange}
+                className={inputCls} disabled={saving} />
+            </div>
+          </div>
+          <p className="text-xs text-brand-steel">
+            While the sale is running, this product shows a discounted price everywhere (storefront, product page,
+            checkout) and reverts automatically the moment it ends — no follow-up action needed.
+          </p>
         </fieldset>
 
         {/* ── Catalogue Info ───────────────────────────── */}
