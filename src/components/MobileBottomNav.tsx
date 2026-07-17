@@ -14,7 +14,7 @@ const SIDE_TABS = [
   { href: '/account',    label: 'Account',  Icon: User          },
 ];
 
-const HIDDEN_ROUTES = ['/admin'];
+const HIDDEN_ROUTES = ['/admin', '/agent-dashboard', '/agent/'];
 
 // Fixed-position elements get pushed up above the on-screen keyboard on
 // mobile browsers (the viewport resizes, "bottom: 0" lands above the keyboard

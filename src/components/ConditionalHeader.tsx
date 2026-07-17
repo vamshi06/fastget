@@ -17,7 +17,7 @@ export function ConditionalHeader() {
     setIsNativeApp(!!(window as any).ReactNativeWebView);
   }, []);
 
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/agent-dashboard') || pathname.startsWith('/agent/')) {
     return null;
   }
 

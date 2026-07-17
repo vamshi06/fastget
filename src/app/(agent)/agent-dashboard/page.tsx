@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Order } from '@/types';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
-import { AlertCircle, RefreshCw, ChevronRight, Phone, MapPin, Clock } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, Phone, MapPin, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 
 const STATUSES = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
 
@@ -15,6 +15,7 @@ export default function AgentDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('received');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const fetchOrders = useCallback(async (status: string) => {
     try {
@@ -73,6 +74,13 @@ export default function AgentDashboard() {
     cancelled: 'bg-red-50 border-red-200',
   };
 
+  const sortedOrders = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortOrder === 'asc' ? diff : -diff;
+    });
+  }, [orders, sortOrder]);
+
   const statusBadges: Record<string, string> = {
     received: 'bg-amber-100 text-amber-800',
     eta_assigned: 'bg-primary-100 text-primary-700',
@@ -82,42 +90,52 @@ export default function AgentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-black text-brand-charcoal">Agent Dashboard</h1>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-          <p className="text-brand-slate">Manage orders and update status</p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-brand-charcoal">Agent Dashboard</h1>
+          <p className="text-brand-slate text-sm mt-1">Manage orders and update status</p>
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
 
+      <div>
         {/* Status Tabs */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {STATUSES.map((status) => (
-            <button
-              key={status}
-              onClick={() => { setSelectedStatus(status); setLoading(true); }}
-              className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
-                selectedStatus === status
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-white text-brand-charcoal border border-neutral-200 hover:border-brand-primary hover:bg-primary-50'
-              }`}
-            >
-              {statusLabels[status]}
-              <span className="ml-2 text-xs font-semibold opacity-75">
-                ({statusCounts[status] || 0})
-              </span>
-            </button>
-          ))}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            {STATUSES.map((status) => (
+              <button
+                key={status}
+                onClick={() => { setSelectedStatus(status); setLoading(true); }}
+                className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+                  selectedStatus === status
+                    ? 'bg-brand-primary text-white shadow-sm'
+                    : 'bg-white text-brand-charcoal border border-neutral-200 hover:border-brand-primary hover:bg-primary-50'
+                }`}
+              >
+                {statusLabels[status]}
+                <span className="ml-2 text-xs font-semibold opacity-75">
+                  ({statusCounts[status] || 0})
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-brand-charcoal border border-neutral-200 hover:border-brand-primary hover:bg-primary-50 transition-all"
+          >
+            {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+            {sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
+          </button>
         </div>
 
         {/* Content */}
@@ -143,7 +161,7 @@ export default function AgentDashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => (
+            {sortedOrders.map((order) => (
               <Link key={order.id} href={`/agent/${order.id}`} className="block">
                 <div className={`border rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer ${statusCardColors[order.status]}`}>
                   <div className="flex items-start justify-between gap-4">
