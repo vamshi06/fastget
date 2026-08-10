@@ -36,10 +36,19 @@ export function HeroSection() {
   const resumeAt = useRef(0);
   const loopTimeout = useRef<ReturnType<typeof setTimeout>>();
 
+  // Scrolls only the carousel's own track, not the page. scrollIntoView()
+  // walks up and scrolls every scrollable ancestor into view too, so once the
+  // user had scrolled the page down past the hero, the 5s autoplay tick would
+  // yank the whole page back to the top to bring this off-screen element into
+  // view. Computing the target scrollLeft ourselves keeps the scroll local.
   const scrollToIndex = useCallback((i: number) => {
     const track = trackRef.current;
     const child = track?.children[i] as HTMLElement | undefined;
-    child?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    if (!track || !child) return;
+    const trackRect = track.getBoundingClientRect();
+    const childRect = child.getBoundingClientRect();
+    const left = track.scrollLeft + (childRect.left - trackRect.left);
+    track.scrollTo({ left, behavior: 'smooth' });
   }, []);
 
   // Autoplay — pauses while the user is actively dragging/swiping the track
