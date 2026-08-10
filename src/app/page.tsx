@@ -1,5 +1,4 @@
 import { HeroSection } from '@/components/home/HeroSection';
-import { TrustBadges } from '@/components/home/TrustBadges';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
 import { FlashSaleBanner } from '@/components/home/FlashSaleBanner';
@@ -70,13 +69,6 @@ export default async function Home() {
           limit={8}
         />
 
-      </div>
-
-      {/* 7. Trust strip — full width at bottom */}
-      <div className="bg-white border-t border-neutral-100">
-        <div className="page-container">
-          <TrustBadges />
-        </div>
       </div>
 
     </div>
