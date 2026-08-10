@@ -147,7 +147,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ? (isBlank(body.saleEndsAt) ? null : parseIsoDate(body.saleEndsAt, 'Sale end time'))
       : undefined;
     const salePriceInPaise = salePriceProvided
-      ? (salePrice !== null ? Math.round(salePrice * 100) : null)
+      ? (salePrice != null ? Math.round(salePrice * 100) : null)
       : undefined;
 
     // Fetch current row to get source_table and products_id
