@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/components/CartContext';
@@ -20,7 +20,6 @@ export const metadata: Metadata = {
     'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
   keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
   manifest: '/manifest.webmanifest',
-  themeColor: '#f97316',
   icons: {
     icon: [
       { url: '/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
@@ -33,6 +32,16 @@ export const metadata: Metadata = {
     shortcut: '/icons/favicon-32.png',
     apple: '/icons/favicon-180.png',
   },
+};
+
+// viewportFit: 'cover' lets the page draw edge-to-edge (needed since the
+// mobile app's WebView renders behind the Android system nav bar) and makes
+// env(safe-area-inset-*) resolve to real values instead of 0 — without it,
+// --bottom-nav-space's env(safe-area-inset-bottom) term is always 0 and
+// MobileBottomNav sits underneath the gesture/nav bar.
+export const viewport: Viewport = {
+  themeColor: '#f97316',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
