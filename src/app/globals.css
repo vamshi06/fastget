@@ -39,8 +39,10 @@
 
     /* Reserved space for MobileBottomNav — kept in sync with its actual
        visibility (route-hidden / keyboard-open) so hiding it doesn't leave
-       a dangling empty gap. See MobileBottomNav.tsx. */
-    --bottom-nav-space: 4rem;
+       a dangling empty gap. Includes the device's bottom safe-area inset
+       (Android gesture bar / iOS home indicator) so page content never sits
+       underneath the nav. See MobileBottomNav.tsx. */
+    --bottom-nav-space: calc(4rem + env(safe-area-inset-bottom));
   }
 
   @media (min-width: 768px) {

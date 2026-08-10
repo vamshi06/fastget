@@ -143,13 +143,11 @@ export default function AgentUpdatePage() {
 
   if (loadingOrder) {
     return (
-      <div className="min-h-screen bg-brand-fog py-8">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <Loader className="w-8 h-8 animate-spin text-brand-primary mx-auto mb-4" />
-              <p className="text-brand-slate">Loading order details...</p>
-            </div>
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Loader className="w-8 h-8 animate-spin text-brand-primary mx-auto mb-4" />
+            <p className="text-brand-slate">Loading order details...</p>
           </div>
         </div>
       </div>
@@ -158,17 +156,15 @@ export default function AgentUpdatePage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-brand-fog py-8">
-        <div className="max-w-2xl mx-auto px-4">
-          <Link href="/agent-dashboard" className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal mb-4 text-sm transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Link>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <AlertCircle className="w-6 h-6 text-red-600 mb-2" />
-            <h2 className="text-lg font-bold text-red-900">Order Not Found</h2>
-            <p className="text-red-800 mt-1 text-sm">The order could not be found. Please try again.</p>
-          </div>
+      <div className="max-w-2xl mx-auto">
+        <Link href="/agent-dashboard" className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal mb-4 text-sm transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Link>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <AlertCircle className="w-6 h-6 text-red-600 mb-2" />
+          <h2 className="text-lg font-bold text-red-900">Order Not Found</h2>
+          <p className="text-red-800 mt-1 text-sm">The order could not be found. Please try again.</p>
         </div>
       </div>
     );
@@ -177,16 +173,15 @@ export default function AgentUpdatePage() {
   const isComplete = order.status === 'delivered' || order.status === 'cancelled';
 
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="mb-6">
-          <Link href="/agent-dashboard" className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal text-sm font-medium transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Link>
-        </div>
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <Link href="/agent-dashboard" className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal text-sm font-medium transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Link>
+      </div>
 
-        <div className="grid gap-6">
+      <div className="grid gap-6">
           {/* Order Summary Card */}
           <div className="card p-6">
             <div className="mb-6">
@@ -398,6 +393,7 @@ export default function AgentUpdatePage() {
           </div>
         )}
       </div>
-    </div>
   );
 }
+
+

@@ -117,6 +117,12 @@ export default async function AdminDashboard() {
           >
             Manage Products
           </Link>
+          <Link
+            href="/agent-dashboard"
+            className="btn-secondary"
+          >
+            Agent Dashboard
+          </Link>
         </div>
       </div>
 

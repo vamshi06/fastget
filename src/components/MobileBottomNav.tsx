@@ -14,7 +14,7 @@ const SIDE_TABS = [
   { href: '/account',    label: 'Account',  Icon: User          },
 ];
 
-const HIDDEN_ROUTES = ['/admin'];
+const HIDDEN_ROUTES = ['/admin', '/agent-dashboard', '/agent/'];
 
 // Fixed-position elements get pushed up above the on-screen keyboard on
 // mobile browsers (the viewport resizes, "bottom: 0" lands above the keyboard
@@ -90,8 +90,8 @@ export function MobileBottomNav() {
   const rightTabs = SIDE_TABS.slice(2);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
-      <div className="flex items-stretch h-16 safe-area-inset-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-stretch h-16">
         {/* Left two tabs */}
         {leftTabs.map(({ href, label, Icon }) => {
           const isActive =
