@@ -112,9 +112,18 @@ export default function WebViewScreen() {
     ) {
       return true; // let WebView handle normal URLs
     }
-    // Hand off only known UPI / payment-app / intent schemes to the OS. Any other
-    // scheme (file:, javascript:, tel:, unknown custom apps) is ignored.
+    // tel: is handled explicitly (not folded into ALLOWED_EXTERNAL_SCHEMES, which is
+    // a UPI/payment-app allowlist) so "Call Support" reliably opens the dialer on
+    // every Android WebView provider instead of relying on inconsistent OEM fallback
+    // behavior for unrecognized schemes when this handler returns false.
     const lower = url.toLowerCase();
+    if (lower.startsWith('tel:')) {
+      Linking.openURL(url).catch(() => {});
+      return false;
+    }
+
+    // Hand off only known UPI / payment-app / intent schemes to the OS. Any other
+    // scheme (file:, javascript:, unknown custom apps) is ignored.
     if (ALLOWED_EXTERNAL_SCHEMES.some((scheme) => lower.startsWith(scheme))) {
       Linking.openURL(url).catch(() => {});
     }
