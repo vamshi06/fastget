@@ -222,8 +222,8 @@ export default function OrderStatusPage() {
         {/* Order Status Card */}
         <div className="card p-6 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-black text-brand-charcoal">Order #{order.statusToken.toUpperCase()}</h1>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-black text-brand-charcoal break-all">Order #{order.statusToken.toUpperCase()}</h1>
               <p className="text-brand-slate mt-1 text-sm">
                 Placed on {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
               </p>
