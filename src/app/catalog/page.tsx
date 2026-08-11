@@ -464,30 +464,30 @@ function CatalogPageContent() {
         {!loading && !error && totalPages > 1 && (
           <div className="mt-10 flex flex-col items-center gap-3">
 
-            <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center justify-center w-full gap-2">
 
               {/* Previous */}
               <button
                 onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage === 1}
                 className={cn(
-                  'flex items-center gap-1.5 h-10 px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
+                  'flex items-center gap-1.5 h-10 px-2.5 sm:px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
                   currentPage === 1
                     ? 'text-brand-steel bg-white border border-neutral-100 cursor-not-allowed opacity-50'
                     : 'text-brand-charcoal bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
                 )}
               >
                 <ChevronLeft className="w-4 h-4" />
-                Prev
+                <span className="hidden sm:inline">Prev</span>
               </button>
 
               {/* Page numbers */}
-              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto hide-scrollbar min-w-0">
                 {pages.map((p, idx) =>
                   p === '...' ? (
                     <span
                       key={`dots-${idx}`}
-                      className="w-9 h-10 flex items-center justify-center text-brand-steel text-[14px]"
+                      className="w-9 h-10 flex items-center justify-center text-brand-steel text-[14px] shrink-0"
                     >
                       …
                     </span>
@@ -496,7 +496,7 @@ function CatalogPageContent() {
                       key={p}
                       onClick={() => goToPage(p as number)}
                       className={cn(
-                        'w-10 h-10 rounded-xl text-[14px] font-medium transition-all',
+                        'w-10 h-10 rounded-xl text-[14px] font-medium transition-all shrink-0',
                         p === currentPage
                           ? 'bg-brand-primary text-white shadow-md'
                           : 'bg-white border border-neutral-200 text-brand-charcoal hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
@@ -513,13 +513,13 @@ function CatalogPageContent() {
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={cn(
-                  'flex items-center gap-1.5 h-10 px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
+                  'flex items-center gap-1.5 h-10 px-2.5 sm:px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
                   currentPage === totalPages
                     ? 'text-brand-steel bg-white border border-neutral-100 cursor-not-allowed opacity-50'
                     : 'text-brand-charcoal bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
                 )}
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
