@@ -57,6 +57,41 @@ export async function confirmOrderPayment(
 }
 
 /**
+ * Reconciles a `payment.captured` webhook event against an existing order row.
+ * This is a safety net, not the primary confirmation path (that's
+ * confirmOrderPayment, called from /api/payment/verify-payment when the
+ * customer's browser returns from checkout). No order row exists here at all
+ * if the customer closed the tab right after paying — this update simply
+ * no-ops in that case (0 rows matched); the caller logs that for visibility.
+ */
+export async function reconcileCapturedPayment(
+  razorpayOrderId: string,
+  razorpayPaymentId: string
+): Promise<boolean> {
+  await ensurePaymentColumns();
+  const sql = getUnpooledConnection();
+  try {
+    const result = await sql`
+      UPDATE orders
+      SET razorpay_payment_id  = ${razorpayPaymentId},
+          payment_status       = 'captured',
+          payment_captured_at  = COALESCE(payment_captured_at, NOW())
+      WHERE razorpay_order_id = ${razorpayOrderId}
+        AND payment_status IS DISTINCT FROM 'captured'
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to reconcile webhook payment', {
+      razorpayOrderId,
+      razorpayPaymentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
  * Deletes an order by ID. Used to clean up an orphaned DB order when the
  * Razorpay order creation fails immediately after the DB write.
  */

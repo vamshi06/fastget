@@ -48,6 +48,28 @@ export async function fetchPayment(paymentId: string) {
 }
 
 /**
+ * Verifies a Razorpay webhook payload signature (HMAC SHA256 over the exact
+ * raw request body, keyed with the webhook secret set in Razorpay Dashboard →
+ * Settings → Webhooks — NOT the same as RAZORPAY_KEY_SECRET).
+ * https://razorpay.com/docs/webhooks/validate-test/#validate-webhooks-manually
+ */
+export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) throw new Error('RAZORPAY_WEBHOOK_SECRET not configured');
+
+  const expected = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+
+  try {
+    const sigBuffer = Buffer.from(signature, 'hex');
+    const expBuffer = Buffer.from(expected, 'hex');
+    if (sigBuffer.length !== expBuffer.length) return false;
+    return crypto.timingSafeEqual(sigBuffer, expBuffer);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Verifies the Razorpay payment signature using HMAC SHA256.
  * The signed body is: `razorpay_order_id|razorpay_payment_id`
  */
