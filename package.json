@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "sync-schema": "tsx scripts/sync-schema.ts",
-    "import-sheet": "tsx scripts/import-sheet.ts"
+    "sync-schema": "tsx --env-file-if-exists=.env.local scripts/sync-schema.ts",
+    "import-sheet": "tsx --env-file-if-exists=.env.local scripts/import-sheet.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
