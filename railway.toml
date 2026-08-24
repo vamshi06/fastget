@@ -1,13 +1,16 @@
 [build]
 builder = "nixpacks"
-# rm -rf .next first: Nixpacks caches .next/cache (webpack's persistent build
-# cache) between deploys. A stale cache from a prior build can produce corrupted
-# output after config/dependency changes — e.g. "<Html> should not be imported
-# outside of pages/_document" on /404 and /500 cascading into
-# "Cannot read properties of null (reading 'useContext')" on every other page,
-# even though the source builds clean. Forcing a fresh .next avoids that class
-# of bug entirely, at the cost of losing incremental-build speedup.
-buildCommand = "rm -rf .next && NODE_ENV=production npm run build"
+# Nixpacks mounts .next/cache as a persistent Docker build-cache volume, so it
+# survives across deploys (and `rm -rf .next` fails on it with "Device or
+# resource busy" — it's a mount point, not a plain dir). A stale copy of that
+# webpack cache from a prior build can produce corrupted output after
+# config/dependency changes — e.g. "<Html> should not be imported outside of
+# pages/_document" on /404 and /500 cascading into "Cannot read properties of
+# null (reading 'useContext')" on every other page, even though the source
+# builds clean from scratch. Clearing the cache's *contents* (not the mount
+# itself) before each build avoids that class of bug, at the cost of losing
+# incremental-build speedup.
+buildCommand = "find .next/cache -mindepth 1 -delete 2>/dev/null; NODE_ENV=production npm run build"
 
 [deploy]
 startCommand = "next start -p $PORT"
