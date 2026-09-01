@@ -1287,4 +1287,20 @@ export async function adminDeleteOrderFeedback(feedbackId: string): Promise<bool
   }
 }
 
+/**
+ * Admin moderation delete — permanently removes an order by id, no ownership check.
+ * Associated product reviews and delivery feedback cascade-delete with it
+ * (ON DELETE CASCADE on their order_id foreign keys).
+ */
+export async function adminDeleteOrder(id: string): Promise<boolean> {
+  const sql = getClient();
+  try {
+    const result = await sql`DELETE FROM orders WHERE id = ${id} RETURNING id`;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to admin-delete order', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
 // sql client helpers are accessed via getUnpooledConnection() or the internal getClient()/getUnpooledClient()

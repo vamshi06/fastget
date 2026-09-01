@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS } from '@/types';
 import { requireAdminPage } from '@/lib/auth';
+import { DeleteOrderButton } from './DeleteOrderButton';
 
 interface OrderDetailPageProps {
   params: {
@@ -44,12 +45,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             Order ID: <span className="font-mono font-semibold text-brand-charcoal">{order.id}</span>
           </p>
         </div>
-        <Link
-          href="/admin/orders"
-          className="btn-secondary px-4 py-2 text-sm"
-        >
-          ← Back
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/orders"
+            className="btn-secondary px-4 py-2 text-sm"
+          >
+            ← Back
+          </Link>
+          <DeleteOrderButton orderId={order.id} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

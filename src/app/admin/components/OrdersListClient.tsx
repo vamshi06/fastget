@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 
 interface OrdersListProps {
   orders: Order[];
@@ -11,14 +12,33 @@ interface OrdersListProps {
 
 const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-brand-charcoal font-medium text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary transition-all duration-200';
 
-export function OrdersListClient({ orders }: OrdersListProps) {
+export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
   const searchParams = useSearchParams();
+  const [orders, setOrders] = useState(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
     (searchParams.get('status') as OrderStatus | 'all') || 'all'
   );
   const [nameFilter, setNameFilter] = useState(searchParams.get('name') || '');
   const [dateFromFilter, setDateFromFilter] = useState(searchParams.get('dateFrom') || '');
   const [dateToFilter, setDateToFilter] = useState(searchParams.get('dateTo') || '');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/admin/api/orders/${pendingDeleteId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to delete');
+      setOrders((prev) => prev.filter((o) => o.id !== pendingDeleteId));
+      setPendingDeleteId(null);
+    } catch {
+      // best-effort admin action — row simply stays if the delete failed
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const filteredOrders = orders.filter((order) => {
     if (statusFilter !== 'all' && order.status !== statusFilter) return false;
@@ -175,12 +195,20 @@ export function OrdersListClient({ orders }: OrdersListProps) {
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200"
-                      >
-                        View →
-                      </Link>
+                      <div className="flex items-center gap-4">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200"
+                        >
+                          View →
+                        </Link>
+                        <button
+                          onClick={() => setPendingDeleteId(order.id)}
+                          className="text-red-600 hover:text-red-700 font-semibold text-sm transition-colors duration-200"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -195,6 +223,16 @@ export function OrdersListClient({ orders }: OrdersListProps) {
           </table>
         </div>
       </div>
+
+      {pendingDeleteId && (
+        <ConfirmDeleteModal
+          title="Delete order?"
+          message="This will permanently remove the order along with any associated reviews and delivery feedback. This cannot be undone."
+          pending={deleting}
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }
