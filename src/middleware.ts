@@ -27,6 +27,36 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? await verifySessionToken(token) : null;
 
+  // TEMP DIAGNOSTIC (remove once the deployed-only 307 bug is root-caused):
+  // logs why a protected request was rejected, without leaking the token.
+  if (!session || session.role !== 'admin') {
+    let claimedRole: string | undefined;
+    let claimedExp: number | undefined;
+    try {
+      const body = token?.split('.')[1];
+      if (body) {
+        const b64 = body.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+        const parsed = JSON.parse(atob(padded));
+        claimedRole = parsed.role;
+        claimedExp = parsed.exp;
+      }
+    } catch {
+      claimedRole = 'PARSE_ERROR';
+    }
+    console.log('[mw-diag]', {
+      pathname,
+      hadCookie: Boolean(token),
+      tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-6)}` : null,
+      verifiedSession: session,
+      claimedRole,
+      claimedExp,
+      nowSec: Math.floor(Date.now() / 1000),
+      secretPresent: Boolean(process.env.ADMIN_SESSION_SECRET),
+      secretLen: process.env.ADMIN_SESSION_SECRET?.length ?? 0,
+    });
+  }
+
   if (!session || session.role !== 'admin') {
     // API routes get a JSON 401; page routes get redirected to the login screen.
     // Both must be no-store: browsers (and <Link> prefetch in particular) will
