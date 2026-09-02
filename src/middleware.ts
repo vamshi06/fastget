@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/session';
+import { verifySessionToken, createSessionToken, SESSION_COOKIE_NAME } from '@/lib/session';
+
+// TEMP DIAGNOSTIC: short, non-reversible fingerprint of the secret so we can
+// compare "what the login handler used" vs "what middleware sees" without
+// ever logging the secret itself.
+async function secretFingerprint(): Promise<string> {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) return 'MISSING';
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return Array.from(new Uint8Array(digest).slice(0, 6))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 // Single source of truth for route protection (runs in the Edge runtime).
 //
@@ -44,6 +56,17 @@ export async function middleware(request: NextRequest) {
     } catch {
       claimedRole = 'PARSE_ERROR';
     }
+    // Self round-trip: sign + verify a throwaway token in THIS exact runtime,
+    // right now. If this also fails, the bug is crypto/runtime, not a secret
+    // mismatch between the login handler and middleware.
+    let selfRoundTrip: string;
+    try {
+      const testToken = await createSessionToken({ userId: 'diag-selftest', role: 'admin' });
+      const testVerify = await verifySessionToken(testToken);
+      selfRoundTrip = testVerify?.role === 'admin' ? 'PASS' : 'FAIL-no-match';
+    } catch (e) {
+      selfRoundTrip = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
+    }
     console.log('[mw-diag]', {
       pathname,
       hadCookie: Boolean(token),
@@ -54,6 +77,8 @@ export async function middleware(request: NextRequest) {
       nowSec: Math.floor(Date.now() / 1000),
       secretPresent: Boolean(process.env.ADMIN_SESSION_SECRET),
       secretLen: process.env.ADMIN_SESSION_SECRET?.length ?? 0,
+      secretFp: await secretFingerprint(),
+      selfRoundTrip,
     });
   }
 

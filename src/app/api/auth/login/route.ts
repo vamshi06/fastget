@@ -112,6 +112,27 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = await createSessionToken({ userId: user.id, role: user.role });
 
+    // TEMP DIAGNOSTIC (remove once the deployed-only 307 bug is root-caused):
+    // same fingerprint computation as middleware's [mw-diag] — compare secretFp
+    // values between this log and middleware's to see if they ever diverge.
+    if (user.role === 'admin') {
+      try {
+        const secret = process.env.ADMIN_SESSION_SECRET ?? '';
+        const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+        const secretFp = Array.from(new Uint8Array(digest).slice(0, 6))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        console.log('[login-diag]', {
+          userId: user.id,
+          secretLen: secret.length,
+          secretFp,
+          tokenPreview: `${sessionToken.slice(0, 12)}...${sessionToken.slice(-6)}`,
+        });
+      } catch {
+        /* diagnostic only, never let it break login */
+      }
+    }
+
     const response = NextResponse.json(
       {
         success: true,
