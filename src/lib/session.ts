@@ -37,16 +37,25 @@ function b64urlDecode(s: string): ArrayBuffer {
   return out.buffer;
 }
 
+// Cache the imported CryptoKey at module scope instead of re-importing on
+// every sign/verify call. Re-importing on every request was suspected as a
+// factor in an intermittent deployed-only verification bug (TEMP DIAGNOSTIC
+// in middleware.ts is tracking this down); reusing one key is also just
+// standard Web Crypto practice regardless.
+let cachedKeyPromise: Promise<CryptoKey> | null = null;
+
 async function getKey(): Promise<CryptoKey> {
+  if (cachedKeyPromise) return cachedKeyPromise;
   const secret = process.env.ADMIN_SESSION_SECRET;
   if (!secret) throw new Error('ADMIN_SESSION_SECRET env var is not set');
-  return globalThis.crypto.subtle.importKey(
+  cachedKeyPromise = globalThis.crypto.subtle.importKey(
     'raw',
     enc.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign', 'verify'],
   );
+  return cachedKeyPromise;
 }
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
