@@ -29,12 +29,20 @@ export async function middleware(request: NextRequest) {
 
   if (!session || session.role !== 'admin') {
     // API routes get a JSON 401; page routes get redirected to the login screen.
+    // Both must be no-store: browsers (and <Link> prefetch in particular) will
+    // otherwise cache this "you're logged out" response and keep replaying it
+    // after a successful login, sending an authenticated admin right back to
+    // the login screen.
     if (pathname.startsWith('/api/') || pathname.startsWith('/admin/api/')) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      const res = NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      res.headers.set('Cache-Control', 'no-store');
+      return res;
     }
     const loginUrl = new URL('/admin/login', request.url);
     loginUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(loginUrl);
+    const res = NextResponse.redirect(loginUrl);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
   }
 
   const response = NextResponse.next();
