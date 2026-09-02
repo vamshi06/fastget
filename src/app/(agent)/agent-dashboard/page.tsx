@@ -1,12 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Order } from '@/types';
-import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
-import { AlertCircle, RefreshCw, ChevronRight, Phone, MapPin, Clock, ArrowUp, ArrowDown } from 'lucide-react';
+import { formatCurrency, formatDate, formatTime, cn } from '@/lib/utils';
+import {
+  AlertCircle, RefreshCw, ChevronRight, ChevronLeft, Phone, MapPin, Clock, ArrowUp, ArrowDown,
+} from 'lucide-react';
 
 const STATUSES = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
+const PAGE_SIZE = 20;
+
+// ── Pagination range helper (same shape as the catalog page) ──────────────────
+function paginationRange(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const left  = Math.max(2, current - 2);
+  const right = Math.min(total - 1, current + 2);
+  const range: (number | '...')[] = [1];
+
+  if (left > 2) range.push('...');
+  for (let i = left; i <= right; i++) range.push(i);
+  if (right < total - 1) range.push('...');
+  range.push(total);
+
+  return range;
+}
 
 export default function AgentDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -15,15 +34,23 @@ export default function AgentDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('received');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchOrders = useCallback(async (status: string) => {
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  const fetchOrders = useCallback(async (status: string, page: number, sort: 'asc' | 'desc') => {
     try {
       setError(null);
-      const response = await fetch(`/api/orders/pending?status=${status}&limit=50`);
+      const offset = (page - 1) * PAGE_SIZE;
+      const response = await fetch(
+        `/api/orders/pending?status=${status}&limit=${PAGE_SIZE}&offset=${offset}&sort=${sort}`
+      );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to fetch orders');
       setOrders(data.orders || []);
+      setTotalCount(data.count || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders');
     } finally {
@@ -48,14 +75,34 @@ export default function AgentDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchOrders(selectedStatus);
+    fetchOrders(selectedStatus, currentPage, sortOrder);
     fetchStatusCounts();
-  }, [selectedStatus, fetchOrders, fetchStatusCounts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStatus, currentPage, sortOrder]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchOrders(selectedStatus);
+    await fetchOrders(selectedStatus, currentPage, sortOrder);
     await fetchStatusCounts();
+  };
+
+  const handleSelectStatus = (status: string) => {
+    if (status === selectedStatus) return;
+    setSelectedStatus(status);
+    setCurrentPage(1);
+    setLoading(true);
+  };
+
+  const handleToggleSort = () => {
+    setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    setCurrentPage(1);
+    setLoading(true);
+  };
+
+  const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    setCurrentPage(page);
+    setLoading(true);
   };
 
   const statusLabels: Record<string, string> = {
@@ -74,13 +121,6 @@ export default function AgentDashboard() {
     cancelled: 'bg-red-50 border-red-200',
   };
 
-  const sortedOrders = useMemo(() => {
-    return [...orders].sort((a, b) => {
-      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      return sortOrder === 'asc' ? diff : -diff;
-    });
-  }, [orders, sortOrder]);
-
   const statusBadges: Record<string, string> = {
     received: 'bg-amber-100 text-amber-800',
     eta_assigned: 'bg-primary-100 text-primary-700',
@@ -88,6 +128,8 @@ export default function AgentDashboard() {
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
   };
+
+  const pages = paginationRange(currentPage, totalPages);
 
   return (
     <div className="space-y-8">
@@ -114,7 +156,7 @@ export default function AgentDashboard() {
             {STATUSES.map((status) => (
               <button
                 key={status}
-                onClick={() => { setSelectedStatus(status); setLoading(true); }}
+                onClick={() => handleSelectStatus(status)}
                 className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
                   selectedStatus === status
                     ? 'bg-brand-primary text-white shadow-sm'
@@ -130,7 +172,7 @@ export default function AgentDashboard() {
           </div>
 
           <button
-            onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+            onClick={handleToggleSort}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-brand-charcoal border border-neutral-200 hover:border-brand-primary hover:bg-primary-50 transition-all"
           >
             {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
@@ -161,7 +203,7 @@ export default function AgentDashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedOrders.map((order) => (
+            {orders.map((order) => (
               <Link key={order.id} href={`/agent/${order.id}`} className="block">
                 <div className={`border rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer ${statusCardColors[order.status]}`}>
                   <div className="flex items-start justify-between gap-4">
@@ -220,6 +262,76 @@ export default function AgentDashboard() {
                 </div>
               </Link>
             ))}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-col items-center gap-3">
+                <div className="flex items-center justify-center w-full gap-2">
+                  {/* Previous */}
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={cn(
+                      'flex items-center gap-1.5 h-10 px-2.5 sm:px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
+                      currentPage === 1
+                        ? 'text-brand-steel bg-white border border-neutral-100 cursor-not-allowed opacity-50'
+                        : 'text-brand-charcoal bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
+                    )}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Prev</span>
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto hide-scrollbar min-w-0">
+                    {pages.map((p, idx) =>
+                      p === '...' ? (
+                        <span
+                          key={`dots-${idx}`}
+                          className="w-9 h-10 flex items-center justify-center text-brand-steel text-[14px] shrink-0"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => goToPage(p as number)}
+                          className={cn(
+                            'w-10 h-10 rounded-xl text-[14px] font-medium transition-all shrink-0',
+                            p === currentPage
+                              ? 'bg-brand-primary text-white shadow-md'
+                              : 'bg-white border border-neutral-200 text-brand-charcoal hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ),
+                    )}
+                  </div>
+
+                  {/* Next */}
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={cn(
+                      'flex items-center gap-1.5 h-10 px-2.5 sm:px-4 rounded-xl text-[14px] font-medium transition-all shrink-0',
+                      currentPage === totalPages
+                        ? 'text-brand-steel bg-white border border-neutral-100 cursor-not-allowed opacity-50'
+                        : 'text-brand-charcoal bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
+                    )}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Page info */}
+                <p className="text-[13px] text-brand-steel">
+                  Page {currentPage} of {totalPages}
+                  {totalCount > 0 && ` · ${totalCount} order${totalCount !== 1 ? 's' : ''} total`}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

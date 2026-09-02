@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic';
  *
  * Query params:
  * - status (optional): Filter by status (default: 'received')
- * - limit (optional): Number of results (default: 20, max: 100)
+ * - limit (optional): Number of results per page (default: 20, max: 100)
+ * - offset (optional): Number of results to skip, for pagination (default: 0)
+ * - sort (optional): 'asc' or 'desc' by created_at (default: 'desc')
  */
 export async function GET(request: NextRequest) {
   const start = Date.now();
@@ -22,8 +24,12 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status') || 'received';
     const limitParam = parseInt(searchParams.get('limit') || '20', 10);
     const limit = isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 100);
+    const offsetParam = parseInt(searchParams.get('offset') || '0', 10);
+    const offset = isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
+    const sortParam = searchParams.get('sort') || 'desc';
+    const sortAsc = sortParam === 'asc';
 
-    logger.info('API', 'GET /api/orders/pending', { statusFilter, limit });
+    logger.info('API', 'GET /api/orders/pending', { statusFilter, limit, offset, sort: sortAsc ? 'asc' : 'desc' });
 
     // Validate status is one of allowed values
     const validStatuses = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
@@ -48,29 +54,32 @@ export async function GET(request: NextRequest) {
     // Neon returns COUNT as bigint string — cast to number safely
     const totalCount = Number(countResult[0]?.total ?? 0);
 
-    // Fetch orders with the specified status
-    const orders = await sqlConn`
-      SELECT
-        id,
-        created_at,
-        customer_name,
-        customer_phone,
-        site_address,
-        landmark,
-        delivery_type,
-        scheduled_time,
-        items,
-        subtotal,
-        convenience_fee,
-        total,
-        payment_method,
-        status,
-        eta
-      FROM orders
-      WHERE status = ${statusFilter}
-      ORDER BY created_at ASC
-      LIMIT ${limit}
-    `;
+    // Fetch orders with the specified status.
+    // ORDER BY direction can't be parameter-bound with the neon tagged-template
+    // client, so the query is branched explicitly instead of interpolated.
+    const orders = sortAsc
+      ? await sqlConn`
+          SELECT
+            id, created_at, customer_name, customer_phone, site_address, landmark,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            payment_method, status, eta
+          FROM orders
+          WHERE status = ${statusFilter}
+          ORDER BY created_at ASC
+          LIMIT ${limit}
+          OFFSET ${offset}
+        `
+      : await sqlConn`
+          SELECT
+            id, created_at, customer_name, customer_phone, site_address, landmark,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            payment_method, status, eta
+          FROM orders
+          WHERE status = ${statusFilter}
+          ORDER BY created_at DESC
+          LIMIT ${limit}
+          OFFSET ${offset}
+        `;
 
     const formattedOrders = orders.map((order: any) => ({
       id: order.id,
@@ -90,7 +99,9 @@ export async function GET(request: NextRequest) {
       eta: order.eta,
     }));
 
-    logger.debug('API', 'GET /api/orders/pending — orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount });
+    const hasMore = offset + formattedOrders.length < totalCount;
+
+    logger.debug('API', 'GET /api/orders/pending — orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount, offset, hasMore });
     logger.api('GET', '/api/orders/pending', 200, Date.now() - start);
 
     return NextResponse.json(
@@ -99,6 +110,10 @@ export async function GET(request: NextRequest) {
         count: totalCount,
         status: statusFilter,
         orders: formattedOrders,
+        offset,
+        limit,
+        sort: sortAsc ? 'asc' : 'desc',
+        hasMore,
       },
       {
         status: 200,
