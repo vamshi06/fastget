@@ -51,6 +51,8 @@ export interface DbUser {
   reset_password_token: string | null;
   reset_password_token_expiry: Date | null;
   resend_verification_at: Date | null;
+  // Added in migration 015 — self-linked by admin/agent users via my-profile
+  telegram_chat_id: string | null;
 }
 
 /**
@@ -297,6 +299,47 @@ export async function updateUserProfile(
 }
 
 /**
+ * Link (or unlink) a user's Telegram chat ID, used to DM them the new-order
+ * notification. Pass null to unlink.
+ */
+export async function updateTelegramChatId(
+  userId: string,
+  telegramChatId: string | null,
+): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      UPDATE users
+      SET telegram_chat_id = ${telegramChatId}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+      RETURNING *
+    `;
+    if (result.length === 0) return null;
+    return dbUserToUser(result[0] as DbUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to update telegram_chat_id', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Staff (admin + agent) users to notify when a new order is placed.
+ * Used by src/lib/order-notifications.ts — never exposed to customers.
+ */
+export async function getStaffForOrderNotifications(): Promise<User[]> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      SELECT * FROM users WHERE role IN ('admin', 'agent')
+    `;
+    return (result as DbUser[]).map(dbUserToUser);
+  } catch (error) {
+    logger.error('Users', 'Failed to fetch staff for order notifications', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
  * Update user's preferred address.
  */
 export async function updatePreferredAddress(
@@ -527,6 +570,7 @@ function dbUserToUser(dbUser: DbUser): User {
         ? dbUser.email_verified_at.toISOString()
         : String(dbUser.email_verified_at)
       : undefined,
+    telegramChatId: dbUser.telegram_chat_id || undefined,
   };
 }
 

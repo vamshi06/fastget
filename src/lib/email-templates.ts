@@ -3,6 +3,8 @@
  * Brand: primary #F5A623 (amber), charcoal #1C1C1E, slate #6B6B6E
  */
 
+import type { Order } from '@/types';
+
 const P = '#F5A623'; // brand-primary
 const D = '#DC8A0E'; // brand-dark
 const C = '#1C1C1E'; // brand-charcoal
@@ -249,5 +251,56 @@ export function passwordChangedTemplate(
     subject: 'Your FastGet password has been changed',
     html: wrap(body),
     text: `Hi ${name},\n\nYour FastGet password has been successfully changed.\n\nIf you did not make this change, contact support immediately.`,
+  };
+}
+
+// ── New Order Placed (staff alert) ─────────────────────────────────────────────
+// Sent to admin/agent users — see src/lib/order-notifications.ts. Durable
+// backup to the Telegram alert (which is the primary, instant channel).
+
+export function orderPlacedStaffEmailTemplate(
+  order: Order,
+  appUrl: string,
+): { subject: string; html: string; text: string } {
+  const orderUrl = `${appUrl}/admin/orders/${order.id}`;
+  const itemsRows = order.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px 0;font-size:14px;color:${C};">${esc(item.name)} <span style="color:${S};">&times;${item.quantity}</span></td>
+        <td style="padding:8px 0;font-size:14px;color:${C};text-align:right;white-space:nowrap;">₹${(item.price * item.quantity).toLocaleString('en-IN')}</td>
+      </tr>`,
+    )
+    .join('');
+  const itemsText = order.items.map((i) => `  - ${i.name} x${i.quantity} — ₹${i.price * i.quantity}`).join('\n');
+
+  const body = `
+    <div style="padding:36px 40px;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:40px;">🛒</div>
+        <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:${C};">New order placed</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:${S};">₹${order.total.toLocaleString('en-IN')} &middot; ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} &middot; ${esc(order.paymentMethod.toUpperCase())}</p>
+      </div>
+
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:24px 0;background:${G};border-radius:14px;padding:18px 20px;">
+        <tr><td style="font-size:13px;color:${S};padding:4px 0;">Customer</td><td style="font-size:13px;color:${C};font-weight:600;text-align:right;padding:4px 0;">${esc(order.customerName)}</td></tr>
+        <tr><td style="font-size:13px;color:${S};padding:4px 0;">Phone</td><td style="font-size:13px;color:${C};font-weight:600;text-align:right;padding:4px 0;">${esc(order.customerPhone)}</td></tr>
+        <tr><td style="font-size:13px;color:${S};padding:4px 0;vertical-align:top;">Address</td><td style="font-size:13px;color:${C};font-weight:600;text-align:right;padding:4px 0;">${esc(order.siteAddress)}</td></tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-top:1px solid #EEE;padding-top:4px;">
+        ${itemsRows}
+      </table>
+
+      <div style="text-align:center;margin:28px 0 8px;">
+        ${ctaButton(orderUrl, 'View order')}
+      </div>
+      ${fallbackLink(orderUrl)}
+    </div>`;
+
+  return {
+    subject: `New order — ₹${order.total.toLocaleString('en-IN')} from ${order.customerName}`,
+    html: wrap(body),
+    text: `New order placed\n\nCustomer: ${order.customerName}\nPhone: ${order.customerPhone}\nAddress: ${order.siteAddress}\nTotal: ₹${order.total}\n\nItems:\n${itemsText}\n\nView: ${orderUrl}`,
   };
 }

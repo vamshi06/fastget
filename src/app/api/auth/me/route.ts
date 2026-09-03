@@ -58,6 +58,7 @@ export async function GET() {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        telegramChatId: user.telegramChatId,
       },
     },
     { headers: NO_STORE },

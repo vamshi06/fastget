@@ -145,6 +145,7 @@ export interface User {
   updatedAt: string;
   emailVerified?: boolean;
   emailVerifiedAt?: string;
+  telegramChatId?: string;
 }
 
 export type AddressType = 'home' | 'work' | 'other';

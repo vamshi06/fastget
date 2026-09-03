@@ -4,6 +4,7 @@ import { confirmOrderPayment, deleteOrder } from '@/lib/payment-db';
 import { verifyOrderToken } from '@/lib/order-token';
 import { createOrder } from '@/lib/db';
 import { generateUUID, generateToken } from '@/lib/utils';
+import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
 import { Order } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -141,6 +142,10 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Payment', 'Payment verified and order created', { orderId, razorpay_payment_id });
+
+    // Best-effort staff alert (Telegram + email) — never blocks/fails the response.
+    await notifyStaffOfNewOrder(order);
+
     logger.api('POST', '/api/payment/verify-payment', 200, Date.now() - start);
 
     return NextResponse.json({ success: true, statusToken });

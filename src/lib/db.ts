@@ -167,6 +167,9 @@ export async function initializeUsersTable(): Promise<void> {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255)`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token_expiry TIMESTAMPTZ`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS resend_verification_at TIMESTAMPTZ`;
+
+    // Migration 015: Telegram chat ID for new-order notifications (staff self-link via my-profile)
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token) WHERE verification_token IS NOT NULL`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_reset_password_token ON users(reset_password_token) WHERE reset_password_token IS NOT NULL`;
 

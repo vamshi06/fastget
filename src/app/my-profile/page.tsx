@@ -14,6 +14,7 @@ import {
   Check,
   Pencil,
   X,
+  Send,
 } from 'lucide-react';
 
 /* ─── Guest screen ───────────────────────────────────────────────────────── */
@@ -58,6 +59,11 @@ export default function MyProfilePage() {
   const [name, setName] = useState(currentUser?.name ?? '');
   const [phone, setPhone] = useState(currentUser?.phone?.replace(/\D/g, '').slice(-10) ?? '');
 
+  const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'agent';
+  const [telegramEditing, setTelegramEditing] = useState(false);
+  const [telegramSaving, setTelegramSaving] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState(currentUser?.telegramChatId ?? '');
+
   if (!isLoaded) return null;
   if (!currentUser) return <GuestProfile />;
 
@@ -89,6 +95,33 @@ export default function MyProfilePage() {
       showToast(error instanceof Error ? error.message : 'Failed to update profile', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveTelegram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTelegramSaving(true);
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: currentUser.name,
+          phone: currentUser.phone?.replace(/\D/g, '').slice(-10),
+          telegramChatId: telegramChatId.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save Telegram chat ID');
+      }
+      setCurrentUser({ ...currentUser, telegramChatId: data.user.telegramChatId });
+      setTelegramEditing(false);
+      showToast('Telegram notifications updated', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to save Telegram chat ID', 'error');
+    } finally {
+      setTelegramSaving(false);
     }
   };
 
@@ -202,6 +235,78 @@ export default function MyProfilePage() {
               <Pencil className="w-4 h-4" />
               Edit Profile
             </button>
+          </div>
+        )}
+
+        {/* Telegram order alerts — staff only (admin/agent) */}
+        {isStaff && (
+          <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5 mt-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Send className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-brand-charcoal">Telegram order alerts</p>
+                <p className="text-xs text-brand-slate">Get pinged on Telegram the moment a new order is placed.</p>
+              </div>
+            </div>
+
+            {telegramEditing ? (
+              <form onSubmit={handleSaveTelegram} className="mt-4 space-y-3">
+                <FloatingInput
+                  label="Telegram Chat ID"
+                  name="telegramChatId"
+                  value={telegramChatId}
+                  onChange={(e) => setTelegramChatId(e.target.value.replace(/[^\d-]/g, ''))}
+                  maxLength={64}
+                />
+                <p className="text-xs text-brand-slate leading-relaxed">
+                  Open Telegram, message <strong>@userinfobot</strong> to get your numeric chat ID, and start
+                  a chat with the FastGet bot so it&apos;s allowed to message you. Leave blank to turn alerts off.
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTelegramChatId(currentUser.telegramChatId ?? '');
+                      setTelegramEditing(false);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={telegramSaving}
+                    className="flex-1 py-2.5 rounded-xl bg-brand-primary text-white font-semibold text-sm hover:bg-brand-dark transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  >
+                    {telegramSaving ? (
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    {telegramSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-brand-charcoal">
+                  {currentUser.telegramChatId ? `Linked · ${currentUser.telegramChatId}` : 'Not linked'}
+                </p>
+                <button
+                  onClick={() => {
+                    setTelegramChatId(currentUser.telegramChatId ?? '');
+                    setTelegramEditing(true);
+                  }}
+                  className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  {currentUser.telegramChatId ? 'Edit' : 'Link'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
