@@ -90,7 +90,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
-const CONVENIENCE_FEE_PERCENTAGE = 10;
+// Convenience fee has been removed — total equals subtotal.
+// Must stay in sync with order-pricing.CONVENIENCE_FEE_PERCENTAGE (server pricing).
+const CONVENIENCE_FEE_PERCENTAGE = 0;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });

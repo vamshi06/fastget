@@ -11,8 +11,11 @@ import { logger } from '@/lib/logger';
  * the amount charged can never be tampered with from the browser.
  */
 
+// Convenience fee has been removed — total equals subtotal. Kept at 0 (rather
+// than deleting the field) so the `convenience_fee` DB column, order types,
+// and API payloads don't need a schema migration.
 // Must stay in sync with CartContext.CONVENIENCE_FEE_PERCENTAGE (client display).
-export const CONVENIENCE_FEE_PERCENTAGE = 10;
+export const CONVENIENCE_FEE_PERCENTAGE = 0;
 
 const MAX_QTY_PER_ITEM = 1000;
 
