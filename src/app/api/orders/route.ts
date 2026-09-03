@@ -9,6 +9,7 @@ import {
 import { createOrder } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
+import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
 import { logger } from '@/lib/logger';
 
 /**
@@ -91,6 +92,10 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Orders', 'Order created', { orderId, itemCount: order.items.length, total: order.total, deliveryType: order.deliveryType });
+
+    // Best-effort staff alert (Telegram + email) — never blocks/fails the order response.
+    await notifyStaffOfNewOrder(order);
+
     logger.api('POST', '/api/orders', 201, Date.now() - start);
 
     // SECURITY: Return only statusToken — updateToken is intentionally omitted

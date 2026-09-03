@@ -678,10 +678,6 @@ function CheckoutPageContent() {
                   <span>Subtotal</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
-                <div className="flex justify-between text-sm text-brand-slate">
-                  <span>Convenience Fee (10%)</span>
-                  <span className="font-medium text-brand-charcoal">{formatCurrency(getConvenienceFee())}</span>
-                </div>
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
                     <span>Total</span>
