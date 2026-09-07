@@ -77,10 +77,11 @@ export default function ProductDetailPage() {
       .catch(() => {/* ignore related products error */});
   }, [product?.category, productId]);
 
-  // Keep local quantity in sync with cart
+  // Keep local quantity in sync with cart, respecting the variant's MOQ
   const cartItem     = product ? state.items.find((i) => i.product.id === product.id) : undefined;
   const cartQuantity = cartItem?.quantity ?? 0;
-  useEffect(() => { setQuantity(cartQuantity || 1); }, [cartQuantity]);
+  const moq           = selectedVariant?.moq && selectedVariant.moq > 0 ? selectedVariant.moq : 1;
+  useEffect(() => { setQuantity(cartQuantity > 0 ? cartQuantity : moq); }, [cartQuantity, moq]);
 
   // Effective price comes from the selected variant
   const effectivePrice = selectedVariant?.priceRupees ?? product?.price ?? 0;
@@ -101,11 +102,12 @@ export default function ProductDetailPage() {
         sku:       selectedVariant?.sku ?? product.sku,
         unit:      selectedVariant?.attributes?.uom ?? product.unit,
       };
+      const safeQuantity = Math.max(moq, quantity);
       if (cartQuantity === 0) {
-        addItem(cartProduct, quantity);
+        addItem(cartProduct, safeQuantity);
         showToast(`${product.name} added to cart`, 'success', { label: 'View Cart', href: '/cart' });
       } else {
-        updateQuantity(product.id, quantity);
+        updateQuantity(product.id, safeQuantity);
         showToast('Quantity updated in cart', 'success', { label: 'View Cart', href: '/cart' });
       }
     } catch {
@@ -120,7 +122,7 @@ export default function ProductDetailPage() {
     const prev = cartQuantity;
     try {
       removeItem(product.id);
-      setQuantity(1);
+      setQuantity(moq);
       showToast(`${product.name} removed from cart`, 'success', {
         label: 'Undo',
         onClick: () => addItem(product, prev),
@@ -327,8 +329,9 @@ export default function ProductDetailPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 p-1 bg-primary-50 rounded-xl border border-primary-200">
                     <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center hover:border-brand-primary hover:text-brand-primary transition-all"
+                      onClick={() => setQuantity(Math.max(moq, quantity - 1))}
+                      disabled={quantity <= moq}
+                      className="w-10 h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center hover:border-brand-primary hover:text-brand-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-neutral-200 disabled:hover:text-inherit"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
