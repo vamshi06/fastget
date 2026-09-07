@@ -233,6 +233,10 @@ function categoryTableRowToProduct(row: any): Product {
     variantCount: 1,
     isFlashSale:  saleActive || undefined,
     saleEndsAt:   saleActive ? new Date(row.sale_ends_at).toISOString() : undefined,
+    saleOriginalPriceRupees: saleActive ? Math.round(priceVal / 100) : undefined,
+    saleMinOrderRupees: saleActive && row.sale_min_order_paise != null
+      ? Math.round(Number(row.sale_min_order_paise) / 100)
+      : undefined,
   };
 }
 
@@ -376,6 +380,7 @@ export interface ActiveFlashSale {
   salePriceRupees: number;
   originalPriceRupees: number;
   saleEndsAt: string; // ISO timestamp
+  minOrderRupees?: number; // cart must reach this (at original prices) to unlock the sale price
 }
 
 /**
@@ -386,7 +391,7 @@ export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
   const sql = getUnpooledClient();
   try {
     const rows = await sql`
-      SELECT product_code, name, brand, image_url, price, sale_price, sale_ends_at
+      SELECT product_code, name, brand, image_url, price, sale_price, sale_ends_at, sale_min_order_paise
       FROM products_catalog_view
       WHERE sale_price IS NOT NULL
         AND NOW() BETWEEN sale_starts_at AND sale_ends_at
@@ -408,6 +413,7 @@ export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
       salePriceRupees:      Math.round(Number(r.sale_price) / 100),
       originalPriceRupees:  Math.round(Number(r.price) / 100),
       saleEndsAt:           new Date(r.sale_ends_at).toISOString(),
+      minOrderRupees:       r.sale_min_order_paise != null ? Math.round(Number(r.sale_min_order_paise) / 100) : undefined,
     };
   } catch (error) {
     logger.error('Products', 'getActiveFlashSale failed', {
@@ -417,43 +423,53 @@ export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
   }
 }
 
+/** Per-product trusted pricing breakdown returned by getTrustedPricingInfo. */
+export interface TrustedPriceInfo {
+  originalPaise: number;
+  salePaise: number | null;
+  saleActive: boolean;
+  minOrderPaise: number | null;
+}
+
 /**
  * Trusted server-side price lookup for checkout (H1).
  *
- * Given the public product ids (product_code), returns the authoritative unit
- * price in RUPEES straight from the catalog — never trust a client-supplied
- * price. Prices are stored in paise and the storefront displays
- * Math.round(paise / 100), so we mirror that rounding exactly to stay
- * consistent with what the shopper saw.
+ * Given the public product ids (product_code), returns the authoritative
+ * original price, sale price (if any), whether the sale is currently active,
+ * and the sale's minimum-order threshold — all straight from the catalog in
+ * PAISE, never trust a client-supplied price. The caller (order-pricing.ts)
+ * decides whether the sale price applies, since that depends on the whole
+ * cart's pre-discount subtotal, not any single line.
  *
  * Reads from products_catalog_view (the same source as GET /api/products), with
  * a fallback to the normalised products table for any codes not found there
- * (e.g. when LEGACY_PRODUCTS_TABLE=1). Codes missing from both are simply absent
- * from the returned map, and the caller must reject them.
+ * (e.g. when LEGACY_PRODUCTS_TABLE=1) — treated as having no active sale.
+ * Codes missing from both are simply absent from the returned map, and the
+ * caller must reject them.
  */
-export async function getTrustedUnitPrices(
+export async function getTrustedPricingInfo(
   productCodes: string[],
-): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+): Promise<Map<string, TrustedPriceInfo>> {
+  const out = new Map<string, TrustedPriceInfo>();
   const codes = Array.from(new Set(productCodes.filter(Boolean)));
   if (codes.length === 0) return out;
 
   const sql = getUnpooledClient();
   try {
     const rows = (await sql.query(
-      `SELECT product_code,
-              CASE
-                WHEN sale_price IS NOT NULL
-                 AND NOW() BETWEEN sale_starts_at AND sale_ends_at
-                THEN sale_price
-                ELSE price
-              END AS price
+      `SELECT product_code, price, sale_price, sale_min_order_paise,
+              (sale_price IS NOT NULL AND NOW() BETWEEN sale_starts_at AND sale_ends_at) AS sale_active
          FROM products_catalog_view
         WHERE product_code = ANY($1::text[])`,
       [codes],
     )) as any[];
     for (const r of rows) {
-      out.set(r.product_code as string, Math.round(Number(r.price) / 100));
+      out.set(r.product_code as string, {
+        originalPaise: Number(r.price),
+        salePaise: r.sale_price != null ? Number(r.sale_price) : null,
+        saleActive: Boolean(r.sale_active),
+        minOrderPaise: r.sale_min_order_paise != null ? Number(r.sale_min_order_paise) : null,
+      });
     }
 
     const missing = codes.filter((c) => !out.has(c));
@@ -466,11 +482,13 @@ export async function getTrustedUnitPrices(
       )) as any[];
       for (const r of legacy) {
         const code = r.product_code as string;
-        if (!out.has(code)) out.set(code, Math.round(Number(r.price) / 100));
+        if (!out.has(code)) {
+          out.set(code, { originalPaise: Number(r.price), salePaise: null, saleActive: false, minOrderPaise: null });
+        }
       }
     }
   } catch (error) {
-    logger.error('Products', 'getTrustedUnitPrices failed', {
+    logger.error('Products', 'getTrustedPricingInfo failed', {
       error: error instanceof Error ? error.message : String(error),
     });
     // Return whatever we have; unmatched codes cause the caller to reject.
@@ -550,13 +568,15 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
           THEN cv.sale_price
           ELSE COALESCE(pv.price_override, p.price)
         END AS effective_price_paise,
+        COALESCE(pv.price_override, p.price) AS original_price_paise,
         pv.mrp_price AS mrp_price_paise,
         COALESCE(pv.moq, 1) AS moq,
         COALESCE(pv.attributes, '{}') AS attributes,
         COALESCE(inv.stock_quantity, 0)    AS stock_quantity,
         COALESCE(inv.reserved_quantity, 0) AS reserved_quantity,
         (cv.sale_price IS NOT NULL AND NOW() BETWEEN cv.sale_starts_at AND cv.sale_ends_at) AS is_flash_sale,
-        cv.sale_ends_at
+        cv.sale_ends_at,
+        cv.sale_min_order_paise
       FROM product_variants pv
       JOIN products p ON p.id = pv.product_id
       LEFT JOIN inventory inv ON inv.variant_id = pv.id
@@ -607,6 +627,12 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       stockStatus,
       isFlashSale:  saleActiveOnDetail || undefined,
       saleEndsAt:   saleActiveOnDetail ? new Date(firstVariantRow.sale_ends_at).toISOString() : undefined,
+      saleOriginalPriceRupees: saleActiveOnDetail
+        ? Math.round(Number(firstVariantRow.original_price_paise) / 100)
+        : undefined,
+      saleMinOrderRupees: saleActiveOnDetail && firstVariantRow.sale_min_order_paise != null
+        ? Math.round(Number(firstVariantRow.sale_min_order_paise) / 100)
+        : undefined,
       sku:          firstVariant?.sku,
       variantId:    firstVariant?.id,
       moq:          firstVariant?.moq ?? 1,
@@ -1090,6 +1116,7 @@ export interface RawProductRow {
   sale_price: number | null;      // paise
   sale_starts_at: string | null;  // ISO timestamp
   sale_ends_at: string | null;    // ISO timestamp
+  sale_min_order_paise: number | null;
 }
 
 /**
@@ -1102,7 +1129,7 @@ export async function getProductRawRow(productCode: string): Promise<RawProductR
   // load and edit inactive/discontinued products too.
   const cols = `product_code, name, brand, description, price, mrp_price, moq, uom,
                 size, colour, image_url, status, category_slug, variant_id, products_id,
-                sale_price, sale_starts_at, sale_ends_at`;
+                sale_price, sale_starts_at, sale_ends_at, sale_min_order_paise`;
   const sub = (tbl: string) =>
     `SELECT ${cols}, '${tbl}' AS source_table FROM ${tbl} WHERE product_code = $1`;
   const query = [
@@ -1140,6 +1167,7 @@ export async function updateProductInCategoryTable(
     salePrice?: number | null;     // paise
     saleStartsAt?: string | null;  // ISO timestamp
     saleEndsAt?: string | null;    // ISO timestamp
+    saleMinOrderPaise?: number | null;
   },
 ): Promise<boolean> {
   if (!VALID_CATEGORY_TABLES.has(tableName) || tableName === 'products_catalog_view') {
@@ -1165,6 +1193,7 @@ export async function updateProductInCategoryTable(
     if ('salePrice'    in updates)         push('sale_price',      updates.salePrice);
     if ('saleStartsAt' in updates)         push('sale_starts_at',  updates.saleStartsAt);
     if ('saleEndsAt'   in updates)         push('sale_ends_at',    updates.saleEndsAt);
+    if ('saleMinOrderPaise' in updates)    push('sale_min_order_paise', updates.saleMinOrderPaise);
 
     if (vals.length === 0) return true;
 

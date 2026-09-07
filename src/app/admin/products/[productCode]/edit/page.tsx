@@ -23,6 +23,7 @@ interface FormData {
   salePrice: string;
   saleStartsAt: string; // datetime-local value, e.g. "2026-08-15T10:57"
   saleEndsAt: string;
+  saleMinOrder: string; // optional min cart value (rupees) to unlock the sale price
 }
 
 /** ISO timestamp -> local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
@@ -46,7 +47,7 @@ export default function EditProductPage() {
   const [formData, setFormData]   = useState<FormData>({
     name: '', brand: '', description: '', price: '', mrpPrice: '',
     moq: '1', uom: '', imageUrl: '', status: 'active', stockQuantity: '0',
-    salePrice: '', saleStartsAt: '', saleEndsAt: '',
+    salePrice: '', saleStartsAt: '', saleEndsAt: '', saleMinOrder: '',
   });
   const [categorySlug, setCategorySlug] = useState('');
   const [loading, setLoading]     = useState(true);
@@ -76,6 +77,7 @@ export default function EditProductPage() {
           salePrice:     d.salePrice !== '' && d.salePrice != null ? String(d.salePrice) : '',
           saleStartsAt:  d.saleStartsAt ? toDatetimeLocal(d.saleStartsAt) : '',
           saleEndsAt:    d.saleEndsAt   ? toDatetimeLocal(d.saleEndsAt)   : '',
+          saleMinOrder:  d.saleMinOrder !== '' && d.saleMinOrder != null ? String(d.saleMinOrder) : '',
         });
         setCategorySlug(d.categorySlug ?? '');
       })
@@ -112,6 +114,10 @@ export default function EditProductPage() {
         setError('Sale end time must be after the start time');
         return;
       }
+      if (formData.saleMinOrder) {
+        const minOrderNum = parseFloat(formData.saleMinOrder);
+        if (isNaN(minOrderNum) || minOrderNum <= 0) { setError('Minimum order value must be greater than 0'); return; }
+      }
     }
 
     setSaving(true);
@@ -130,6 +136,7 @@ export default function EditProductPage() {
         salePrice:     formData.salePrice ? parseFloat(formData.salePrice) : null,
         saleStartsAt:  formData.saleStartsAt ? new Date(formData.saleStartsAt).toISOString() : null,
         saleEndsAt:    formData.saleEndsAt   ? new Date(formData.saleEndsAt).toISOString()   : null,
+        saleMinOrder:  allSale && formData.saleMinOrder ? parseFloat(formData.saleMinOrder) : null,
       };
 
       const res = await fetch(`/admin/api/products/${encodeURIComponent(productCode)}`, {
@@ -255,7 +262,7 @@ export default function EditProductPage() {
             {(formData.salePrice || formData.saleStartsAt || formData.saleEndsAt) && (
               <button
                 type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, salePrice: '', saleStartsAt: '', saleEndsAt: '' }))}
+                onClick={() => setFormData((prev) => ({ ...prev, salePrice: '', saleStartsAt: '', saleEndsAt: '', saleMinOrder: '' }))}
                 disabled={saving}
                 className="normal-case text-[11px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
               >
@@ -309,6 +316,17 @@ export default function EditProductPage() {
               <label className={labelCls}>Sale Ends</label>
               <input type="datetime-local" name="saleEndsAt" value={formData.saleEndsAt} onChange={handleChange}
                 className={inputCls} disabled={saving} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 sm:col-span-1">
+              <label className={labelCls}>Minimum Order Value (₹)</label>
+              <input type="number" name="saleMinOrder" value={formData.saleMinOrder} onChange={handleChange}
+                placeholder="Optional — e.g. 100" min="0" step="0.01" className={inputCls} disabled={saving} />
+              <p className="text-xs text-brand-steel mt-1">
+                Leave blank for no minimum. Otherwise the sale price only applies once the shopper has this much
+                (at regular prices) of OTHER products in their cart — it falls back to the regular price below that.
+              </p>
             </div>
           </div>
           <p className="text-xs text-brand-steel">

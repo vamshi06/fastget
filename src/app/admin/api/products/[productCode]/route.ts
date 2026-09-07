@@ -87,6 +87,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         salePrice:     row.sale_price ? Math.round(row.sale_price / 100) : '',
         saleStartsAt:  row.sale_starts_at ?? '',
         saleEndsAt:    row.sale_ends_at   ?? '',
+        saleMinOrder:  row.sale_min_order_paise ? Math.round(row.sale_min_order_paise / 100) : '',
       },
     });
   } catch (error) {
@@ -149,6 +150,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const salePriceInPaise = salePriceProvided
       ? (salePrice != null ? Math.round(salePrice * 100) : null)
       : undefined;
+    const saleMinOrderProvided = 'saleMinOrder' in body;
+    const saleMinOrder = saleMinOrderProvided
+      ? (isBlank(body.saleMinOrder) ? null : requireNumber(body.saleMinOrder, 'minimum order value', { min: 0.01 }))
+      : undefined;
+    const saleMinOrderInPaise = saleMinOrderProvided
+      ? (saleMinOrder != null ? Math.round(saleMinOrder * 100) : null)
+      : undefined;
 
     // Fetch current row to get source_table and products_id
     const row = await getProductRawRow(productCode);
@@ -174,6 +182,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       throw new ValidationError('Sale price must be less than the regular selling price.');
     }
 
+    // Minimum order value only makes sense alongside an active/scheduled sale —
+    // clear it automatically when the sale itself is being cancelled.
+    const effectiveSaleMinOrderInPaise = !allSaleFields
+      ? null
+      : (saleMinOrderProvided ? saleMinOrderInPaise : undefined);
+
     // Build update payload for category table (prices in paise)
     const catUpdates: Parameters<typeof updateProductInCategoryTable>[2] = {};
     if (name !== undefined) catUpdates.name = name;
@@ -188,6 +202,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (salePriceProvided) catUpdates.salePrice = salePriceInPaise;
     if (saleStartsAtProvided) catUpdates.saleStartsAt = saleStartsAt;
     if (saleEndsAtProvided) catUpdates.saleEndsAt = saleEndsAt;
+    if (effectiveSaleMinOrderInPaise !== undefined) catUpdates.saleMinOrderPaise = effectiveSaleMinOrderInPaise;
 
     const catOk = await updateProductInCategoryTable(row.source_table, productCode, catUpdates);
     if (!catOk) {

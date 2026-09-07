@@ -241,6 +241,11 @@ export default function ProductDetailPage() {
               )}
               <span className="text-brand-slate text-sm mb-0.5">/ {product.unit}</span>
             </div>
+            {product.isFlashSale && product.saleMinOrderRupees != null && product.saleMinOrderRupees > 0 && (
+              <p className="text-xs text-amber-600 font-medium -mt-2">
+                ⚡ Flash price applies once you have {formatCurrency(product.saleMinOrderRupees)}+ of other products in your cart
+              </p>
+            )}
 
             {/* Variant selector */}
             {variants.length > 1 && (

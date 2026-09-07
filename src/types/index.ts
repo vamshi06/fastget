@@ -20,6 +20,11 @@ export interface Product {
   // Flash-sale fields — populated when a limited-time sale_price is active
   isFlashSale?: boolean;
   saleEndsAt?: string; // ISO timestamp
+  // `price` above is already the discounted sale price when isFlashSale is
+  // true. saleOriginalPriceRupees carries the pre-discount price so the cart
+  // can fall back to it when saleMinOrderRupees isn't met.
+  saleOriginalPriceRupees?: number;
+  saleMinOrderRupees?: number; // cart must reach this (at original prices) to unlock the sale price
 }
 
 export type CategoryId =

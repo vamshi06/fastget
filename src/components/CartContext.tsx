@@ -28,9 +28,24 @@ const CartContext = createContext<
       getSubtotal: () => number;
       getConvenienceFee: () => number;
       getTotal: () => number;
+      getPreDiscountSubtotal: (excludeProductId?: string) => number;
+      isFlashSaleEligible: (product: Product) => boolean;
+      getEffectiveUnitPrice: (product: Product) => number;
     }
   | undefined
 >(undefined);
+
+/**
+ * A flash-sale product's `price` is already the discounted sale price (set
+ * at catalog-fetch time). This returns what it would cost WITHOUT the sale,
+ * for the minimum-order check below — must stay in sync with the server's
+ * originalPaise handling in order-pricing.priceOrderFromCatalog.
+ */
+function getOriginalUnitPrice(product: Product): number {
+  return product.isFlashSale && typeof product.saleOriginalPriceRupees === 'number'
+    ? product.saleOriginalPriceRupees
+    : product.price;
+}
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -147,12 +162,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return state.items.reduce((sum, item) => sum + item.quantity, 0);
   }, [state.items]);
 
+  // Cart subtotal at ORIGINAL (pre-discount) prices, optionally excluding one
+  // product's own line (used for the flash-sale minimum-order check below —
+  // "min order ₹100" means ₹100 of OTHER products, not counting the sale
+  // item's own price). Must stay in sync with order-pricing.priceOrderFromCatalog.
+  const getPreDiscountSubtotal = useCallback((excludeProductId?: string) => {
+    return state.items.reduce((sum, item) => {
+      if (excludeProductId && item.product.id === excludeProductId) return sum;
+      return sum + getOriginalUnitPrice(item.product) * item.quantity;
+    }, 0);
+  }, [state.items]);
+
+  const isFlashSaleEligible = useCallback((product: Product) => {
+    if (!product.isFlashSale) return true;
+    if (typeof product.saleMinOrderRupees !== 'number') return true;
+    return getPreDiscountSubtotal(product.id) >= product.saleMinOrderRupees;
+  }, [getPreDiscountSubtotal]);
+
+  // The price this line actually charges — falls back to the original price
+  // when the cart hasn't reached the flash sale's minimum order value yet.
+  const getEffectiveUnitPrice = useCallback((product: Product) => {
+    if (product.isFlashSale && !isFlashSaleEligible(product)) {
+      return getOriginalUnitPrice(product);
+    }
+    return product.price;
+  }, [isFlashSaleEligible]);
+
   const getSubtotal = useCallback(() => {
     return state.items.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
+      (sum, item) => sum + getEffectiveUnitPrice(item.product) * item.quantity,
       0
     );
-  }, [state.items]);
+  }, [state.items, getEffectiveUnitPrice]);
 
   const getConvenienceFee = useCallback(() => {
     const subtotal = getSubtotal();
@@ -176,6 +217,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         getSubtotal,
         getConvenienceFee,
         getTotal,
+        getPreDiscountSubtotal,
+        isFlashSaleEligible,
+        getEffectiveUnitPrice,
       }}
     >
       {children}
@@ -194,6 +238,9 @@ const EMPTY_CART = {
   getSubtotal: () => 0,
   getConvenienceFee: () => 0,
   getTotal: () => 0,
+  getPreDiscountSubtotal: () => 0,
+  isFlashSaleEligible: () => true,
+  getEffectiveUnitPrice: (product: Product) => product.price,
 };
 
 export function useCart() {

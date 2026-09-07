@@ -102,6 +102,12 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
           </div>
         </div>
 
+        {sale.minOrderRupees != null && sale.minOrderRupees > 0 && (
+          <p className="text-[11px] text-white/70 mb-2">
+            Add ₹{sale.minOrderRupees}+ of other products to your cart to unlock this price
+          </p>
+        )}
+
         {/* Countdown + CTA */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">

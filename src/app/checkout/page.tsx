@@ -21,7 +21,7 @@ const ADDRESS_TYPE_LABELS: Record<AddressType, string> = { home: 'Home', work: '
 
 function CheckoutPageContent() {
   const router = useRouter();
-  const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded } = useCart();
+  const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded, getEffectiveUnitPrice } = useCart();
   const { currentUser } = useUser();
   const { showToast } = useToast();
   const { openCheckout } = useRazorpay();
@@ -668,7 +668,7 @@ function CheckoutPageContent() {
                     <span className="text-brand-slate">
                       {item.product.name} × {item.quantity}
                     </span>
-                    <span className="font-medium text-brand-charcoal">{formatCurrency(item.product.price * item.quantity)}</span>
+                    <span className="font-medium text-brand-charcoal">{formatCurrency(getEffectiveUnitPrice(item.product) * item.quantity)}</span>
                   </div>
                 ))}
               </div>

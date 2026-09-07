@@ -18,6 +18,9 @@ export default function CartPage() {
     getTotal,
     clearCart,
     isLoaded,
+    isFlashSaleEligible,
+    getEffectiveUnitPrice,
+    getPreDiscountSubtotal,
   } = useCart();
   const { showToast } = useToast();
 
@@ -109,9 +112,14 @@ export default function CartPage() {
                   <h3 className="font-semibold text-brand-charcoal text-sm leading-snug">{item.product.name}</h3>
                   <p className="text-xs text-brand-slate mb-2 line-clamp-1">{item.product.description}</p>
                   <p className="text-brand-primary font-bold text-sm">
-                    {formatCurrency(item.product.price)}{' '}
+                    {formatCurrency(getEffectiveUnitPrice(item.product))}{' '}
                     <span className="text-brand-steel font-normal">/ {item.product.unit}</span>
                   </p>
+                  {item.product.isFlashSale && !isFlashSaleEligible(item.product) && (
+                    <p className="text-[11px] text-amber-600 font-medium mt-1">
+                      Add {formatCurrency(Math.max(0, (item.product.saleMinOrderRupees ?? 0) - getPreDiscountSubtotal(item.product.id)))} more of other products to unlock the {formatCurrency(item.product.price)} flash price
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex flex-col items-end justify-between flex-shrink-0">
