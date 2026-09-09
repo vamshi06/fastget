@@ -8,9 +8,9 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote } from 'lucide-react';
 import Link from 'next/link';
-import { UserAddress, AddressType } from '@/types';
+import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
 const ADDRESS_TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: string }>> = {
   home: Home,
@@ -29,6 +29,7 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'verifying' | 'failed'>('idle');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
   const errorRef = useRef<HTMLDivElement>(null);
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
@@ -204,7 +205,63 @@ function CheckoutPageContent() {
     );
   }
 
-  const handleRazorpayPayment = async (e: React.FormEvent) => {
+  // Best-effort save of the address entered/edited during checkout — shared
+  // by both the COD and Razorpay success paths.
+  const persistAddressIfRequested = async () => {
+    if (!(isManualEntryActive && saveAddress)) return;
+    try {
+      await fetch('/api/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: newAddressType,
+          street: formData.siteAddress,
+          city: newAddressCity,
+          phone: formatPhoneNumber(formData.customerPhone),
+          landmark: formData.landmark || undefined,
+          isPrimary: savedAddresses.length === 0,
+        }),
+      });
+    } catch {
+      // Address save is best-effort — don't block order confirmation on it
+    }
+  };
+
+  const handlePlaceCodOrder = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          customerPhone: formatPhoneNumber(formData.customerPhone),
+          items: state.items,
+          subtotal: getSubtotal(),
+          convenienceFee: getConvenienceFee(),
+          total: getTotal(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.statusToken) {
+        await persistAddressIfRequested();
+        clearCart();
+        router.push(`/order/${data.statusToken}`);
+      } else {
+        setIsSubmitting(false);
+        const msg = data.error || 'Failed to place order. Please try again.';
+        setError(msg);
+        showToast(msg, 'error');
+      }
+    } catch {
+      setIsSubmitting(false);
+      const msg = 'Something went wrong while placing your order';
+      setError(msg);
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -216,6 +273,11 @@ function CheckoutPageContent() {
 
     if (isManualEntryActive && saveAddress && !newAddressCity.trim()) {
       setError('Please enter a city to save this address');
+      return;
+    }
+
+    if (paymentMethod === 'cod') {
+      await handlePlaceCodOrder();
       return;
     }
 
@@ -269,24 +331,7 @@ function CheckoutPageContent() {
             });
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.statusToken) {
-              if (isManualEntryActive && saveAddress) {
-                try {
-                  await fetch('/api/addresses', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      type: newAddressType,
-                      street: formData.siteAddress,
-                      city: newAddressCity,
-                      phone: formatPhoneNumber(formData.customerPhone),
-                      landmark: formData.landmark || undefined,
-                      isPrimary: savedAddresses.length === 0,
-                    }),
-                  });
-                } catch {
-                  // Address save is best-effort — don't block order confirmation on it
-                }
-              }
+              await persistAddressIfRequested();
               clearCart();
               router.push(`/order/${verifyData.statusToken}`);
             } else {
@@ -346,7 +391,7 @@ function CheckoutPageContent() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleRazorpayPayment} className="card p-6 space-y-6">
+            <form onSubmit={handleSubmitOrder} className="card p-6 space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-brand-primary" />
@@ -640,18 +685,72 @@ function CheckoutPageContent() {
                 </div>
               </div>
 
+              <div className="border-t border-neutral-100 pt-6">
+                <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-brand-primary" />
+                  Payment Method
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <label
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'razorpay'
+                        ? 'border-brand-primary bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                      }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
+                      onChange={() => setPaymentMethod('razorpay')}
+                      className="w-4 h-4 accent-brand-primary"
+                    />
+                    <div>
+                      <p className="font-semibold text-brand-charcoal text-sm">Online Payment</p>
+                      <p className="text-xs text-brand-slate">UPI / Card / Net Banking</p>
+                    </div>
+                  </label>
+                  <label
+                    className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'cod'
+                        ? 'border-brand-primary bg-primary-50'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                      }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                      className="w-4 h-4 accent-brand-primary"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4 text-brand-slate flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
+                        <p className="text-xs text-brand-slate">Pay when your order arrives</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting
-                  ? paymentState === 'processing'
-                    ? 'Complete payment in popup…'
-                    : paymentState === 'verifying'
-                      ? 'Verifying payment…'
-                      : 'Initiating payment…'
-                  : 'Proceed to Pay'}
+                  ? paymentMethod === 'cod'
+                    ? 'Placing order…'
+                    : paymentState === 'processing'
+                      ? 'Complete payment in popup…'
+                      : paymentState === 'verifying'
+                        ? 'Verifying payment…'
+                        : 'Initiating payment…'
+                  : paymentMethod === 'cod'
+                    ? 'Place Order'
+                    : 'Proceed to Pay'}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
             </form>
@@ -688,7 +787,9 @@ function CheckoutPageContent() {
 
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
                 <p className="text-sm text-green-800 font-semibold mb-1">Payment Method</p>
-                <p className="text-sm text-green-700">Online Payment (UPI / Card / Net Banking)</p>
+                <p className="text-sm text-green-700">
+                  {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI / Card / Net Banking)'}
+                </p>
               </div>
 
               {formData.deliveryType === 'urgent' && (

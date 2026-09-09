@@ -76,6 +76,12 @@ export interface OrderItem {
   price: number;
 }
 
+/** One entry in an order's status timeline — when it entered a given status. */
+export interface StatusHistoryEntry {
+  status: OrderStatus;
+  timestamp: string; // ISO 8601
+}
+
 export interface Order {
   id: string;
   createdAt: string;
@@ -96,6 +102,10 @@ export interface Order {
   statusToken: string;
   updateToken: string;
   userId?: string;
+  // Timeline of status changes, oldest first (e.g. received -> eta_assigned -> ...).
+  // Populated by the DB layer (createOrder seeds it, updateOrderStatus appends to
+  // it) — undefined only on an in-memory Order built just before its first save.
+  statusHistory?: StatusHistoryEntry[];
 }
 
 export interface OrderFormData {

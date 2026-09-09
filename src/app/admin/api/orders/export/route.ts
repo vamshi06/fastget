@@ -1,5 +1,5 @@
 import { getRecentOrders, getOrdersByStatus } from '@/lib/db';
-import { Order, OrderStatus } from '@/types';
+import { Order, OrderStatus, PaymentMethod } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { requireRole } from '@/lib/auth';
@@ -28,6 +28,14 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       );
     }
+    const paymentFilter = request.nextUrl.searchParams.get('payment') || 'all';
+    if (paymentFilter !== 'all' && paymentFilter !== 'cod' && paymentFilter !== 'razorpay') {
+      return NextResponse.json(
+        { error: 'payment must be "all", "cod", or "razorpay".' },
+        { status: 400 },
+      );
+    }
+
     const nameFilter = (request.nextUrl.searchParams.get('name') || '').slice(0, 100);
 
     // Invalid dates would make every comparison false and silently export an
@@ -51,7 +59,7 @@ export async function GET(request: NextRequest) {
       toDate.setHours(23, 59, 59, 999);
     }
 
-    logger.info('API', 'GET /admin/api/orders/export', { statusFilter, nameFilter: nameFilter || undefined });
+    logger.info('API', 'GET /admin/api/orders/export', { statusFilter, paymentFilter, nameFilter: nameFilter || undefined });
 
     // Fetch orders from Neon database
     let orders: Order[];
@@ -63,6 +71,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply filters
+    if (paymentFilter !== 'all') {
+      orders = orders.filter((order) => order.paymentMethod === (paymentFilter as PaymentMethod));
+    }
+
     if (nameFilter) {
       const searchTerm = nameFilter.toLowerCase();
       orders = orders.filter((order) => {
@@ -117,6 +129,7 @@ function generateCSV(orders: Order[]): string {
     'Convenience Fee',
     'Total',
     'Payment Method',
+    'Payment Status',
     'Status',
     'ETA',
   ];
@@ -141,6 +154,9 @@ function generateCSV(orders: Order[]): string {
       order.convenienceFee.toFixed(2),
       order.total.toFixed(2),
       escapeCSV(order.paymentMethod),
+      escapeCSV(
+        order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentStatus === 'captured' ? 'Paid' : 'Pending'
+      ),
       escapeCSV(order.status),
       escapeCSV(order.eta || ''),
     ].join(',');

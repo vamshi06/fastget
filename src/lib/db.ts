@@ -86,6 +86,7 @@ export interface DbOrder {
   payment_status: string | null;
   payment_captured_at: Date | null;
   user_id: string | null;
+  status_history: { status: OrderStatus; timestamp: string }[] | null;
 }
 
 /**
@@ -116,9 +117,16 @@ export async function initializeDatabase(): Promise<void> {
         eta TEXT,
         status_token VARCHAR(32) UNIQUE NOT NULL,
         update_token VARCHAR(32) UNIQUE NOT NULL,
-        user_id UUID
+        user_id UUID,
+        status_history JSONB NOT NULL DEFAULT '[]'::jsonb
       )
     `;
+
+    // Migration: add status_history to orders tables created before this column
+    // existed. Backend code always appends to it, so old rows would otherwise
+    // have a NULL/missing history — the DEFAULT here covers that on ALTER too
+    // (Postgres backfills the default for existing rows).
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS status_history JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
     // Create indexes for faster lookups
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_status_token ON orders(status_token)`;
@@ -571,18 +579,22 @@ export async function initializeAllTables(): Promise<void> {
  */
 export async function createOrder(order: Order): Promise<boolean> {
   const sql = getClient();
+  // Seed the status timeline with the order's initial status (normally
+  // 'received') so the admin-facing history always has a starting point.
+  const initialHistory = JSON.stringify([{ status: order.status, timestamp: order.createdAt }]);
   try {
     await sql`
       INSERT INTO orders (
         id, created_at, customer_name, customer_phone, site_address, landmark,
         delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
-        payment_method, status, eta, status_token, update_token, user_id
+        payment_method, status, eta, status_token, update_token, user_id, status_history
       ) VALUES (
         ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
         ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
         ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
         ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
-        ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null}
+        ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null},
+        ${initialHistory}
       )
     `;
     logger.info('DB', 'Order created successfully', { orderId: order.id });
@@ -606,13 +618,14 @@ export async function createOrder(order: Order): Promise<boolean> {
           INSERT INTO orders (
             id, created_at, customer_name, customer_phone, site_address, landmark,
             delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
-            payment_method, status, eta, status_token, update_token, user_id
+            payment_method, status, eta, status_token, update_token, user_id, status_history
           ) VALUES (
             ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
             ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
             ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
             ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
-            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${null}
+            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${null},
+            ${initialHistory}
           )
         `;
         logger.info('DB', 'Order created successfully (unattributed)', { orderId: order.id });
@@ -637,13 +650,14 @@ export async function createOrder(order: Order): Promise<boolean> {
           INSERT INTO orders (
             id, created_at, customer_name, customer_phone, site_address, landmark,
             delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
-            payment_method, status, eta, status_token, update_token, user_id
+            payment_method, status, eta, status_token, update_token, user_id, status_history
           ) VALUES (
             ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
             ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
             ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
             ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
-            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null}
+            ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null},
+            ${initialHistory}
           )
         `;
         return true;
@@ -690,13 +704,13 @@ export async function getOrderByStatusToken(token: string): Promise<Order | null
  * @param {string} orderId
  * @param {OrderStatus} newStatus
  * @param {string} [eta]
- * @returns {Promise<{success: boolean, error?: string, orderId?: string}>}
+ * @returns {Promise<{success: boolean, error?: string, orderId?: string, changedAt?: string}>}
  */
 export async function updateOrderStatus(
   orderId: string,
   newStatus: OrderStatus,
   eta?: string
-): Promise<{ success: boolean; error?: string; orderId?: string }> {
+): Promise<{ success: boolean; error?: string; orderId?: string; changedAt?: string }> {
   try {
     // Authorization is handled by the route (admin session) — no shared PIN.
     // Fetch current order to validate transition.
@@ -718,18 +732,23 @@ export async function updateOrderStatus(
     // Use unpooled connection for writes to ensure consistency
     const sqlConn = getUnpooledClient();
 
+    // Recorded once so the appended history entry and the returned changedAt
+    // (used by the API response) refer to the exact same instant.
+    const changedAt = new Date().toISOString();
+    const historyAppend = JSON.stringify([{ status: newStatus, timestamp: changedAt }]);
+
     let result;
     if (eta) {
       result = await sqlConn`
         UPDATE orders
-        SET status = ${newStatus}, eta = ${eta}
+        SET status = ${newStatus}, eta = ${eta}, status_history = status_history || ${historyAppend}::jsonb
         WHERE id = ${orderId} AND status = ${currentOrder.status}
         RETURNING id
       `;
     } else {
       result = await sqlConn`
         UPDATE orders
-        SET status = ${newStatus}
+        SET status = ${newStatus}, status_history = status_history || ${historyAppend}::jsonb
         WHERE id = ${orderId} AND status = ${currentOrder.status}
         RETURNING id
       `;
@@ -740,7 +759,7 @@ export async function updateOrderStatus(
       return { success: false, error: 'Order status changed by another agent. Please refresh.' };
     }
 
-    return { success: true, orderId: currentOrder.id };
+    return { success: true, orderId: currentOrder.id, changedAt };
   } catch (error) {
     logger.error('DB', 'Failed to update order status', { error: error instanceof Error ? error.message : String(error) });
     return { success: false, error: 'Database error' };
@@ -845,6 +864,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     statusToken: dbOrder.status_token,
     updateToken: dbOrder.update_token,
     userId: dbOrder.user_id || undefined,
+    statusHistory: dbOrder.status_history || [],
   };
 }
 
@@ -899,9 +919,10 @@ export async function cancelOrderByStatusToken(
       return { cancelled: false, reason: 'Order cannot be cancelled once it is out for delivery' };
     }
 
+    const historyAppend = JSON.stringify([{ status: 'cancelled', timestamp: new Date().toISOString() }]);
     const result = await sql`
       UPDATE orders
-      SET status = 'cancelled'
+      SET status = 'cancelled', status_history = status_history || ${historyAppend}::jsonb
       WHERE LOWER(status_token) = LOWER(${statusToken})
         AND status = ${row.status}
       RETURNING id

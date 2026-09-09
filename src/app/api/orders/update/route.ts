@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
     logger.info('Orders', 'Order status updated', { orderId: result.orderId, newStatus: status });
     logger.api('POST', '/api/orders/update', 200, Date.now() - start);
 
-    // Return updated data directly — avoids re-fetching from potentially stale replica
+    // Return updated data directly — avoids re-fetching from potentially stale replica.
+    // updatedAt comes from the DB layer so it matches the timestamp recorded in
+    // status_history exactly, rather than a separately-taken JS timestamp.
     return NextResponse.json(
       {
         success: true,
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
           id: result.orderId,
           status: status,
           eta: eta || null,
-          updatedAt: new Date().toISOString(),
+          updatedAt: result.changedAt || new Date().toISOString(),
         },
       },
       {

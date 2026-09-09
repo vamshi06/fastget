@@ -2,8 +2,9 @@ import { getOrderById } from '@/lib/db';
 import { getProductCodeByVariantSku } from '@/lib/products';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS } from '@/types';
+import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS, StatusHistoryEntry } from '@/types';
 import { requireAdminPage } from '@/lib/auth';
+import { formatDuration } from '@/lib/utils';
 import { DeleteOrderButton } from './DeleteOrderButton';
 
 interface OrderDetailPageProps {
@@ -44,6 +45,21 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     delivered: 'bg-green-100 border-green-300 text-green-800',
     cancelled: 'bg-red-100 border-red-300 text-red-800',
   };
+
+  // Orders written before status_history existed have an empty array — fall
+  // back to a single 'received' entry at created_at so the timeline still
+  // renders something sensible instead of looking broken.
+  const timeline: StatusHistoryEntry[] =
+    order.statusHistory && order.statusHistory.length > 0
+      ? order.statusHistory
+      : [{ status: order.status, timestamp: order.createdAt }];
+
+  const isTerminal = order.status === 'delivered' || order.status === 'cancelled';
+  const firstEntryTime = new Date(timeline[0].timestamp).getTime();
+  const lastEntryTime = new Date(timeline[timeline.length - 1].timestamp).getTime();
+  // Total time the order has taken so far: from first entry to either its
+  // final status (delivered/cancelled) or now, if it's still in progress.
+  const totalDurationMs = (isTerminal ? lastEntryTime : Date.now()) - firstEntryTime;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -202,6 +218,57 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <span className="text-2xl font-black text-brand-primary">₹{order.total.toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          {/* Status Timeline */}
+          <div className="card p-6 animate-in fade-in slide-in-from-right-2 duration-500 delay-125">
+            <div className="flex items-center justify-between mb-5 gap-2">
+              <h3 className="text-lg font-bold text-brand-charcoal">Status Timeline</h3>
+              <span className="text-xs font-bold text-brand-primary bg-primary-50 px-3 py-1 rounded-full whitespace-nowrap">
+                {isTerminal ? 'Total time' : 'Elapsed'}: {formatDuration(totalDurationMs)}
+              </span>
+            </div>
+            <ol>
+              {timeline.map((entry, index) => {
+                const entryDate = new Date(entry.timestamp);
+                const isLast = index === timeline.length - 1;
+                const stageDurationMs =
+                  index > 0 ? entryDate.getTime() - new Date(timeline[index - 1].timestamp).getTime() : null;
+
+                return (
+                  <li
+                    key={`${entry.status}-${entry.timestamp}`}
+                    className={`flex gap-3 pl-1.5 ${isLast ? '' : 'border-l-2 border-neutral-200 pb-4'}`}
+                  >
+                    <span
+                      className={`-ml-[7px] mt-1 w-3 h-3 rounded-full flex-shrink-0 border-2 ${
+                        isLast ? 'bg-brand-primary border-brand-primary' : 'bg-white border-neutral-300'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <div className="pb-4">
+                      <p className="font-bold text-brand-charcoal text-sm">{ORDER_STATUS_LABELS[entry.status]}</p>
+                      <p className="text-xs font-mono text-brand-slate mt-0.5">
+                        {entryDate.toLocaleString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                      {stageDurationMs !== null && (
+                        <p className="text-xs text-brand-steel mt-0.5">
+                          {formatDuration(stageDurationMs)} after previous step
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+            {!isTerminal && (
+              <p className="text-xs text-brand-slate italic -mt-2">Order is still in progress — timer is running.</p>
+            )}
           </div>
 
           {/* Timestamps */}

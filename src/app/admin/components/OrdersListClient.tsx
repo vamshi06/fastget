@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
+import { Order, OrderStatus, PaymentMethod, ORDER_STATUS_LABELS } from '@/types';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -17,6 +17,9 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
   const [orders, setOrders] = useState(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
     (searchParams.get('status') as OrderStatus | 'all') || 'all'
+  );
+  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'all'>(
+    (searchParams.get('payment') as PaymentMethod | 'all') || 'all'
   );
   const [nameFilter, setNameFilter] = useState(searchParams.get('name') || '');
   const [dateFromFilter, setDateFromFilter] = useState(searchParams.get('dateFrom') || '');
@@ -42,6 +45,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
 
   const filteredOrders = orders.filter((order) => {
     if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+    if (paymentFilter !== 'all' && order.paymentMethod !== paymentFilter) return false;
     if (nameFilter) {
       const searchTerm = nameFilter.toLowerCase();
       const matchesName = order.customerName.toLowerCase().includes(searchTerm);
@@ -64,6 +68,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
 
   const handleReset = () => {
     setStatusFilter('all');
+    setPaymentFilter('all');
     setNameFilter('');
     setDateFromFilter('');
     setDateToFilter('');
@@ -91,6 +96,21 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
               <option value="out_for_delivery">Out for Delivery</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+              Payment Method
+            </label>
+            <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value as PaymentMethod | 'all')}
+              className={inputCls}
+            >
+              <option value="all">All Payment Methods</option>
+              <option value="cod">Cash on Delivery</option>
+              <option value="razorpay">Paid Online</option>
             </select>
           </div>
 
@@ -147,7 +167,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
             Orders <span className="text-brand-primary">({filteredOrders.length})</span>
           </h3>
           <Link
-            href={`/admin/api/orders/export?status=${statusFilter}&name=${nameFilter}&dateFrom=${dateFromFilter}&dateTo=${dateToFilter}`}
+            href={`/admin/api/orders/export?status=${statusFilter}&payment=${paymentFilter}&name=${nameFilter}&dateFrom=${dateFromFilter}&dateTo=${dateToFilter}`}
             className="btn-primary text-sm py-2"
           >
             Export CSV
@@ -162,6 +182,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Payment</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Action</th>
               </tr>
@@ -192,6 +213,9 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
                       ₹{order.total.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
+                      <PaymentBadge order={order} />
+                    </td>
+                    <td className="px-6 py-4">
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="px-6 py-4">
@@ -214,7 +238,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-brand-slate font-medium">
+                  <td colSpan={7} className="px-6 py-12 text-center text-brand-slate font-medium">
                     No orders found
                   </td>
                 </tr>
@@ -234,6 +258,31 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
         />
       )}
     </div>
+  );
+}
+
+function PaymentBadge({ order }: { order: Order }) {
+  if (order.paymentMethod === 'cod') {
+    return (
+      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-200 group-hover:scale-105">
+        COD
+      </span>
+    );
+  }
+
+  // Razorpay orders are only ever persisted once payment is captured (see
+  // /api/payment/verify-payment) — payment_status momentarily null right
+  // after that write is the only case that isn't "Paid", so it's labelled
+  // Pending rather than assumed captured.
+  const captured = order.paymentStatus === 'captured';
+  return (
+    <span
+      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${
+        captured ? 'bg-green-100 text-green-800 border-green-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      }`}
+    >
+      {captured ? 'Paid' : 'Payment Pending'}
+    </span>
   );
 }
 

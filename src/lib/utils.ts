@@ -139,6 +139,23 @@ export function formatTime(dateString: string): string {
   });
 }
 
+/** Format a millisecond duration as a short human string, e.g. "1d 2h", "3h 15m", "42m". */
+export function formatDuration(ms: number): string {
+  const totalMinutes = Math.max(0, Math.round(ms / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  // Always show minutes when nothing bigger is shown, even if 0 (e.g. "0m").
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+
+  // Cap at two units so "1d 2h 5m" reads as "1d 2h" rather than getting noisy.
+  return parts.slice(0, 2).join(' ');
+}
+
 export function estimateDeliveryTime(): string {
   const now = new Date();
   const minMinutes = 30;
