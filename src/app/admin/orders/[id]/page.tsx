@@ -1,4 +1,5 @@
 import { getOrderById } from '@/lib/db';
+import { getProductCodeByVariantSku } from '@/lib/products';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS } from '@/types';
@@ -18,6 +19,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   if (!order) {
     notFound();
   }
+
+  // Resolve each line item's variant SKU to its product code so admins can
+  // click through to the product's details page. Items with no matching
+  // variant (e.g. discontinued products, legacy Google Sheets orders)
+  // resolve to null and render without a link.
+  const itemProductCodes = await Promise.all(
+    order.items.map((item) => getProductCodeByVariantSku(item.sku)),
+  );
 
   const createdDate = new Date(order.createdAt);
   const formattedDate = createdDate.toLocaleDateString('en-IN', {
@@ -130,25 +139,50 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <div className="card p-6 animate-in fade-in slide-in-from-left-2 duration-500 delay-250">
             <h3 className="text-lg font-bold text-brand-charcoal mb-5">Order Items</h3>
             <div className="space-y-0">
-              {order.items.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-start justify-between py-4 px-3 border-b border-neutral-100 last:border-0 hover:bg-primary-50 transition-colors duration-200 rounded-xl"
-                  style={{
-                    animation: `fadeInUp 0.5s ease-out ${250 + index * 50}ms forwards`,
-                    opacity: 0,
-                  }}
-                >
-                  <div className="flex-1">
-                    <p className="font-bold text-brand-charcoal">{item.name}</p>
-                    <p className="text-xs text-brand-steel font-mono">SKU: {item.sku}</p>
+              {order.items.map((item, index) => {
+                const productCode = itemProductCodes[index];
+                const itemContent = (
+                  <>
+                    <div className="flex-1">
+                      <p className="font-bold text-brand-charcoal">
+                        {item.name}
+                        {productCode && (
+                          <span className="ml-2 text-xs font-semibold text-brand-primary align-middle">View product →</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-brand-steel font-mono">SKU: {item.sku}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-brand-slate font-medium">Qty: <span className="font-bold text-brand-charcoal">{item.quantity}</span></p>
+                      <p className="font-bold text-brand-charcoal">₹{item.price.toFixed(2)}</p>
+                    </div>
+                  </>
+                );
+
+                const rowClassName =
+                  'flex items-start justify-between py-4 px-3 border-b border-neutral-100 last:border-0 hover:bg-primary-50 transition-colors duration-200 rounded-xl';
+                const rowStyle = {
+                  animation: `fadeInUp 0.5s ease-out ${250 + index * 50}ms forwards`,
+                  opacity: 0,
+                };
+
+                return productCode ? (
+                  <Link
+                    key={index}
+                    href={`/product/${productCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={rowClassName}
+                    style={rowStyle}
+                  >
+                    {itemContent}
+                  </Link>
+                ) : (
+                  <div key={index} className={rowClassName} style={rowStyle}>
+                    {itemContent}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-brand-slate font-medium">Qty: <span className="font-bold text-brand-charcoal">{item.quantity}</span></p>
-                    <p className="font-bold text-brand-charcoal">₹{item.price.toFixed(2)}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

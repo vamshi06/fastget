@@ -992,6 +992,32 @@ export async function getVariantBySku(sku: string): Promise<ProductVariant | nul
 }
 
 /**
+ * Given a variant SKU (e.g. as stored on an order line item), resolve the
+ * public product code used in product URLs (/product/[id],
+ * /admin/products/[productCode]/edit). Falls back to the product's UUID for
+ * legacy rows without a product_code. Returns null if the SKU has no
+ * matching variant (e.g. discontinued or a legacy Google Sheets order).
+ */
+export async function getProductCodeByVariantSku(sku: string): Promise<string | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT COALESCE(p.product_code, p.id::text) AS product_code
+      FROM product_variants pv
+      JOIN products p ON p.id = pv.product_id
+      WHERE pv.sku = ${sku}
+      LIMIT 1
+    `;
+
+    if (result.length === 0) return null;
+    return (result[0] as { product_code: string }).product_code;
+  } catch (error) {
+    logger.error('Products', 'Failed to resolve product code by variant SKU', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
  * Get all variants for a product.
  */
 export async function getProductVariants(productId: string): Promise<ProductVariant[]> {
