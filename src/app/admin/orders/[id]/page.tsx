@@ -36,6 +36,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    // This page renders on the server (Vercel functions run in UTC), so the
+    // timezone must be pinned explicitly — 'en-IN' only sets formatting
+    // conventions, not the clock. Without this, times were off by +5:30.
+    timeZone: 'Asia/Kolkata',
   });
 
   const statusColors: Record<string, string> = {
@@ -254,6 +258,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           month: 'short',
                           hour: '2-digit',
                           minute: '2-digit',
+                          timeZone: 'Asia/Kolkata',
                         })}
                       </p>
                       {stageDurationMs !== null && (
