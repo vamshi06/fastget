@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState, useRef } from 'react';
 import { CartItem, Product } from '@/types';
+import { useUser } from './UserContext';
 
 interface CartState {
   items: CartItem[];
@@ -14,6 +15,7 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; payload: { productId: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number } }
   | { type: 'REPLACE_CART'; payload: CartState }
+  | { type: 'MERGE_SERVER_CART'; payload: { items: CartItem[] } }
   | { type: 'CLEAR_CART' };
 
 const CartContext = createContext<
@@ -96,7 +98,26 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     
     case 'REPLACE_CART':
       return action.payload;
-    
+
+    // Combines the cart saved on the account with whatever is already in this
+    // browser's cart (e.g. items added before logging in), summing quantities
+    // for products present in both rather than letting one side clobber the other.
+    case 'MERGE_SERVER_CART': {
+      const merged = [...state.items];
+      for (const serverItem of action.payload.items) {
+        const existingIndex = merged.findIndex(item => item.product.id === serverItem.product.id);
+        if (existingIndex >= 0) {
+          merged[existingIndex] = {
+            ...merged[existingIndex],
+            quantity: merged[existingIndex].quantity + serverItem.quantity,
+          };
+        } else {
+          merged.push(serverItem);
+        }
+      }
+      return { ...state, items: merged };
+    }
+
     case 'CLEAR_CART':
       return { ...state, items: [] };
     
@@ -112,6 +133,10 @@ const CONVENIENCE_FEE_PERCENTAGE = 0;
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
   const [isLoaded, setIsLoaded] = useState(false);
+  const { currentUser, isLoaded: userIsLoaded } = useUser();
+  // Tracks which logged-in user's saved cart we've already fetched and merged
+  // in, so it happens once per login rather than on every render/cart change.
+  const mergedForUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -141,6 +166,57 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.warn('Failed to save cart to localStorage:', error);
     }
   }, [isLoaded, state]);
+
+  // On login, fetch this account's saved cart and merge it into whatever is
+  // already in the browser (e.g. items added as a guest). Runs once per login
+  // — mergedForUserIdRef guards against re-fetching on every render/cart change.
+  useEffect(() => {
+    if (!isLoaded || !userIsLoaded) return;
+
+    if (!currentUser) {
+      mergedForUserIdRef.current = null;
+      return;
+    }
+    if (mergedForUserIdRef.current === currentUser.id) return;
+    mergedForUserIdRef.current = currentUser.id;
+
+    let cancelled = false;
+    fetch('/api/cart', { cache: 'no-store' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data) return;
+        const serverItems: CartItem[] = Array.isArray(data.items) ? data.items : [];
+        if (serverItems.length > 0) {
+          dispatch({ type: 'MERGE_SERVER_CART', payload: { items: serverItems } });
+        }
+      })
+      .catch(error => {
+        console.warn('Failed to restore saved cart:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, userIsLoaded, currentUser]);
+
+  // Keep the account's saved cart in sync with local changes, once the
+  // above merge has completed for this login (so we never overwrite the
+  // saved cart with a pre-merge, guest-only snapshot).
+  useEffect(() => {
+    if (!isLoaded || !currentUser || mergedForUserIdRef.current !== currentUser.id) return;
+
+    const timeout = setTimeout(() => {
+      fetch('/api/cart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: state.items }),
+      }).catch(error => {
+        console.warn('Failed to save cart:', error);
+      });
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [isLoaded, currentUser, state]);
 
   const addItem = useCallback((product: Product, quantity: number) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });

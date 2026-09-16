@@ -1,5 +1,5 @@
 import { neon, neonConfig } from '@neondatabase/serverless';
-import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS } from '@/types';
+import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS, CartItem } from '@/types';
 import { logger } from '@/lib/logger';
 import { REVIEW_EDIT_WINDOW_MINUTES } from '@/lib/reviewPolicy';
 
@@ -537,6 +537,65 @@ export async function addUserIdToOrders(): Promise<void> {
 }
 
 /**
+ * Initialize carts table for server-side persistence of a logged-in user's
+ * shopping cart, so it is restored on login on any device.
+ */
+export async function initializeCartsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS carts (
+        user_id UUID PRIMARY KEY,
+        items JSONB NOT NULL DEFAULT '[]',
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_carts_user_id
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `;
+    logger.info('DB', 'Carts table initialized successfully');
+  } catch (error) {
+    logger.error('DB', 'Failed to initialize carts table', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+/**
+ * Get a user's saved cart items (product snapshot + quantity), as stored by saveCart().
+ */
+export async function getCartByUserId(userId: string): Promise<CartItem[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT items FROM carts WHERE user_id = ${userId}
+    `;
+    const items = result[0]?.items;
+    return Array.isArray(items) ? (items as CartItem[]) : [];
+  } catch (error) {
+    logger.error('DB', 'Failed to get cart', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Save (replace) a user's cart items.
+ */
+export async function saveCart(userId: string, items: CartItem[]): Promise<boolean> {
+  const sql = getClient();
+  try {
+    await sql`
+      INSERT INTO carts (user_id, items, updated_at)
+      VALUES (${userId}, ${JSON.stringify(items)}, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id) DO UPDATE
+        SET items = ${JSON.stringify(items)}, updated_at = CURRENT_TIMESTAMP
+    `;
+    return true;
+  } catch (error) {
+    logger.error('DB', 'Failed to save cart', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/**
  * Initialize all tables for Phase 1 and Phase 2.
  * Safe to call multiple times.
  */
@@ -555,6 +614,7 @@ export async function initializeAllTables(): Promise<void> {
     
     // Phase 4: User Preferences
     await initializeWishlistsTable();
+    await initializeCartsTable();
 
     // Orders table (with user_id support)
     await initializeDatabase();

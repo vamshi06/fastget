@@ -93,7 +93,7 @@ export default function CartPage() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-4 min-w-0">
             {state.items.map((item) => (
               <div key={item.product.id} className="card p-4 flex gap-4 min-w-0 overflow-hidden">
                 {/* Product image */}
@@ -175,7 +175,7 @@ export default function CartPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 min-w-0">
             <div className="card p-6 sticky top-24">
               <h2 className="text-lg font-bold text-brand-charcoal mb-5">Order Summary</h2>
 

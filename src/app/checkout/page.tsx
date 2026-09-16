@@ -390,7 +390,7 @@ function CheckoutPageContent() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <form onSubmit={handleSubmitOrder} className="card p-6 space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
@@ -757,7 +757,7 @@ function CheckoutPageContent() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 min-w-0">
             <div className="card p-6 sticky top-24">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">Order Summary</h2>
 
