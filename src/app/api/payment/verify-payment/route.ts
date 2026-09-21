@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
 import { confirmOrderPayment, deleteOrder } from '@/lib/payment-db';
 import { verifyOrderToken } from '@/lib/order-token';
-import { createOrder } from '@/lib/db';
+import { createOrder, debitCoins } from '@/lib/db';
 import { generateUUID, generateToken } from '@/lib/utils';
 import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
 import { Order } from '@/types';
@@ -142,6 +142,20 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Payment', 'Payment verified and order created', { orderId, razorpay_payment_id });
+
+    // Debit the coins reserved at create-order time now that the order is
+    // confirmed paid & saved. Best-effort — a debit failure here is a
+    // reconciliation issue to log, not a reason to fail the (already paid) order.
+    if (orderData.userId && orderData.coinsRedeemed && orderData.coinsRedeemed > 0) {
+      const debited = await debitCoins(orderData.userId, orderData.coinsRedeemed, orderId);
+      if (!debited) {
+        logger.error('Payment', 'verify-payment — coin debit failed after order creation', {
+          orderId,
+          userId: orderData.userId,
+          coinsRedeemed: orderData.coinsRedeemed,
+        });
+      }
+    }
 
     // Best-effort staff alert (Telegram + email) — never blocks/fails the response.
     await notifyStaffOfNewOrder(order);

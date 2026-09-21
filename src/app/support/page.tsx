@@ -17,15 +17,15 @@ export default function SupportPage() {
       <LegalSection heading="Get in touch">
         <div className="space-y-3">
           <a
-            href="mailto:support@elemantra.in"
+            href="mailto:sukhmeet.bedi@elemantra.in"
             className="flex items-center gap-3 text-brand-charcoal hover:text-brand-primary transition-colors"
           >
             <Mail className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            support@elemantra.in
+            sukhmeet.bedi@elemantra.in
           </a>
           <div className="flex items-center gap-3 text-brand-charcoal">
             <Phone className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            +91 9167119131
+            +91 8847777020
           </div>
         </div>
         <p className="mt-3">

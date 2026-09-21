@@ -8,8 +8,7 @@ export default function TermsPage() {
       <LegalSection heading="1. Acceptance of terms">
         <p>
           By creating an account or placing an order on FastGet (the
-          &ldquo;Service&rdquo;), operated by Elemantra (&ldquo;we&rdquo;,
-          &ldquo;us&rdquo;), you agree to these Terms of Service. If you do not
+          &ldquo;Service&rdquo;), you agree to these Terms of Service. If you do not
           agree, please do not use the Service.
         </p>
       </LegalSection>
@@ -29,10 +28,10 @@ export default function TermsPage() {
           You are responsible for keeping your password confidential and for all
           activity under your account. Notify us immediately at{" "}
           <a
-            href="mailto:support@elemantra.in"
+            href="mailto:sukhmeet.bedi@elemantra.in"
             className="text-brand-primary font-medium"
           >
-            support@elemantra.in
+            sukhmeet.bedi@elemantra.in
           </a>{" "}
           if you suspect unauthorized use.
         </p>
@@ -118,12 +117,12 @@ export default function TermsPage() {
         <p>
           Questions about these terms? Email{" "}
           <a
-            href="mailto:support@elemantra.in"
+            href="mailto:sukhmeet.bedi@elemantra.in"
             className="text-brand-primary font-medium"
           >
-            support@elemantra.in
+            sukhmeet.bedi@elemantra.in
           </a>{" "}
-          or call +91 9167119131. Elemantra, Office no - 17, 2nd Floor,
+          or call +91 8847777020. FastGet, Office no - 17, 2nd Floor,
           Bhavan&apos;s Campus, Sardar Patel Technology Business Incubator, Old
           D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058.
         </p>

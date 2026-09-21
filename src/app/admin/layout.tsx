@@ -1,10 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BackOfficeSidebarNav } from '@/components/BackOfficeSidebarNav';
+import { getSession } from '@/lib/auth';
 
 export const metadata: Metadata = { title: 'FastGet Admin Panel' };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+
+  // Not an authenticated admin (e.g. on /admin/login, or before a page-level
+  // redirect kicks in) — don't leak the sidebar nav to logged-out visitors.
+  if (!session || session.role !== 'admin') {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-screen bg-brand-fog">
       {/* Sidebar */}

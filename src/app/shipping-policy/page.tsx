@@ -27,7 +27,7 @@ export default function ShippingPolicyPage() {
 
       <LegalSection heading="5. Questions">
         <p>
-          Contact <a href="mailto:support@elemantra.in" className="text-brand-primary font-medium">support@elemantra.in</a> for any delivery questions.
+          Contact <a href="mailto:sukhmeet.bedi@elemantra.in" className="text-brand-primary font-medium">sukhmeet.bedi@elemantra.in</a> for any delivery questions.
         </p>
       </LegalSection>
     </LegalPageLayout>

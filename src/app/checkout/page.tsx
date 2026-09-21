@@ -8,7 +8,7 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
@@ -31,6 +31,15 @@ function CheckoutPageContent() {
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'verifying' | 'failed'>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
   const errorRef = useRef<HTMLDivElement>(null);
+
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [redeemCoins, setRedeemCoins] = useState(false);
+  const [coinsToRedeem, setCoinsToRedeem] = useState(0);
+
+  // How many coins can actually be applied — capped by both balance and the
+  // order's own value (server re-validates both; this is just for display).
+  const maxRedeemable = Math.min(coinBalance, getTotal());
+  const coinDiscount = redeemCoins ? Math.min(coinsToRedeem, maxRedeemable) : 0;
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
   useEffect(() => {
@@ -102,6 +111,18 @@ function CheckoutPageContent() {
       customerPhone: prev.customerPhone || addr.phone,
     }));
   };
+
+  // Fetch the user's coin balance once on mount (login-gated page, so
+  // currentUser is stable by the time this runs).
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/coins/balance', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   // Fetch saved addresses and auto-fill from primary on mount
   useEffect(() => {
@@ -239,7 +260,8 @@ function CheckoutPageContent() {
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
-          total: getTotal(),
+          total: getTotal() - coinDiscount,
+          coinsToRedeem: coinDiscount,
         }),
       });
       const data = await res.json();
@@ -281,6 +303,11 @@ function CheckoutPageContent() {
       return;
     }
 
+    if (coinDiscount >= getTotal()) {
+      setError('Your order is fully covered by coins. Please select Cash on Delivery to place it.');
+      return;
+    }
+
     setIsSubmitting(true);
     setPaymentState('processing');
 
@@ -295,7 +322,8 @@ function CheckoutPageContent() {
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
-          total: getTotal(),
+          total: getTotal() - coinDiscount,
+          coinsToRedeem: coinDiscount,
           currency: 'INR',
           userId: currentUser?.id,
         }),
@@ -777,10 +805,54 @@ function CheckoutPageContent() {
                   <span>Subtotal</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
+
+                {maxRedeemable > 0 && (
+                  <div className="border-t border-neutral-100 pt-3 space-y-2">
+                    <label className="flex items-center justify-between cursor-pointer select-none">
+                      <span className="flex items-center gap-1.5 text-sm text-brand-charcoal font-medium">
+                        <Coins className="w-4 h-4 text-brand-primary" />
+                        Use coins ({coinBalance} available)
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={redeemCoins}
+                        onChange={(e) => {
+                          setRedeemCoins(e.target.checked);
+                          if (e.target.checked) setCoinsToRedeem(maxRedeemable);
+                        }}
+                        className="w-4 h-4 accent-brand-primary"
+                      />
+                    </label>
+                    {redeemCoins && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={maxRedeemable}
+                          value={coinsToRedeem}
+                          onChange={(e) => {
+                            const v = Math.round(Number(e.target.value) || 0);
+                            setCoinsToRedeem(Math.max(0, Math.min(maxRedeemable, v)));
+                          }}
+                          className="w-24 px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                        />
+                        <span className="text-xs text-brand-slate">coins = {formatCurrency(coinDiscount)} off (max {maxRedeemable})</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {coinDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>Coins discount</span>
+                    <span className="font-medium">−{formatCurrency(coinDiscount)}</span>
+                  </div>
+                )}
+
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
                     <span>Total</span>
-                    <span className="text-xl">{formatCurrency(getTotal())}</span>
+                    <span className="text-xl">{formatCurrency(getTotal() - coinDiscount)}</span>
                   </div>
                 </div>
               </div>

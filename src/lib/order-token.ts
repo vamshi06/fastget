@@ -14,6 +14,7 @@ export interface OrderTokenData {
   convenienceFee: number;
   total: number;
   userId?: string;
+  coinsRedeemed?: number;
   expiresAt: number;
 }
 

@@ -48,6 +48,7 @@ import {
   FileText,
   BookOpen,
   LayoutDashboard,
+  Coins,
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
@@ -158,6 +159,7 @@ export function Header() {
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const suggestionsAbortRef = useRef<AbortController | null>(null);
 
@@ -166,6 +168,16 @@ export function Header() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch("/api/coins/balance", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.balance === "number") setCoinBalance(data.balance);
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -552,6 +564,17 @@ export function Header() {
                         {label}
                       </Link>
                     ))}
+
+                    {/* Coins balance */}
+                    <Link
+                      href={'/my-coins' as any}
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
+                    >
+                      <Coins className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                      <span className="flex-1">My Coins</span>
+                      <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '—'}</span>
+                    </Link>
 
                     {/* Support */}
                     <Link

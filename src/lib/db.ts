@@ -1,5 +1,5 @@
 import { neon, neonConfig } from '@neondatabase/serverless';
-import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS, CartItem } from '@/types';
+import { Order, OrderItem, OrderStatus, PaymentMethod, VALID_STATUS_TRANSITIONS, CartItem, CoinTransaction, CoinTransactionReason } from '@/types';
 import { logger } from '@/lib/logger';
 import { REVIEW_EDIT_WINDOW_MINUTES } from '@/lib/reviewPolicy';
 
@@ -596,22 +596,54 @@ export async function saveCart(userId: string, items: CartItem[]): Promise<boole
 }
 
 /**
+ * Initialize coin_transactions (ledger) and users.coin_balance (cached total)
+ * for the loyalty coins program. Must run after users + orders exist (FKs).
+ */
+export async function initializeCoinsTable(): Promise<void> {
+  const sql = getClient();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+        amount INTEGER NOT NULL,
+        reason VARCHAR(30) NOT NULL CHECK (reason IN ('order_delivered', 'redemption', 'redemption_refund', 'admin_adjustment')),
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_coin_transactions_user ON coin_transactions(user_id, created_at DESC)`;
+    // One earn-credit and one refund per order — guards against double-crediting on retry.
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_delivered ON coin_transactions(order_id) WHERE reason = 'order_delivered'`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_refund ON coin_transactions(order_id) WHERE reason = 'redemption_refund'`;
+
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS coin_balance INTEGER NOT NULL DEFAULT 0`;
+
+    logger.info('DB', 'Coins table initialized successfully');
+  } catch (error) {
+    logger.error('DB', 'Failed to initialize coins table', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+/**
  * Initialize all tables for Phase 1 and Phase 2.
  * Safe to call multiple times.
  */
 export async function initializeAllTables(): Promise<void> {
   try {
     logger.info('DB', 'Starting database initialization...');
-    
+
     // Phase 1: User Management
     await initializeUsersTable();
     await initializeUserAddressesTable();
-    
+
     // Phase 2: Product Catalog
     await initializeCategoriesTable();
     await initializeProductsTable();
     await initializeProductVariantsTable();
-    
+
     // Phase 4: User Preferences
     await initializeWishlistsTable();
     await initializeCartsTable();
@@ -623,7 +655,10 @@ export async function initializeAllTables(): Promise<void> {
     // Phase 5: Reviews & Feedback
     await initializeProductReviewsTable();
     await initializeOrderFeedbackTable();
-    
+
+    // Coins loyalty program (depends on users + orders existing)
+    await initializeCoinsTable();
+
     logger.info('DB', 'All tables initialized successfully');
   } catch (error) {
     logger.error('DB', 'Failed to initialize all tables', { error: error instanceof Error ? error.message : String(error) });
@@ -817,6 +852,23 @@ export async function updateOrderStatus(
     // If no rows updated, a race condition changed the status
     if (result.length === 0) {
       return { success: false, error: 'Order status changed by another agent. Please refresh.' };
+    }
+
+    // Coins are best-effort side effects of the transition above — a failure
+    // here must not fail the status update itself (delivery/cancellation is
+    // the primary effect). Guest orders (no userId) don't participate.
+    if (currentOrder.userId) {
+      if (newStatus === 'delivered') {
+        const coinsEarned = Math.round(currentOrder.total * 0.10);
+        if (coinsEarned > 0) {
+          await creditCoins(currentOrder.userId, coinsEarned, 'order_delivered', orderId);
+        }
+      } else if (newStatus === 'cancelled') {
+        const redeemed = await getRedeemedCoinsForOrder(orderId);
+        if (redeemed > 0) {
+          await creditCoins(currentOrder.userId, redeemed, 'redemption_refund', orderId);
+        }
+      }
     }
 
     return { success: true, orderId: currentOrder.id, changedAt };
@@ -1384,6 +1436,198 @@ export async function adminDeleteOrder(id: string): Promise<boolean> {
   } catch (error) {
     logger.error('DB', 'Failed to admin-delete order', { error: error instanceof Error ? error.message : String(error) });
     return false;
+  }
+}
+
+/* ─── Coins loyalty program ─────────────────────────────────────────────── */
+
+interface DbCoinTransaction {
+  id: string;
+  user_id: string;
+  order_id: string | null;
+  amount: number;
+  reason: CoinTransactionReason;
+  created_by: string | null;
+  created_at: Date | string;
+}
+
+function dbCoinTxToCoinTransaction(row: DbCoinTransaction): CoinTransaction {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    orderId: row.order_id ?? undefined,
+    amount: row.amount,
+    reason: row.reason,
+    createdBy: row.created_by ?? undefined,
+    createdAt: toIso(row.created_at),
+  };
+}
+
+export interface UserCoinSummary {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  balance: number;
+}
+
+/** All customers with a non-zero coin balance, highest first (admin overview). */
+export async function getAllCoinBalancesForAdmin(limit: number = 200): Promise<UserCoinSummary[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, name, email, phone, coin_balance
+      FROM users
+      WHERE coin_balance != 0
+      ORDER BY coin_balance DESC
+      LIMIT ${limit}
+    `;
+    return (result as { id: string; name: string; email: string; phone: string; coin_balance: number }[]).map((row) => ({
+      userId: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      balance: row.coin_balance,
+    }));
+  } catch (error) {
+    logger.error('DB', 'Failed to get all coin balances for admin', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/** Get a user's current coin balance (0 if the user doesn't exist). */
+export async function getCoinBalance(userId: string): Promise<number> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT coin_balance FROM users WHERE id = ${userId} LIMIT 1`;
+    if (result.length === 0) return 0;
+    return (result[0].coin_balance as number) ?? 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to get coin balance', { userId, error: error instanceof Error ? error.message : String(error) });
+    return 0;
+  }
+}
+
+/** Get a user's coin ledger, newest first (admin view). */
+export async function getCoinTransactions(userId: string, limit: number = 100): Promise<CoinTransaction[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, user_id, order_id, amount, reason, created_by, created_at
+      FROM coin_transactions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `;
+    return (result as DbCoinTransaction[]).map(dbCoinTxToCoinTransaction);
+  } catch (error) {
+    logger.error('DB', 'Failed to get coin transactions', { userId, error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Credit coins to a user — order-delivered rewards and redemption refunds.
+ * Idempotent per (order_id, reason) via the partial unique indexes on
+ * coin_transactions, so a retried call for the same order/reason is a no-op.
+ * Returns the resulting balance, or null if nothing was credited.
+ */
+export async function creditCoins(
+  userId: string,
+  amount: number,
+  reason: Extract<CoinTransactionReason, 'order_delivered' | 'redemption_refund'>,
+  orderId?: string
+): Promise<number | null> {
+  if (amount <= 0) return null;
+  const sql = getClient();
+  try {
+    const result = await sql`
+      WITH ins AS (
+        INSERT INTO coin_transactions (user_id, order_id, amount, reason)
+        VALUES (${userId}, ${orderId || null}, ${amount}, ${reason})
+        ON CONFLICT DO NOTHING
+        RETURNING amount, user_id
+      )
+      UPDATE users SET coin_balance = coin_balance + (SELECT amount FROM ins)
+      WHERE id = (SELECT user_id FROM ins)
+      RETURNING coin_balance
+    `;
+    if (result.length === 0) return null;
+    return result[0].coin_balance as number;
+  } catch (error) {
+    logger.error('DB', 'Failed to credit coins', { userId, amount, reason, orderId, error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Debit coins for a checkout redemption. The balance check and the debit
+ * happen in the same statement (WHERE coin_balance >= amount), so this can
+ * never take a balance negative even without a wrapping transaction — the
+ * Neon HTTP driver has no multi-statement transaction support.
+ */
+export async function debitCoins(userId: string, amount: number, orderId?: string): Promise<boolean> {
+  if (amount <= 0) return true;
+  const sql = getClient();
+  try {
+    const result = await sql`
+      WITH upd AS (
+        UPDATE users SET coin_balance = coin_balance - ${amount}
+        WHERE id = ${userId} AND coin_balance >= ${amount}
+        RETURNING id
+      )
+      INSERT INTO coin_transactions (user_id, order_id, amount, reason)
+      SELECT ${userId}, ${orderId || null}, ${-amount}, 'redemption' FROM upd
+      RETURNING id
+    `;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to debit coins', { userId, amount, orderId, error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+/** The (positive) amount of coins redeemed against an order, or 0 if none. */
+async function getRedeemedCoinsForOrder(orderId: string): Promise<number> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT amount FROM coin_transactions
+      WHERE order_id = ${orderId} AND reason = 'redemption'
+      LIMIT 1
+    `;
+    if (result.length === 0) return 0;
+    return Math.abs(result[0].amount as number);
+  } catch (error) {
+    logger.error('DB', 'Failed to get redeemed coins for order', { orderId, error: error instanceof Error ? error.message : String(error) });
+    return 0;
+  }
+}
+
+/**
+ * Admin correction — adds or subtracts an arbitrary amount, unlike the
+ * balance-checked/idempotent paths above. Always recorded in the ledger with
+ * the acting admin's user id.
+ */
+export async function adjustCoinsAdmin(userId: string, delta: number, adminUserId: string): Promise<number | null> {
+  if (!Number.isInteger(delta) || delta === 0) return null;
+  const sql = getClient();
+  try {
+    const result = await sql`
+      WITH ins AS (
+        INSERT INTO coin_transactions (user_id, order_id, amount, reason, created_by)
+        VALUES (${userId}, NULL, ${delta}, 'admin_adjustment', ${adminUserId})
+        RETURNING amount, user_id
+      )
+      UPDATE users SET coin_balance = coin_balance + (SELECT amount FROM ins)
+      WHERE id = (SELECT user_id FROM ins)
+      RETURNING coin_balance
+    `;
+    if (result.length === 0) return null;
+    return result[0].coin_balance as number;
+  } catch (error) {
+    logger.error('DB', 'Failed to adjust coins (admin)', { userId, delta, error: error instanceof Error ? error.message : String(error) });
+    return null;
   }
 }
 

@@ -7,8 +7,7 @@ export default function PrivacyPolicyPage() {
     <LegalPageLayout title="Privacy Policy" updatedAt="16 June 2026">
       <LegalSection heading="1. Who we are">
         <p>
-          FastGet is operated by Elemantra (&ldquo;Elemantra&rdquo;,
-          &ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;), registered at
+          FastGet is (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;), registered at
           Office no - 17, 2nd Floor, Bhavan&apos;s Campus, Sardar Patel
           Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri
           West, Mumbai, Maharashtra 400058. This Privacy Policy explains what
@@ -104,10 +103,10 @@ export default function PrivacyPolicyPage() {
           the app installed, by visiting our website. You can also request
           deletion by emailing{" "}
           <a
-            href="mailto:support@elemantra.in"
+            href="mailto:sukhmeet.bedi@elemantra.in"
             className="text-brand-primary font-medium"
           >
-            support@elemantra.in
+            sukhmeet.bedi@elemantra.in
           </a>
           .
         </p>
@@ -145,12 +144,12 @@ export default function PrivacyPolicyPage() {
         <p>
           For privacy questions or data requests, contact us at{" "}
           <a
-            href="mailto:support@elemantra.in"
+            href="mailto:sukhmeet.bedi@elemantra.in"
             className="text-brand-primary font-medium"
           >
-            support@elemantra.in
+            sukhmeet.bedi@elemantra.in
           </a>{" "}
-          or call +91 9167119131. Elemantra, Office no - 17, 2nd Floor,
+          or call +91 8847777020. FastGet, Office no - 17, 2nd Floor,
           Bhavan&apos;s Campus, Sardar Patel Technology Business Incubator, Old
           D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058.
         </p>

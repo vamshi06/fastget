@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser } from '@/components/UserContext';
@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Star,
   BookOpen,
+  Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -193,6 +194,17 @@ const AUTH_ITEMS = [
 export default function AccountPage() {
   const { currentUser, isLoaded, logout } = useUser();
   const router = useRouter();
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/coins/balance', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   // Still hydrating
   if (!isLoaded) return null;
@@ -223,8 +235,24 @@ export default function AccountPage() {
         <p className="text-sm text-brand-slate mt-0.5">{displayPhone}</p>
       </div>
 
+      {/* Coins balance */}
+      <Link
+        href={'/my-coins' as any}
+        className="mx-4 mt-4 flex items-center px-4 py-4 bg-white rounded-2xl shadow-sm border border-neutral-100 hover:bg-neutral-50 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+          <Coins className="w-5 h-5 text-brand-primary" />
+        </div>
+        <div className="ml-3 flex-1">
+          <p className="text-sm font-medium text-brand-charcoal">My Coins</p>
+          <p className="text-xs text-brand-slate">Earn 10% back, redeem for discounts</p>
+        </div>
+        <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '—'}</span>
+        <ChevronRight className="w-4 h-4 text-brand-steel" />
+      </Link>
+
       {/* Auth-only items */}
-      <div className="mx-4 mt-4 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
+      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
         {AUTH_ITEMS.map((item, idx) => (
           <MenuItem
             key={item.href}

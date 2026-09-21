@@ -221,3 +221,23 @@ export interface WishlistItem {
   productData: Product;
   addedAt: string;
 }
+
+// ============================================================================
+// Coins loyalty program
+// ============================================================================
+
+export type CoinTransactionReason =
+  | 'order_delivered'   // 10% of order total, credited when the order is marked delivered
+  | 'redemption'        // spent at checkout, 1 coin = ₹1 off
+  | 'redemption_refund' // a redemption is refunded if its order is later cancelled
+  | 'admin_adjustment'; // manual correction by an admin
+
+export interface CoinTransaction {
+  id: string;
+  userId: string;
+  orderId?: string;
+  amount: number; // positive = credit, negative = debit
+  reason: CoinTransactionReason;
+  createdBy?: string; // admin user id, only set for admin_adjustment
+  createdAt: string;
+}

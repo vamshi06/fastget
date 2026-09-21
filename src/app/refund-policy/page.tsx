@@ -16,7 +16,7 @@ export default function RefundPolicyPage() {
       <LegalSection heading="2. Damaged, defective, or wrong items">
         <p>
           If you receive damaged, defective, or incorrect items, contact us within 24 hours of
-          delivery at <a href="mailto:support@elemantra.in" className="text-brand-primary font-medium">support@elemantra.in</a>
+          delivery at <a href="mailto:sukhmeet.bedi@elemantra.in" className="text-brand-primary font-medium">sukhmeet.bedi@elemantra.in</a>
           {' '}with your order number and photos of the issue. We will arrange a replacement or a
           full refund for the affected items.
         </p>
@@ -36,7 +36,7 @@ export default function RefundPolicyPage() {
 
       <LegalSection heading="5. How to request a refund">
         <p>
-          Email <a href="mailto:support@elemantra.in" className="text-brand-primary font-medium">support@elemantra.in</a>
+          Email <a href="mailto:sukhmeet.bedi@elemantra.in" className="text-brand-primary font-medium">sukhmeet.bedi@elemantra.in</a>
           {' '}or visit the Support page in the app with your order number and a brief description
           of the issue.
         </p>

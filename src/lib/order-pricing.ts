@@ -1,5 +1,6 @@
 import { OrderItem } from '@/types';
 import { getTrustedPricingInfo } from '@/lib/products';
+import { getCoinBalance } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
 /**
@@ -28,7 +29,9 @@ export interface PricedOrder {
   items: OrderItem[]; // line items with server-authoritative unit prices (rupees)
   subtotal: number; // rupees
   convenienceFee: number; // rupees
-  total: number; // rupees
+  total: number; // rupees, after coin discount
+  coinsRedeemed: number; // coins actually applied (may be less than requested)
+  coinDiscount: number; // rupees, 1 coin = ₹1
 }
 
 export type PriceResult =
@@ -38,15 +41,20 @@ export type PriceResult =
 /**
  * Price an order from the catalog.
  *
- * @param rawItems    cart items as received from the client (only id + quantity
- *                    are trusted; the client price is ignored)
- * @param clientTotal optional total the client computed — if it disagrees with
- *                    the server total the order is rejected (tampered or stale
- *                    cart), so a customer is never charged a price they didn't see
+ * @param rawItems      cart items as received from the client (only id + quantity
+ *                      are trusted; the client price is ignored)
+ * @param clientTotal   optional total the client computed — if it disagrees with
+ *                      the server total the order is rejected (tampered or stale
+ *                      cart), so a customer is never charged a price they didn't see
+ * @param userId        logged-in user redeeming coins — coins never apply to guest orders
+ * @param coinsToRedeem coins the client asked to redeem; clamped server-side to the
+ *                       user's actual balance and to the order total, never trusted as-is
  */
 export async function priceOrderFromCatalog(
   rawItems: unknown,
   clientTotal?: number,
+  userId?: string,
+  coinsToRedeem?: number,
 ): Promise<PriceResult> {
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     return { ok: false, status: 400, error: 'Cart is empty' };
@@ -101,11 +109,25 @@ export async function priceOrderFromCatalog(
   }
 
   const convenienceFee = Math.round(subtotal * (CONVENIENCE_FEE_PERCENTAGE / 100));
-  const total = subtotal + convenienceFee;
+  const preDiscountTotal = subtotal + convenienceFee;
 
-  if (total <= 0) {
+  if (preDiscountTotal <= 0) {
     return { ok: false, status: 400, error: 'Invalid order total' };
   }
+
+  // Coins never apply to guest (unattributed) orders — there's no stable
+  // identity to hold a balance against. Balance is always re-fetched from the
+  // DB here; a client-supplied balance is never trusted.
+  let coinsRedeemed = 0;
+  if (userId && typeof coinsToRedeem === 'number' && coinsToRedeem > 0) {
+    if (!Number.isInteger(coinsToRedeem)) {
+      return { ok: false, status: 400, error: 'Invalid coin redemption amount' };
+    }
+    const balance = await getCoinBalance(userId);
+    coinsRedeemed = Math.min(coinsToRedeem, balance, preDiscountTotal);
+  }
+  const coinDiscount = coinsRedeemed; // 1 coin = ₹1
+  const total = preDiscountTotal - coinDiscount;
 
   if (typeof clientTotal === 'number' && Math.round(clientTotal) !== total) {
     logger.warn('Pricing', 'Client total mismatch — rejecting order', {
@@ -119,5 +141,5 @@ export async function priceOrderFromCatalog(
     };
   }
 
-  return { ok: true, priced: { items, subtotal, convenienceFee, total } };
+  return { ok: true, priced: { items, subtotal, convenienceFee, total, coinsRedeemed, coinDiscount } };
 }

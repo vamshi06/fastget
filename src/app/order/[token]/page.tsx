@@ -467,7 +467,7 @@ export default function OrderStatusPage() {
                 Contact our support team if you have any questions about your order.
               </p>
               <a
-                href="tel:+919167119131"
+                href="tel:+918847777020"
                 className="btn-primary w-full py-2.5 text-sm"
               >
                 <Phone className="w-4 h-4" />

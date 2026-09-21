@@ -6,7 +6,7 @@ import {
   formatPhoneNumber,
   validateOrderForm,
 } from '@/lib/utils';
-import { createOrder } from '@/lib/db';
+import { createOrder, debitCoins } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
@@ -35,23 +35,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const { items, total } = body;
+    const { items, total, coinsToRedeem } = body;
+
+    // Attribute the order to the logged-in user via the verified session cookie
+    // (never the request body — IDOR fix, consistent with C3). Guests get an
+    // unattributed order (user_id NULL) and can't redeem coins.
+    const session = await getSession();
 
     // Recompute line items and totals from the trusted catalog (H1). Client
     // item prices / subtotal / convenienceFee / total are never trusted; the
     // client total is only used to detect (and reject) a tampered/stale cart.
-    const pricing = await priceOrderFromCatalog(items, typeof total === 'number' ? total : undefined);
+    const pricing = await priceOrderFromCatalog(
+      items,
+      typeof total === 'number' ? total : undefined,
+      session?.userId,
+      typeof coinsToRedeem === 'number' ? coinsToRedeem : undefined,
+    );
     if (!pricing.ok) {
       logger.warn('API', 'POST /api/orders — pricing rejected', { reason: pricing.error });
       logger.api('POST', '/api/orders', pricing.status, Date.now() - start);
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
-    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal } = pricing.priced;
-
-    // Attribute the order to the logged-in user via the verified session cookie
-    // (never the request body — IDOR fix, consistent with C3). Guests get an
-    // unattributed order (user_id NULL).
-    const session = await getSession();
+    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal, coinsRedeemed } = pricing.priced;
 
     // Generate tokens and IDs
     const orderId = generateUUID();
@@ -92,6 +97,16 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Orders', 'Order created', { orderId, itemCount: order.items.length, total: order.total, deliveryType: order.deliveryType });
+
+    // Debit redeemed coins now that the order is confirmed saved. Best-effort:
+    // the order itself is already placed at the discounted total, so a debit
+    // failure here is a reconciliation issue to log, not a reason to fail the order.
+    if (session?.userId && coinsRedeemed > 0) {
+      const debited = await debitCoins(session.userId, coinsRedeemed, orderId);
+      if (!debited) {
+        logger.error('API', 'POST /api/orders — coin debit failed after order creation', { orderId, userId: session.userId, coinsRedeemed });
+      }
+    }
 
     // Best-effort staff alert (Telegram + email) — never blocks/fails the order response.
     await notifyStaffOfNewOrder(order);
