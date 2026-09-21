@@ -217,6 +217,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <span className="text-brand-slate font-medium text-sm">Subtotal</span>
                 <span className="font-bold text-brand-charcoal">₹{order.subtotal.toFixed(2)}</span>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-slate font-medium text-sm">First Order Discount</span>
+                  <span className="font-bold text-green-700">−₹{order.discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-primary-200 pt-3 mt-3 flex justify-between items-center bg-white p-3 rounded-xl">
                 <span className="font-bold text-brand-charcoal">Total</span>
                 <span className="text-2xl font-black text-brand-primary">₹{order.total.toFixed(2)}</span>

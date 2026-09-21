@@ -8,7 +8,7 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
@@ -21,7 +21,20 @@ const ADDRESS_TYPE_LABELS: Record<AddressType, string> = { home: 'Home', work: '
 
 function CheckoutPageContent() {
   const router = useRouter();
-  const { state, getSubtotal, getConvenienceFee, getTotal, clearCart, isLoaded, getEffectiveUnitPrice } = useCart();
+  const {
+    state,
+    getSubtotal,
+    getConvenienceFee,
+    getTotal,
+    clearCart,
+    isLoaded,
+    getEffectiveUnitPrice,
+    coinBalance,
+    redeemCoins,
+    setRedeemCoins,
+    coinsToRedeem,
+    setCoinsToRedeem,
+  } = useCart();
   const { currentUser } = useUser();
   const { showToast } = useToast();
   const { openCheckout } = useRazorpay();
@@ -32,13 +45,21 @@ function CheckoutPageContent() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
   const errorRef = useRef<HTMLDivElement>(null);
 
-  const [coinBalance, setCoinBalance] = useState(0);
-  const [redeemCoins, setRedeemCoins] = useState(false);
-  const [coinsToRedeem, setCoinsToRedeem] = useState(0);
+  const [firstOrderEligible, setFirstOrderEligible] = useState(false);
+  const [firstOrderDiscountAmount, setFirstOrderDiscountAmount] = useState(200);
+  const [firstOrderMinOrder, setFirstOrderMinOrder] = useState(449);
+
+  // Display-only preview of the first-order coupon — the server always
+  // recomputes and re-validates this from scratch in priceOrderFromCatalog.
+  const firstOrderDiscount =
+    firstOrderEligible && getTotal() >= firstOrderMinOrder
+      ? Math.min(firstOrderDiscountAmount, getTotal())
+      : 0;
 
   // How many coins can actually be applied — capped by both balance and the
-  // order's own value (server re-validates both; this is just for display).
-  const maxRedeemable = Math.min(coinBalance, getTotal());
+  // order's own value after the coupon (server re-validates both; this is
+  // just for display).
+  const maxRedeemable = Math.min(coinBalance, getTotal() - firstOrderDiscount);
   const coinDiscount = redeemCoins ? Math.min(coinsToRedeem, maxRedeemable) : 0;
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
@@ -112,14 +133,16 @@ function CheckoutPageContent() {
     }));
   };
 
-  // Fetch the user's coin balance once on mount (login-gated page, so
-  // currentUser is stable by the time this runs).
+  // Fetch whether the user still qualifies for the first-order coupon.
   useEffect(() => {
     if (!currentUser) return;
-    fetch('/api/coins/balance', { cache: 'no-store' })
+    fetch('/api/orders/first-order-eligibility', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
+        if (!data) return;
+        if (typeof data.eligible === 'boolean') setFirstOrderEligible(data.eligible);
+        if (typeof data.discountAmount === 'number') setFirstOrderDiscountAmount(data.discountAmount);
+        if (typeof data.minOrderValue === 'number') setFirstOrderMinOrder(data.minOrderValue);
       })
       .catch(() => {});
   }, [currentUser]);
@@ -260,7 +283,7 @@ function CheckoutPageContent() {
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
-          total: getTotal() - coinDiscount,
+          total: getTotal() - firstOrderDiscount - coinDiscount,
           coinsToRedeem: coinDiscount,
         }),
       });
@@ -303,8 +326,8 @@ function CheckoutPageContent() {
       return;
     }
 
-    if (coinDiscount >= getTotal()) {
-      setError('Your order is fully covered by coins. Please select Cash on Delivery to place it.');
+    if (firstOrderDiscount + coinDiscount >= getTotal()) {
+      setError('Your order is fully covered by discounts/coins. Please select Cash on Delivery to place it.');
       return;
     }
 
@@ -322,7 +345,7 @@ function CheckoutPageContent() {
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
-          total: getTotal() - coinDiscount,
+          total: getTotal() - firstOrderDiscount - coinDiscount,
           coinsToRedeem: coinDiscount,
           currency: 'INR',
           userId: currentUser?.id,
@@ -806,6 +829,28 @@ function CheckoutPageContent() {
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
 
+                {firstOrderEligible && (
+                  <div className="flex items-start gap-2 p-3 bg-primary-50 border border-primary-200 rounded-xl">
+                    <Tag className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    {firstOrderDiscount > 0 ? (
+                      <p className="text-xs text-brand-charcoal">
+                        <span className="font-bold">First order coupon applied!</span> {formatCurrency(firstOrderDiscountAmount)} off.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-brand-charcoal">
+                        Add {formatCurrency(Math.max(0, firstOrderMinOrder - getTotal()))} more to unlock {formatCurrency(firstOrderDiscountAmount)} off your first order!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {firstOrderDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>First order discount</span>
+                    <span className="font-medium">−{formatCurrency(firstOrderDiscount)}</span>
+                  </div>
+                )}
+
                 {maxRedeemable > 0 && (
                   <div className="border-t border-neutral-100 pt-3 space-y-2">
                     <label className="flex items-center justify-between cursor-pointer select-none">
@@ -852,7 +897,7 @@ function CheckoutPageContent() {
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
                     <span>Total</span>
-                    <span className="text-xl">{formatCurrency(getTotal() - coinDiscount)}</span>
+                    <span className="text-xl">{formatCurrency(getTotal() - firstOrderDiscount - coinDiscount)}</span>
                   </div>
                 </div>
               </div>

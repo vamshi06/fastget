@@ -12,6 +12,7 @@ export interface OrderTokenData {
   items: OrderItem[];
   subtotal: number;
   convenienceFee: number;
+  discount?: number;
   total: number;
   userId?: string;
   coinsRedeemed?: number;

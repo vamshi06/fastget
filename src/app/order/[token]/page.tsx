@@ -400,6 +400,12 @@ export default function OrderStatusPage() {
                   <span>Subtotal</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(order.subtotal)}</span>
                 </div>
+                {order.discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>First order discount</span>
+                    <span className="font-medium">−{formatCurrency(order.discount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-neutral-100 pt-3 flex justify-between">
                   <span className="font-bold text-brand-charcoal">Total Amount</span>
                   <span className="text-xl font-black text-brand-primary">{formatCurrency(order.total)}</span>
@@ -588,6 +594,12 @@ export default function OrderStatusPage() {
               <span className="inv-totals-label">Sub Total</span>
               <span className="inv-totals-value">{formatCurrency(order.subtotal)}</span>
             </div>
+            {order.discount > 0 && (
+              <div className="inv-totals-row">
+                <span className="inv-totals-label">First Order Discount</span>
+                <span className="inv-totals-value">−{formatCurrency(order.discount)}</span>
+              </div>
+            )}
             <div className="inv-totals-row inv-totals-grand">
               <span className="inv-totals-label">Total Due</span>
               <span className="inv-totals-value">{formatCurrency(order.total)}</span>

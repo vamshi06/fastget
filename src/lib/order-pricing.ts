@@ -1,6 +1,6 @@
 import { OrderItem } from '@/types';
 import { getTrustedPricingInfo } from '@/lib/products';
-import { getCoinBalance } from '@/lib/db';
+import { getCoinBalance, hasUserOrderedBefore } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
 /**
@@ -20,6 +20,11 @@ export const CONVENIENCE_FEE_PERCENTAGE = 0;
 
 const MAX_QTY_PER_ITEM = 1000;
 
+// First-order coupon: ₹200 off a logged-in customer's very first order, once
+// it's worth at least ₹449 (pre-discount, i.e. subtotal + convenience fee).
+export const FIRST_ORDER_DISCOUNT_RUPEES = 200;
+export const FIRST_ORDER_MIN_ORDER_RUPEES = 449;
+
 export interface IncomingCartItem {
   product?: { id?: unknown; name?: unknown; price?: unknown };
   quantity?: unknown;
@@ -29,7 +34,8 @@ export interface PricedOrder {
   items: OrderItem[]; // line items with server-authoritative unit prices (rupees)
   subtotal: number; // rupees
   convenienceFee: number; // rupees
-  total: number; // rupees, after coin discount
+  discount: number; // rupees, first-order coupon (0 if not applied)
+  total: number; // rupees, after discount and coin redemption
   coinsRedeemed: number; // coins actually applied (may be less than requested)
   coinDiscount: number; // rupees, 1 coin = ₹1
 }
@@ -115,6 +121,18 @@ export async function priceOrderFromCatalog(
     return { ok: false, status: 400, error: 'Invalid order total' };
   }
 
+  // First-order coupon — like coins, it never applies to guest (unattributed)
+  // orders since eligibility depends on stable order history tied to a user.
+  // Re-checked here against the DB on every price, never trusted from the client.
+  let discount = 0;
+  if (userId && preDiscountTotal >= FIRST_ORDER_MIN_ORDER_RUPEES) {
+    const orderedBefore = await hasUserOrderedBefore(userId);
+    if (!orderedBefore) {
+      discount = Math.min(FIRST_ORDER_DISCOUNT_RUPEES, preDiscountTotal);
+    }
+  }
+  const postDiscountTotal = preDiscountTotal - discount;
+
   // Coins never apply to guest (unattributed) orders — there's no stable
   // identity to hold a balance against. Balance is always re-fetched from the
   // DB here; a client-supplied balance is never trusted.
@@ -124,10 +142,10 @@ export async function priceOrderFromCatalog(
       return { ok: false, status: 400, error: 'Invalid coin redemption amount' };
     }
     const balance = await getCoinBalance(userId);
-    coinsRedeemed = Math.min(coinsToRedeem, balance, preDiscountTotal);
+    coinsRedeemed = Math.min(coinsToRedeem, balance, postDiscountTotal);
   }
   const coinDiscount = coinsRedeemed; // 1 coin = ₹1
-  const total = preDiscountTotal - coinDiscount;
+  const total = postDiscountTotal - coinDiscount;
 
   if (typeof clientTotal === 'number' && Math.round(clientTotal) !== total) {
     logger.warn('Pricing', 'Client total mismatch — rejecting order', {
@@ -141,5 +159,5 @@ export async function priceOrderFromCatalog(
     };
   }
 
-  return { ok: true, priced: { items, subtotal, convenienceFee, total, coinsRedeemed, coinDiscount } };
+  return { ok: true, priced: { items, subtotal, convenienceFee, discount, total, coinsRedeemed, coinDiscount } };
 }

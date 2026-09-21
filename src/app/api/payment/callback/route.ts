@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
     items: orderData.items,
     subtotal: orderData.subtotal,
     convenienceFee: orderData.convenienceFee,
+    discount: orderData.discount || 0,
     total: orderData.total,
     paymentMethod: 'razorpay',
     status: 'received',

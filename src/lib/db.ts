@@ -74,6 +74,7 @@ export interface DbOrder {
   items: OrderItem[];
   subtotal: number;
   convenience_fee: number;
+  discount: number;
   total: number;
   payment_method: string;
   status: OrderStatus;
@@ -127,6 +128,10 @@ export async function initializeDatabase(): Promise<void> {
     // have a NULL/missing history — the DEFAULT here covers that on ALTER too
     // (Postgres backfills the default for existing rows).
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS status_history JSONB NOT NULL DEFAULT '[]'::jsonb`;
+
+    // Migration: add discount (first-order coupon, rupees) to orders tables
+    // created before this column existed.
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0`;
 
     // Create indexes for faster lookups
     await sql`CREATE INDEX IF NOT EXISTS idx_orders_status_token ON orders(status_token)`;
@@ -681,13 +686,13 @@ export async function createOrder(order: Order): Promise<boolean> {
     await sql`
       INSERT INTO orders (
         id, created_at, customer_name, customer_phone, site_address, landmark,
-        delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+        delivery_type, scheduled_time, items, subtotal, convenience_fee, discount, total,
         payment_method, status, eta, status_token, update_token, user_id, status_history
       ) VALUES (
         ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
         ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
         ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
-        ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
+        ${order.convenienceFee}, ${order.discount || 0}, ${order.total}, ${order.paymentMethod}, ${order.status},
         ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null},
         ${initialHistory}
       )
@@ -712,13 +717,13 @@ export async function createOrder(order: Order): Promise<boolean> {
         await sql`
           INSERT INTO orders (
             id, created_at, customer_name, customer_phone, site_address, landmark,
-            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, discount, total,
             payment_method, status, eta, status_token, update_token, user_id, status_history
           ) VALUES (
             ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
             ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
             ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
-            ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
+            ${order.convenienceFee}, ${order.discount || 0}, ${order.total}, ${order.paymentMethod}, ${order.status},
             ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${null},
             ${initialHistory}
           )
@@ -744,13 +749,13 @@ export async function createOrder(order: Order): Promise<boolean> {
         await sql`
           INSERT INTO orders (
             id, created_at, customer_name, customer_phone, site_address, landmark,
-            delivery_type, scheduled_time, items, subtotal, convenience_fee, total,
+            delivery_type, scheduled_time, items, subtotal, convenience_fee, discount, total,
             payment_method, status, eta, status_token, update_token, user_id, status_history
           ) VALUES (
             ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
             ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
             ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
-            ${order.convenienceFee}, ${order.total}, ${order.paymentMethod}, ${order.status},
+            ${order.convenienceFee}, ${order.discount || 0}, ${order.total}, ${order.paymentMethod}, ${order.status},
             ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null},
             ${initialHistory}
           )
@@ -968,6 +973,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     items: dbOrder.items,
     subtotal: dbOrder.subtotal,
     convenienceFee: dbOrder.convenience_fee,
+    discount: dbOrder.discount || 0,
     total: dbOrder.total,
     paymentMethod: dbOrder.payment_method as PaymentMethod,
     paymentStatus: dbOrder.payment_status ?? null,
@@ -995,6 +1001,24 @@ export async function getOrdersByUserId(userId: string): Promise<Order[]> {
   } catch (error) {
     logger.error('DB', 'Failed to get orders by user_id', { error: error instanceof Error ? error.message : String(error) });
     return [];
+  }
+}
+
+/**
+ * Whether a user has ever placed an order (any status) — used to gate the
+ * first-order coupon. A lightweight existence check rather than fetching
+ * every order, since only presence/absence of a row matters here.
+ */
+export async function hasUserOrderedBefore(userId: string): Promise<boolean> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT 1 FROM orders WHERE user_id = ${userId} LIMIT 1`;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to check prior orders for user', { userId, error: error instanceof Error ? error.message : String(error) });
+    // Fail closed on the coupon (treat as "not eligible") rather than risk
+    // granting it repeatedly if the existence check errors out.
+    return true;
   }
 }
 

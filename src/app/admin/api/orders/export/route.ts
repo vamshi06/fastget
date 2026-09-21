@@ -127,6 +127,7 @@ function generateCSV(orders: Order[]): string {
     'Items',
     'Subtotal',
     'Convenience Fee',
+    'Discount',
     'Total',
     'Payment Method',
     'Payment Status',
@@ -152,6 +153,7 @@ function generateCSV(orders: Order[]): string {
       escapeCSV(items),
       order.subtotal.toFixed(2),
       order.convenienceFee.toFixed(2),
+      order.discount.toFixed(2),
       order.total.toFixed(2),
       escapeCSV(order.paymentMethod),
       escapeCSV(

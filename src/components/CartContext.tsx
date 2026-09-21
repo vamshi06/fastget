@@ -33,6 +33,11 @@ const CartContext = createContext<
       getPreDiscountSubtotal: (excludeProductId?: string) => number;
       isFlashSaleEligible: (product: Product) => boolean;
       getEffectiveUnitPrice: (product: Product) => number;
+      coinBalance: number;
+      redeemCoins: boolean;
+      setRedeemCoins: (value: boolean) => void;
+      coinsToRedeem: number;
+      setCoinsToRedeem: (value: number) => void;
     }
   | undefined
 >(undefined);
@@ -138,6 +143,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // in, so it happens once per login rather than on every render/cart change.
   const mergedForUserIdRef = useRef<string | null>(null);
 
+  // Coin redemption choice lives here (not on the cart/checkout pages) so it
+  // carries over when a customer checks "Use coins" on the cart page and then
+  // continues to checkout — they shouldn't have to make the same choice twice.
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [redeemCoins, setRedeemCoins] = useState(false);
+  const [coinsToRedeem, setCoinsToRedeem] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setCoinBalance(0);
+      setRedeemCoins(false);
+      setCoinsToRedeem(0);
+      return;
+    }
+    fetch('/api/coins/balance', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
+      })
+      .catch(() => {});
+  }, [currentUser]);
+
   useEffect(() => {
     try {
       const savedCart = window.localStorage.getItem(CART_STORAGE_KEY);
@@ -232,6 +259,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => {
     dispatch({ type: 'CLEAR_CART' });
+    setRedeemCoins(false);
+    setCoinsToRedeem(0);
   }, []);
 
   const getItemCount = useCallback(() => {
@@ -296,6 +325,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         getPreDiscountSubtotal,
         isFlashSaleEligible,
         getEffectiveUnitPrice,
+        coinBalance,
+        redeemCoins,
+        setRedeemCoins,
+        coinsToRedeem,
+        setCoinsToRedeem,
       }}
     >
       {children}
@@ -317,6 +351,11 @@ const EMPTY_CART = {
   getPreDiscountSubtotal: () => 0,
   isFlashSaleEligible: () => true,
   getEffectiveUnitPrice: (product: Product) => product.price,
+  coinBalance: 0,
+  redeemCoins: false,
+  setRedeemCoins: () => {},
+  coinsToRedeem: 0,
+  setCoinsToRedeem: () => {},
 };
 
 export function useCart() {

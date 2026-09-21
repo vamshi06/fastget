@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       logger.api('POST', '/api/payment/create-order', pricing.status, Date.now() - start);
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
-    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal, coinsRedeemed } = pricing.priced;
+    const { items: pricedItems, subtotal, convenienceFee, discount, total: serverTotal, coinsRedeemed } = pricing.priced;
 
     // Razorpay can't process a zero-amount payment — an order fully covered by
     // coins has nothing left to pay online, so it must go through COD instead.
@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       items: pricedItems,
       subtotal,
       convenienceFee,
+      discount,
       total: serverTotal,
       userId: session?.userId,
       coinsRedeemed,

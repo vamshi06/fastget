@@ -94,6 +94,7 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   convenienceFee: number;
+  discount: number; // rupees off via the first-order coupon (0 if not applied)
   total: number;
   paymentMethod: PaymentMethod;
   paymentStatus?: string | null;

@@ -392,6 +392,12 @@ export function InvoicePDF({ order }: { order: Order }) {
                 <Text style={styles.totalsLabel}>Sub Total</Text>
                 <Text style={styles.totalsValue}>{fmt(order.subtotal)}</Text>
               </View>
+              {order.discount > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>First Order Discount</Text>
+                  <Text style={styles.totalsValue}>-{fmt(order.discount)}</Text>
+                </View>
+              )}
               <View style={[styles.totalsRow, styles.totalsRowGrand]}>
                 <Text style={styles.totalsGrandLabel}>Total Due</Text>
                 <Text style={styles.totalsGrandValue}>{fmt(order.total)}</Text>

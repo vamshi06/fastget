@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
+import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { CartItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2, Tag, Coins } from 'lucide-react';
 
 export default function CartPage() {
   const {
@@ -21,11 +22,44 @@ export default function CartPage() {
     isFlashSaleEligible,
     getEffectiveUnitPrice,
     getPreDiscountSubtotal,
+    coinBalance,
+    redeemCoins,
+    setRedeemCoins,
+    coinsToRedeem,
+    setCoinsToRedeem,
   } = useCart();
+  const { currentUser } = useUser();
   const { showToast } = useToast();
 
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+
+  const [firstOrderEligible, setFirstOrderEligible] = useState(false);
+  const [firstOrderDiscountAmount, setFirstOrderDiscountAmount] = useState(200);
+  const [firstOrderMinOrder, setFirstOrderMinOrder] = useState(449);
+
+  // Fetch whether the user still qualifies for the first-order coupon (for
+  // preview only — the checkout/order APIs always re-validate this server-side).
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch('/api/orders/first-order-eligibility', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (typeof data.eligible === 'boolean') setFirstOrderEligible(data.eligible);
+        if (typeof data.discountAmount === 'number') setFirstOrderDiscountAmount(data.discountAmount);
+        if (typeof data.minOrderValue === 'number') setFirstOrderMinOrder(data.minOrderValue);
+      })
+      .catch(() => {});
+  }, [currentUser]);
+
+  const firstOrderDiscount =
+    firstOrderEligible && getTotal() >= firstOrderMinOrder
+      ? Math.min(firstOrderDiscountAmount, getTotal())
+      : 0;
+
+  const maxRedeemable = Math.min(coinBalance, getTotal() - firstOrderDiscount);
+  const coinDiscount = redeemCoins ? Math.min(coinsToRedeem, maxRedeemable) : 0;
 
   const handleRemove = (item: CartItem) => {
     setRemovingId(item.product.id);
@@ -184,10 +218,76 @@ export default function CartPage() {
                   <span>Subtotal</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
+
+                {firstOrderEligible && (
+                  <div className="flex items-start gap-2 p-3 bg-primary-50 border border-primary-200 rounded-xl">
+                    <Tag className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    {firstOrderDiscount > 0 ? (
+                      <p className="text-xs text-brand-charcoal">
+                        <span className="font-bold">First order coupon applied!</span> {formatCurrency(firstOrderDiscountAmount)} off.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-brand-charcoal">
+                        Add {formatCurrency(Math.max(0, firstOrderMinOrder - getTotal()))} more to unlock {formatCurrency(firstOrderDiscountAmount)} off your first order!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {firstOrderDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>First order discount</span>
+                    <span className="font-medium">−{formatCurrency(firstOrderDiscount)}</span>
+                  </div>
+                )}
+
+                {maxRedeemable > 0 && (
+                  <div className="border-t border-neutral-100 pt-3 space-y-2">
+                    <label className="flex items-center justify-between cursor-pointer select-none">
+                      <span className="flex items-center gap-1.5 text-sm text-brand-charcoal font-medium">
+                        <Coins className="w-4 h-4 text-brand-primary" />
+                        Use coins ({coinBalance} available)
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={redeemCoins}
+                        onChange={(e) => {
+                          setRedeemCoins(e.target.checked);
+                          if (e.target.checked) setCoinsToRedeem(maxRedeemable);
+                        }}
+                        className="w-4 h-4 accent-brand-primary"
+                      />
+                    </label>
+                    {redeemCoins && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={maxRedeemable}
+                          value={coinsToRedeem}
+                          onChange={(e) => {
+                            const v = Math.round(Number(e.target.value) || 0);
+                            setCoinsToRedeem(Math.max(0, Math.min(maxRedeemable, v)));
+                          }}
+                          className="w-24 px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                        />
+                        <span className="text-xs text-brand-slate">coins = {formatCurrency(coinDiscount)} off (max {maxRedeemable})</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {coinDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>Coins discount</span>
+                    <span className="font-medium">−{formatCurrency(coinDiscount)}</span>
+                  </div>
+                )}
+
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
                     <span>Total</span>
-                    <span className="text-xl">{formatCurrency(getTotal())}</span>
+                    <span className="text-xl">{formatCurrency(getTotal() - firstOrderDiscount - coinDiscount)}</span>
                   </div>
                 </div>
               </div>

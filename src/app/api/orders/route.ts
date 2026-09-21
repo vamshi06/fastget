@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       logger.api('POST', '/api/orders', pricing.status, Date.now() - start);
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
-    const { items: pricedItems, subtotal, convenienceFee, total: serverTotal, coinsRedeemed } = pricing.priced;
+    const { items: pricedItems, subtotal, convenienceFee, discount, total: serverTotal, coinsRedeemed } = pricing.priced;
 
     // Generate tokens and IDs
     const orderId = generateUUID();
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       items: pricedItems,
       subtotal,
       convenienceFee,
+      discount,
       total: serverTotal,
       paymentMethod: 'cod',
       status: 'received' as OrderStatus,
