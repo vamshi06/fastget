@@ -1,0 +1,16 @@
+{
+  "closeSelector": "स्थान चयनकर्ता बंद करें",
+  "heading": "हम कहाँ डिलीवर करें?",
+  "subheading": "चुने गए सेवा क्षेत्रों में तेज़ डिलीवरी",
+  "selectDeliveryArea": "एक डिलीवरी क्षेत्र चुनें",
+  "orEnterPincode": "या पिनकोड दर्ज करें",
+  "pincodePlaceholder": "6 अंकों का पिनकोड दर्ज करें",
+  "pincodeAriaLabel": "6 अंकों का पिनकोड",
+  "checkPincodeAria": "पिनकोड उपलब्धता जांचें",
+  "checking": "जांच रहे हैं…",
+  "weDeliverTo": "हम {area} में डिलीवर करते हैं · {eta}",
+  "noDeliveryPincode": "हम अभी इस पिनकोड पर डिलीवरी नहीं करते",
+  "confirmDeliveryTo": "{area} में डिलीवरी की पुष्टि करें",
+  "selectAreaToContinue": "जारी रखने के लिए एक डिलीवरी क्षेत्र चुनें",
+  "deliverToArea": "{area} में डिलीवर करें"
+}

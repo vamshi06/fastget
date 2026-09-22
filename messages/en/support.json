@@ -1,0 +1,18 @@
+{
+  "pageTitle": "FastGet Support",
+  "getInTouch": {
+    "heading": "Get in touch",
+    "orderNote": "For order issues, include your order number so we can help faster."
+  },
+  "commonTopics": {
+    "heading": "Common topics",
+    "shippingPolicy": "Shipping Policy",
+    "refundPolicy": "Refund Policy",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "manageAccount": {
+    "heading": "Manage your account",
+    "body": "You can update your saved addresses, view order history, or permanently delete your account from <account>Account</account> in the app or on the website."
+  }
+}

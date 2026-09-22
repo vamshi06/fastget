@@ -1,157 +1,106 @@
+import { getTranslations } from "next-intl/server";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
 export const metadata = { title: "Privacy Policy — FastGet" };
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const t = await getTranslations("legal.privacy");
+  const s2List = t.raw("s2.list") as string[];
+  const s3List = t.raw("s3.list") as string[];
+
   return (
-    <LegalPageLayout title="Privacy Policy" updatedAt="16 June 2026">
-      <LegalSection heading="1. Who we are">
-        <p>
-          FastGet is (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;), registered at
-          Office no - 17, 2nd Floor, Bhavan&apos;s Campus, Sardar Patel
-          Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri
-          West, Mumbai, Maharashtra 400058. This Privacy Policy explains what
-          information we collect through the FastGet website and mobile app, how
-          we use it, and the choices you have.
-        </p>
+    <LegalPageLayout title={t("title")} updatedAt="16 June 2026">
+      <LegalSection heading={t("s1.heading")}>
+        <p>{t("s1.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="2. Information we collect">
-        <p>
-          When you create an account, place an order, or contact support, we
-          collect:
-        </p>
+      <LegalSection heading={t("s2.heading")}>
+        <p>{t("s2.intro")}</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            Account details: name, email address, phone number, and password
-            (stored as a one-way hash, never in plain text)
-          </li>
-          <li>Delivery addresses you save to your account</li>
-          <li>Order history: items purchased, order status, and invoices</li>
-          <li>Communications you send us (e.g. support requests)</li>
+          {s2List.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
         </ul>
-        <p>
-          We do not collect your device location or contacts, and the app
-          requests no permissions beyond internet access.
-        </p>
+        <p>{t("s2.outro")}</p>
       </LegalSection>
 
-      <LegalSection heading="3. How we use your information">
+      <LegalSection heading={t("s3.heading")}>
         <ul className="list-disc pl-5 space-y-1">
-          <li>To create and manage your account and process orders</li>
-          <li>
-            To send order confirmations, delivery updates, and
-            verification/password-reset emails
-          </li>
-          <li>To provide customer support</li>
-          <li>To improve and secure our service</li>
+          {s3List.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
         </ul>
       </LegalSection>
 
-      <LegalSection heading="4. Sharing with third parties">
-        <p>
-          We share the minimum information necessary with the following service
-          providers, who act on our behalf:
-        </p>
+      <LegalSection heading={t("s4.heading")}>
+        <p>{t("s4.intro")}</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            <strong>Razorpay</strong> — processes your payments (cards, UPI, net
-            banking). Razorpay receives your payment details directly; FastGet
-            never stores your card or UPI credentials.
+            <strong>Razorpay</strong> — {t("s4.razorpay")}
           </li>
           <li>
-            <strong>Resend</strong> — delivers transactional emails (signup
-            verification, password reset, order updates) on our behalf.
+            <strong>Resend</strong> — {t("s4.resend")}
           </li>
           <li>
-            <strong>Cloudinary</strong> — hosts product images; no personal
-            information is sent to Cloudinary.
+            <strong>Cloudinary</strong> — {t("s4.cloudinary")}
           </li>
           <li>
-            <strong>Neon (PostgreSQL hosting)</strong> — stores our application
-            database, including your account and order data, on infrastructure
-            hosted in AWS ap-southeast-1.
+            <strong>Neon (PostgreSQL hosting)</strong> — {t("s4.neon")}
           </li>
         </ul>
-        <p>We do not sell your personal information to third parties.</p>
+        <p>{t("s4.outro")}</p>
       </LegalSection>
 
-      <LegalSection heading="5. Cookies and local storage">
-        <p>
-          We use a secure, encrypted session cookie to keep you signed in, and
-          store your cart and wishlist locally on your device so they persist
-          between visits. These are functional and are not used for advertising
-          or cross-site tracking.
-        </p>
+      <LegalSection heading={t("s5.heading")}>
+        <p>{t("s5.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="6. Data retention">
-        <p>
-          We retain your account and order data for as long as your account is
-          active, or as required to comply with legal, tax, and accounting
-          obligations. You can request deletion at any time as described below.
-        </p>
+      <LegalSection heading={t("s6.heading")}>
+        <p>{t("s6.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="7. Your rights, including account deletion">
+      <LegalSection heading={t("s7.heading")}>
         <p>
-          You can review and update your saved addresses at any time from{" "}
-          <strong>Account</strong> in the app. To permanently delete your
-          account and associated data (addresses and wishlist), go to{" "}
-          <strong>Account → Delete Account</strong> in the app or website and
-          confirm with your password. This is available whether or not you have
-          the app installed, by visiting our website. You can also request
-          deletion by emailing{" "}
-          <a
-            href="mailto:sukhmeet.bedi@elemantra.in"
-            className="text-brand-primary font-medium"
-          >
-            sukhmeet.bedi@elemantra.in
-          </a>
-          .
+          {t.rich("s7.p1", {
+            account: (chunks) => <strong>{chunks}</strong>,
+            deleteAccount: (chunks) => <strong>{chunks}</strong>,
+            email: (chunks) => (
+              <a
+                href="mailto:sukhmeet.bedi@elemantra.in"
+                className="text-brand-primary font-medium"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
-        <p>
-          Order records required for tax/accounting purposes may be retained as
-          required by law even after account deletion.
-        </p>
+        <p>{t("s7.p2")}</p>
       </LegalSection>
 
-      <LegalSection heading="8. Security">
-        <p>
-          Passwords are stored using one-way hashing (bcrypt). Data in transit
-          is encrypted via HTTPS. Session cookies are HTTP-only and signed.
-          Access to the production database is restricted to authorized
-          personnel.
-        </p>
+      <LegalSection heading={t("s8.heading")}>
+        <p>{t("s8.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="9. Children's privacy">
-        <p>
-          FastGet is intended for business and contractor use and is not
-          directed at children under 18. We do not knowingly collect data from
-          children.
-        </p>
+      <LegalSection heading={t("s9.heading")}>
+        <p>{t("s9.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="10. Changes to this policy">
-        <p>
-          We may update this policy from time to time. Material changes will be
-          reflected by updating the &ldquo;Last updated&rdquo; date above.
-        </p>
+      <LegalSection heading={t("s10.heading")}>
+        <p>{t("s10.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="11. Contact us">
+      <LegalSection heading={t("s11.heading")}>
         <p>
-          For privacy questions or data requests, contact us at{" "}
-          <a
-            href="mailto:sukhmeet.bedi@elemantra.in"
-            className="text-brand-primary font-medium"
-          >
-            sukhmeet.bedi@elemantra.in
-          </a>{" "}
-          or call +91 8847777020. FastGet, Office no - 17, 2nd Floor,
-          Bhavan&apos;s Campus, Sardar Patel Technology Business Incubator, Old
-          D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058.
+          {t.rich("s11.body", {
+            email: (chunks) => (
+              <a
+                href="mailto:sukhmeet.bedi@elemantra.in"
+                className="text-brand-primary font-medium"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
       </LegalSection>
     </LegalPageLayout>

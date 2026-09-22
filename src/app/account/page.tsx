@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import {
@@ -67,19 +68,20 @@ function MenuItem({
 /* ─── Public links (visible without auth) ───────────────────────────────── */
 
 const PUBLIC_ITEMS = [
-  { href: '/support', label: 'FastGet Support', Icon: Headphones },
-];
+  { href: '/support', labelKey: 'menu.support', Icon: Headphones },
+] as const;
 
 const POLICY_ITEMS = [
-  { href: '/shipping-policy', label: 'Shipping Policy', Icon: Truck     },
-  { href: '/refund-policy',   label: 'Refund Policy',   Icon: RefreshCw },
-  { href: '/privacy-policy',  label: 'Privacy Policy',  Icon: Lock      },
-  { href: '/terms',           label: 'Terms of Service', Icon: FileText },
-];
+  { href: '/shipping-policy', labelKey: 'menu.shippingPolicy', Icon: Truck     },
+  { href: '/refund-policy',   labelKey: 'menu.refundPolicy',   Icon: RefreshCw },
+  { href: '/privacy-policy',  labelKey: 'menu.privacyPolicy',  Icon: Lock      },
+  { href: '/terms',           labelKey: 'menu.termsOfService', Icon: FileText },
+] as const;
 
 /* ─── Policies accordion (shared between guest + auth screens) ──────────── */
 
 function PoliciesSection() {
+  const t = useTranslations('account');
   const [open, setOpen] = useState(false);
   return (
     <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
@@ -90,7 +92,7 @@ function PoliciesSection() {
         <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center flex-shrink-0">
           <BookOpen className="w-5 h-5 text-brand-dark" />
         </div>
-        <span className="ml-3 text-sm font-medium text-brand-charcoal flex-1 text-left">Policies</span>
+        <span className="ml-3 text-sm font-medium text-brand-charcoal flex-1 text-left">{t('menu.policies')}</span>
         <ChevronDown className={cn('w-4 h-4 text-brand-steel transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {open && (
@@ -99,7 +101,7 @@ function PoliciesSection() {
             <MenuItem
               key={item.href}
               href={item.href}
-              label={item.label}
+              label={t(item.labelKey)}
               Icon={item.Icon}
               isLast={idx === POLICY_ITEMS.length - 1}
             />
@@ -113,6 +115,8 @@ function PoliciesSection() {
 /* ─── Guest screen ──────────────────────────────────────────────────────── */
 
 function GuestAccount() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   return (
     <div className="min-h-screen bg-brand-fog pb-8">
 
@@ -131,9 +135,9 @@ function GuestAccount() {
           <div className="w-20 h-20 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
             <User className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Welcome to FastGet</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">{t('guest.heading')}</h1>
           <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-            Sign in to manage your orders, addresses, and account settings.
+            {t('guest.subtitle')}
           </p>
 
           {/* CTAs */}
@@ -143,14 +147,14 @@ function GuestAccount() {
               className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
             >
               <LogIn className="w-5 h-5" />
-              Log In
+              {tc('login')}
             </Link>
             <Link
               href={'/signup?redirect=/account' as any}
               className="flex items-center justify-center gap-2.5 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
             >
               <UserPlus className="w-5 h-5" />
-              Create an Account
+              {t('guest.createAccount')}
             </Link>
           </div>
         </div>
@@ -159,7 +163,7 @@ function GuestAccount() {
       {/* Divider */}
       <div className="flex items-center gap-3 px-4 mt-7 mb-4">
         <div className="flex-1 h-px bg-neutral-200" />
-        <span className="text-xs text-brand-steel font-medium">More</span>
+        <span className="text-xs text-brand-steel font-medium">{t('guest.more')}</span>
         <div className="flex-1 h-px bg-neutral-200" />
       </div>
 
@@ -169,7 +173,7 @@ function GuestAccount() {
           <MenuItem
             key={item.href}
             href={item.href}
-            label={item.label}
+            label={t(item.labelKey)}
             Icon={item.Icon}
             isLast={idx === PUBLIC_ITEMS.length - 1}
           />
@@ -186,12 +190,14 @@ function GuestAccount() {
 /* ─── Authenticated account page ────────────────────────────────────────── */
 
 const AUTH_ITEMS = [
-  { href: '/my-profile',   label: 'My Profile',    Icon: User          },
-  { href: '/my-orders',    label: 'Order History', Icon: ClipboardList },
-  { href: '/my-addresses', label: 'My Addresses',  Icon: MapPin        },
-];
+  { href: '/my-profile',   labelKey: 'menu.myProfile',    Icon: User          },
+  { href: '/my-orders',    labelKey: 'menu.orderHistory', Icon: ClipboardList },
+  { href: '/my-addresses', labelKey: 'menu.myAddresses',  Icon: MapPin        },
+] as const;
 
 export default function AccountPage() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   const { currentUser, isLoaded, logout } = useUser();
   const router = useRouter();
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
@@ -244,8 +250,8 @@ export default function AccountPage() {
           <Coins className="w-5 h-5 text-brand-primary" />
         </div>
         <div className="ml-3 flex-1">
-          <p className="text-sm font-medium text-brand-charcoal">My Coins</p>
-          <p className="text-xs text-brand-slate">Earn 10% back, redeem for discounts</p>
+          <p className="text-sm font-medium text-brand-charcoal">{t('menu.myCoins')}</p>
+          <p className="text-xs text-brand-slate">{t('menu.myCoinsSubtitle')}</p>
         </div>
         <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '—'}</span>
         <ChevronRight className="w-4 h-4 text-brand-steel" />
@@ -257,7 +263,7 @@ export default function AccountPage() {
           <MenuItem
             key={item.href}
             href={item.href}
-            label={item.label}
+            label={t(item.labelKey)}
             Icon={item.Icon}
             isLast={idx === AUTH_ITEMS.length - 1}
           />
@@ -270,7 +276,7 @@ export default function AccountPage() {
           <MenuItem
             key={item.href}
             href={item.href}
-            label={item.label}
+            label={t(item.labelKey)}
             Icon={item.Icon}
             isLast={idx === PUBLIC_ITEMS.length - 1}
           />
@@ -288,7 +294,7 @@ export default function AccountPage() {
           <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
             <LogOut className="w-5 h-5 text-red-500" />
           </div>
-          <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">Log Out</span>
+          <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">{tc('signOut')}</span>
           <ChevronRight className="w-4 h-4 text-brand-steel" />
         </button>
       </div>

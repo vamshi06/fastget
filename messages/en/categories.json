@@ -1,0 +1,10 @@
+{
+  "tools-machines": { "full": "Tools & Machines", "short": "Tools" },
+  "carpentry": { "full": "Carpentry", "short": "Carpentry" },
+  "paints": { "full": "Paints & Polish", "short": "Paints" },
+  "plumbing": { "full": "Plumbing", "short": "Plumbing" },
+  "civil-materials": { "full": "Civil Materials", "short": "Civil" },
+  "electrical": { "full": "Electrical", "short": "Electrical" },
+  "flooring-ceilings": { "full": "Flooring & Ceilings", "short": "Flooring" },
+  "glass-aluminium": { "full": "Glass & Aluminium", "short": "Glass & Alu" }
+}

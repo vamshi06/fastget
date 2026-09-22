@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Star } from 'lucide-react';
 
 interface StarRatingProps {
@@ -12,6 +13,7 @@ interface StarRatingProps {
 
 /** Star rating — read-only display when `onChange` is omitted, interactive otherwise. */
 export function StarRating({ value, onChange, size = 20, readOnly = false }: StarRatingProps) {
+  const t = useTranslations('product');
   const [hovered, setHovered] = useState<number | null>(null);
   const interactive = !readOnly && !!onChange;
   const shown = hovered ?? value;
@@ -27,7 +29,7 @@ export function StarRating({ value, onChange, size = 20, readOnly = false }: Sta
           onMouseEnter={() => interactive && setHovered(star)}
           onMouseLeave={() => interactive && setHovered(null)}
           className={interactive ? 'cursor-pointer' : 'cursor-default'}
-          aria-label={`${star} star${star !== 1 ? 's' : ''}`}
+          aria-label={t('starAriaLabel', { count: star })}
         >
           <Star
             style={{ width: size, height: size }}

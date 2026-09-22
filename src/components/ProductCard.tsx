@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Product } from '@/types';
 import { useCart } from './CartContext';
 import { useToast } from './ToastContext';
@@ -19,6 +20,8 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   const { showToast } = useToast();
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const [isAdding, setIsAdding] = useState(false);
+  const t = useTranslations('product');
+  const tc = useTranslations('common');
 
   const wishlisted = isInWishlist(product.id);
 
@@ -26,10 +29,10 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
     e.preventDefault();
     if (wishlisted) {
       await removeFromWishlist(product.id);
-      showToast(`Removed from wishlist`, 'success');
+      showToast(t('wishlistRemoved'), 'success');
     } else {
       await addToWishlist(product);
-      showToast(`Saved to wishlist`, 'success', { label: 'View Wishlist', href: '/wishlist' });
+      showToast(t('wishlistSaved'), 'success', { label: t('viewWishlist'), href: '/wishlist' });
     }
   };
 
@@ -47,9 +50,9 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       setIsAdding(true);
       try {
         addItem(product, 1);
-        showToast(`${product.name} added to cart`, 'success', { label: 'View Cart', href: '/cart' });
+        showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
       } catch {
-        showToast('Could not add item. Try again.', 'error');
+        showToast(t('couldNotAddItem'), 'error');
       } finally {
         setTimeout(() => setIsAdding(false), 400);
       }
@@ -64,12 +67,12 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
     } else {
       try {
         removeItem(product.id);
-        showToast(`${product.name} removed from cart`, 'success', {
-          label: 'Undo',
+        showToast(t('removedFromCart', { name: product.name }), 'success', {
+          label: t('undo'),
           onClick: () => addItem(product, 1),
         });
       } catch {
-        showToast('Could not remove item. Try again.', 'error');
+        showToast(t('couldNotRemoveItem'), 'error');
       }
     }
   };
@@ -98,7 +101,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
             {/* Wishlist heart — compact card */}
             <button
               onClick={handleWishlistToggle}
-              aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+              aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
               className="absolute top-1.5 left-1.5 z-10 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
             >
               <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
@@ -106,13 +109,13 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
 
             {discount > 0 && (
               <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
-                {discount}% OFF
+                {t('offBadge', { discount })}
               </span>
             )}
 
             {product.stockStatus === 'out' && (
               <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                <span className="text-[9px] font-semibold text-neutral-500">Out of Stock</span>
+                <span className="text-[9px] font-semibold text-neutral-500">{tc('outOfStock')}</span>
               </div>
             )}
 
@@ -147,7 +150,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               {hasMrp && <span className="text-[10px] text-neutral-400 line-through">{formatCurrency(product.mrpPrice!)}</span>}
             </div>
             {savings > 0 && (
-              <p className="text-[9px] font-bold text-green-600 mb-0.5">₹{savings.toLocaleString('en-IN')} OFF</p>
+              <p className="text-[9px] font-bold text-green-600 mb-0.5">{t('savingsOff', { amount: savings.toLocaleString('en-IN') })}</p>
             )}
             <p className="text-[10px] font-medium text-brand-charcoal line-clamp-2 leading-tight mb-0.5 flex-grow">
               {product.name}
@@ -175,20 +178,20 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
           )}
           {discount > 0 && (
             <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-              {discount}% off
+              {t('percentOff', { discount })}
             </span>
           )}
           {/* Wishlist heart — full card */}
           <button
             onClick={handleWishlistToggle}
-            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
             className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
           >
             <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
           </button>
           {product.stockStatus === 'out' && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-              <span className="text-xs font-semibold text-neutral-500 bg-white px-2.5 py-1 rounded-full border border-neutral-200">Out of Stock</span>
+              <span className="text-xs font-semibold text-neutral-500 bg-white px-2.5 py-1 rounded-full border border-neutral-200">{tc('outOfStock')}</span>
             </div>
           )}
         </div>
@@ -211,15 +214,15 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
           {product.moq && product.moq > 1 && (
             <p className="flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mb-2">
               <Tag className="w-3 h-3 flex-shrink-0" />
-              Min. order: {product.moq} {product.unit}
+              {t('minOrder', { moq: product.moq, unit: product.unit })}
             </p>
           )}
           <div onClick={(e) => e.preventDefault()}>
             {product.stockStatus === 'out' ? (
-              <button disabled className="w-full py-2 px-4 bg-neutral-100 text-neutral-400 rounded-xl cursor-not-allowed text-sm font-medium">Out of Stock</button>
+              <button disabled className="w-full py-2 px-4 bg-neutral-100 text-neutral-400 rounded-xl cursor-not-allowed text-sm font-medium">{tc('outOfStock')}</button>
             ) : quantity === 0 ? (
               <button onClick={handleIncrement} disabled={isAdding} className={`btn-primary w-full py-2 text-sm ${isAdding ? 'opacity-75 cursor-not-allowed' : ''}`}>
-                {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" />Add to Cart</>}
+                {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" />{t('addToCart')}</>}
               </button>
             ) : (
               <div className="flex items-center justify-between gap-2 p-1 bg-primary-50 rounded-xl border border-primary-200">

@@ -1,0 +1,10 @@
+{
+  "tools-machines": { "full": "औज़ार और मशीनें", "short": "औज़ार" },
+  "carpentry": { "full": "बढ़ईगीरी", "short": "बढ़ईगीरी" },
+  "paints": { "full": "पेंट और पॉलिश", "short": "पेंट" },
+  "plumbing": { "full": "प्लंबिंग", "short": "प्लंबिंग" },
+  "civil-materials": { "full": "सिविल सामग्री", "short": "सिविल" },
+  "electrical": { "full": "इलेक्ट्रिकल", "short": "इलेक्ट्रिकल" },
+  "flooring-ceilings": { "full": "फ़्लोरिंग और सीलिंग", "short": "फ़्लोरिंग" },
+  "glass-aluminium": { "full": "ग्लास और एल्युमिनियम", "short": "ग्लास व एल्यु" }
+}

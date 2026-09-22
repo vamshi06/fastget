@@ -1,34 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 
-const slides = [
-  {
-    title: 'Construction Materials',
-    highlight: 'Delivered in 60 Min',
-    description:
-      'Carpentry, Plumbing, Hardware, Electrical & more everything your site needs, delivered same-day.',
-  },
-  {
-    title: 'Keep Your Project',
-    highlight: 'Moving Without Stops',
-    description:
-      'Plywood, hinges, CPVC fittings, wires, bolts urgent materials to your Mumbai site before work stops.',
-  },
-  {
-    title: 'Carpentry, Plumbing,',
-    highlight: 'Hardware & More',
-    description:
-      'From plywood boards to CPVC fittings, electrical accessories to adhesives your one-stop site store.',
-  },
-];
-
-// A clone of the first slide appended at the end lets the track scroll one
-// step past the last real slide, which we then jump back from invisibly —
-// giving a seamless loop from slide 3 back to slide 1.
-const extendedSlides = [...slides, slides[0]];
+interface HeroSlide {
+  title: string;
+  highlight: string;
+  description: string;
+}
 
 export function HeroSection() {
+  const t = useTranslations('home');
+  const slides = t.raw('heroSlides') as HeroSlide[];
+  // A clone of the first slide appended at the end lets the track scroll one
+  // step past the last real slide, which we then jump back from invisibly —
+  // giving a seamless loop from slide 3 back to slide 1.
+  const extendedSlides = useMemo(() => [...slides, slides[0]], [slides]);
   const [dot, setDot] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef(0);
@@ -61,7 +48,7 @@ export function HeroSection() {
       scrollToIndex(next);
     }, 5000);
     return () => clearInterval(t);
-  }, [scrollToIndex]);
+  }, [scrollToIndex, slides.length]);
 
   // Keep the indicators in sync with manual scrolling/swiping, and loop back
   // to the real first slide once the cloned slide at the end is reached.
@@ -91,7 +78,7 @@ export function HeroSection() {
       cancelAnimationFrame(frame);
       clearTimeout(loopTimeout.current);
     };
-  }, []);
+  }, [slides.length]);
 
   const handleInteractionStart = () => {
     isInteracting.current = true;

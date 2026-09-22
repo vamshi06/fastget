@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ArrowRight } from 'lucide-react';
 
-const CATEGORIES = [
-  { slug: 'civil-materials',   name: 'Civil Materials'     },
-  { slug: 'flooring-ceilings', name: 'Tiling & Flooring'   },
-  { slug: 'paints',            name: 'Paints & Polish'      },
-  { slug: 'plumbing',          name: 'Plumbing'             },
-  { slug: 'carpentry',         name: 'Carpentry'            },
-  { slug: 'electrical',        name: 'Electrical'           },
-  { slug: 'tools-machines',    name: 'Tools & Machines'     },
-  { slug: 'glass-aluminium',   name: 'Glass & Aluminium'    },
+const CATEGORY_SLUGS = [
+  'civil-materials',
+  'flooring-ceilings',
+  'paints',
+  'plumbing',
+  'carpentry',
+  'electrical',
+  'tools-machines',
+  'glass-aluminium',
 ];
 
 function CategoryTile({ slug, name }: { slug: string; name: string }) {
@@ -46,25 +47,29 @@ function CategoryTile({ slug, name }: { slug: string; name: string }) {
 }
 
 export function CategoryStrip() {
+  const t = useTranslations('home');
+  const tCategories = useTranslations('categories');
+  const tc = useTranslations('common');
+
   return (
     <section>
       <div className="section-header mb-4">
         <div>
-          <h2 className="section-title">Shop by Category</h2>
+          <h2 className="section-title">{t('shopByCategory')}</h2>
           <div className="speed-accent mt-1.5" />
         </div>
         <Link
           href="/categories"
           className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1"
         >
-          View All
+          {tc('viewAll')}
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-        {CATEGORIES.map((cat) => (
-          <CategoryTile key={cat.slug} slug={cat.slug} name={cat.name} />
+        {CATEGORY_SLUGS.map((slug) => (
+          <CategoryTile key={slug} slug={slug} name={tCategories(`${slug}.full`)} />
         ))}
       </div>
     </section>

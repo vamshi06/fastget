@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Home, LayoutGrid, ShoppingCart, ClipboardList, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/components/CartContext';
 
-const SIDE_TABS = [
-  { href: '/',           label: 'Home',     Icon: Home          },
-  { href: '/categories', label: 'Category', Icon: LayoutGrid    },
-  { href: '/my-orders',  label: 'Orders',   Icon: ClipboardList },
-  { href: '/account',    label: 'Account',  Icon: User          },
+const SIDE_TAB_DEFS = [
+  { href: '/',           labelKey: 'home',     Icon: Home          },
+  { href: '/categories', labelKey: 'category', Icon: LayoutGrid    },
+  { href: '/my-orders',  labelKey: 'orders',   Icon: ClipboardList },
+  { href: '/account',    labelKey: 'account',  Icon: User          },
 ];
 
 const HIDDEN_ROUTES = ['/admin', '/agent-dashboard', '/agent/'];
@@ -51,6 +52,9 @@ export function MobileBottomNav() {
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
   const isCartActive = pathname.startsWith('/cart');
+  const t = useTranslations('nav');
+  const tc = useTranslations('common');
+  const SIDE_TABS = SIDE_TAB_DEFS.map((tab) => ({ ...tab, label: t(`bottomNav.${tab.labelKey}`) }));
 
   // Delay rendering until after client hydration so the server output (null)
   // matches the initial client output (null), eliminating hydration mismatches.
@@ -143,7 +147,7 @@ export function MobileBottomNav() {
                 isCartActive ? 'font-semibold text-brand-primary' : 'font-medium text-brand-steel'
               )}
             >
-              Cart
+              {tc('cart')}
             </span>
           </Link>
         </div>

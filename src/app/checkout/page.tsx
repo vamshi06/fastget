@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
@@ -17,10 +18,16 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: 
   work: Briefcase,
   other: MoreHorizontal,
 };
-const ADDRESS_TYPE_LABELS: Record<AddressType, string> = { home: 'Home', work: 'Work', other: 'Other' };
 
 function CheckoutPageContent() {
   const router = useRouter();
+  const t = useTranslations('checkout');
+  const tc = useTranslations('common');
+  const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
+    home: t('addressTypes.home'),
+    work: t('addressTypes.work'),
+    other: t('addressTypes.other'),
+  };
   const {
     state,
     getSubtotal,
@@ -185,21 +192,21 @@ function CheckoutPageContent() {
             {itemCount > 0 && (
               <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 mb-4">
                 <Package className="w-3.5 h-3.5" />
-                {itemCount} item{itemCount > 1 ? 's' : ''} in cart
+                {t('itemsInCartBadge', { count: itemCount })}
               </span>
             )}
-            <h1 className="text-3xl font-black text-white tracking-tight">Almost there!</h1>
+            <h1 className="text-3xl font-black text-white tracking-tight">{t('guestTitle')}</h1>
             <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-              Sign in to complete your order and enjoy fast delivery
+              {t('guestSubtitle')}
             </p>
           </div>
 
           {/* Benefits */}
           <div className="space-y-1">
             {[
-              { icon: Zap, text: 'Urgent delivery in 30–60 minutes' },
-              { icon: ClipboardList, text: 'Track your order in real time' },
-              { icon: ShieldCheck, text: 'Secure account & order history' },
+              { icon: Zap, text: t('benefitUrgentDelivery') },
+              { icon: ClipboardList, text: t('benefitTrackOrder') },
+              { icon: ShieldCheck, text: t('benefitSecureAccount') },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
                 <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -216,17 +223,17 @@ function CheckoutPageContent() {
               href="/login?redirect=/checkout"
               className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
             >
-              Log In to Your Account
+              {t('logInCta')}
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               href="/signup?redirect=/checkout"
               className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
             >
-              Create a New Account
+              {t('signUpCta')}
             </Link>
             <p className="text-center text-xs text-white/70 pt-1">
-              Your cart is saved — it will be waiting after you sign in
+              {t('cartSavedNote')}
             </p>
           </div>
         </div>
@@ -239,10 +246,10 @@ function CheckoutPageContent() {
       <div className="min-h-screen bg-brand-fog py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <Package className="w-16 h-16 text-brand-steel mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">Your cart is empty</h1>
-          <p className="text-brand-slate mb-8">Add products to your cart before checking out</p>
+          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">{t('emptyTitle')}</h1>
+          <p className="text-brand-slate mb-8">{t('emptyMessage')}</p>
           <Link href="/catalog" className="btn-primary inline-flex px-6 py-3">
-            Browse Products
+            {tc('browseProducts')}
           </Link>
         </div>
       </div>
@@ -294,13 +301,13 @@ function CheckoutPageContent() {
         router.push(`/order/${data.statusToken}`);
       } else {
         setIsSubmitting(false);
-        const msg = data.error || 'Failed to place order. Please try again.';
+        const msg = data.error || t('errorPlaceOrderFailed');
         setError(msg);
         showToast(msg, 'error');
       }
     } catch {
       setIsSubmitting(false);
-      const msg = 'Something went wrong while placing your order';
+      const msg = t('errorPlaceOrderGeneric');
       setError(msg);
       showToast(msg, 'error');
     }
@@ -317,7 +324,7 @@ function CheckoutPageContent() {
     }
 
     if (isManualEntryActive && saveAddress && !newAddressCity.trim()) {
-      setError('Please enter a city to save this address');
+      setError(t('errorEnterCity'));
       return;
     }
 
@@ -327,7 +334,7 @@ function CheckoutPageContent() {
     }
 
     if (firstOrderDiscount + coinDiscount >= getTotal()) {
-      setError('Your order is fully covered by discounts/coins. Please select Cash on Delivery to place it.');
+      setError(t('errorFullyCovered'));
       return;
     }
 
@@ -354,7 +361,7 @@ function CheckoutPageContent() {
 
       if (!createRes.ok) {
         const data = await createRes.json();
-        throw new Error(data.error || 'Failed to initiate payment');
+        throw new Error(data.error || t('errorInitiatePayment'));
       }
 
       const { razorpayOrderId, amount, currency, orderToken } = await createRes.json();
@@ -388,12 +395,12 @@ function CheckoutPageContent() {
             } else {
               setPaymentState('failed');
               setIsSubmitting(false);
-              setError(verifyData.error || 'Payment verification failed. Please contact support.');
+              setError(verifyData.error || t('errorPaymentVerificationFailed'));
             }
           } catch {
             setPaymentState('failed');
             setIsSubmitting(false);
-            setError('Payment verification failed. Please contact support.');
+            setError(t('errorPaymentVerificationFailed'));
           }
         },
         prefill: {
@@ -405,7 +412,7 @@ function CheckoutPageContent() {
           ondismiss: () => {
             setPaymentState('idle');
             setIsSubmitting(false);
-            setError('Payment not completed. Tap "Proceed to Pay" to complete your order.');
+            setError(t('errorPaymentNotCompleted'));
           },
         },
       });
@@ -413,7 +420,7 @@ function CheckoutPageContent() {
     } catch (err) {
       setPaymentState('failed');
       setIsSubmitting(false);
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const msg = err instanceof Error ? err.message : t('errorGeneric');
       setError(msg);
       showToast(msg, 'error');
     }
@@ -425,12 +432,12 @@ function CheckoutPageContent() {
     <div className="min-h-screen bg-brand-fog py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 mb-8">
-          <Link href="/cart" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">Cart</Link>
+          <Link href="/cart" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">{t('breadcrumbCart')}</Link>
           <ChevronRight className="w-4 h-4 text-brand-steel" />
-          <span className="text-brand-charcoal font-medium text-sm">Checkout</span>
+          <span className="text-brand-charcoal font-medium text-sm">{t('pageTitle')}</span>
         </div>
 
-        <h1 className="text-2xl font-black text-brand-charcoal mb-8">Checkout</h1>
+        <h1 className="text-2xl font-black text-brand-charcoal mb-8">{t('pageTitle')}</h1>
 
         {error && (
           <div ref={errorRef} className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
@@ -446,12 +453,12 @@ function CheckoutPageContent() {
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-brand-primary" />
-                  Contact Information
+                  {t('contactInfo')}
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                      Full Name *
+                      {t('fullNameLabel')}
                     </label>
                     {currentUser && (
                       <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
@@ -461,7 +468,7 @@ function CheckoutPageContent() {
                           onChange={(e) => handleUseAccountName(e.target.checked)}
                           className="w-3.5 h-3.5 accent-brand-primary"
                         />
-                        <span className="text-xs text-brand-slate">Use account name ({currentUser.name})</span>
+                        <span className="text-xs text-brand-slate">{t('useAccountName', { name: currentUser.name })}</span>
                       </label>
                     )}
                     <input
@@ -473,12 +480,12 @@ function CheckoutPageContent() {
                         setFormData({ ...formData, customerName: value });
                       }}
                       className={inputCls}
-                      placeholder="Enter your name"
+                      placeholder={t('namePlaceholder')}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                      Phone Number *
+                      {t('phoneLabel')}
                     </label>
                     {currentUser?.phone && (
                       <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
@@ -488,7 +495,7 @@ function CheckoutPageContent() {
                           onChange={(e) => handleUseAccountPhone(e.target.checked)}
                           className="w-3.5 h-3.5 accent-brand-primary"
                         />
-                        <span className="text-xs text-brand-slate">Use account number ({currentUser.phone})</span>
+                        <span className="text-xs text-brand-slate">{t('useAccountPhone', { phone: currentUser.phone })}</span>
                       </label>
                     )}
                     <div className="relative">
@@ -502,7 +509,7 @@ function CheckoutPageContent() {
                           setFormData({ ...formData, customerPhone: value });
                         }}
                         className={`${inputCls} pl-10`}
-                        placeholder="10-digit mobile number"
+                        placeholder={t('phonePlaceholder')}
                         maxLength={10}
                       />
                     </div>
@@ -513,7 +520,7 @@ function CheckoutPageContent() {
               <div className="border-t border-neutral-100 pt-6">
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-brand-primary" />
-                  Delivery Address
+                  {t('deliveryAddress')}
                 </h2>
 
                 {/* Selected address card */}
@@ -529,7 +536,7 @@ function CheckoutPageContent() {
                         </p>
                         <p className="text-sm font-medium text-brand-charcoal leading-snug">{selectedAddress.street}</p>
                         {selectedAddress.landmark && (
-                          <p className="text-xs text-brand-slate mt-0.5">Near {selectedAddress.landmark}</p>
+                          <p className="text-xs text-brand-slate mt-0.5">{t('nearLandmark', { landmark: selectedAddress.landmark })}</p>
                         )}
                         <p className="text-sm text-brand-slate">{selectedAddress.city}</p>
                       </div>
@@ -538,7 +545,7 @@ function CheckoutPageContent() {
                         onClick={() => setShowAddressPicker(p => !p)}
                         className="flex items-center gap-1 text-xs font-semibold text-brand-primary hover:text-brand-dark transition-colors flex-shrink-0 mt-0.5"
                       >
-                        Change
+                        {t('change')}
                         {showAddressPicker ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
                     </div>
@@ -560,7 +567,7 @@ function CheckoutPageContent() {
                                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-slate'}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-brand-charcoal">{ADDRESS_TYPE_LABELS[addr.type]}{addr.isPrimary && <span className="ml-1.5 text-brand-primary">· Primary</span>}</p>
+                                <p className="text-xs font-bold text-brand-charcoal">{ADDRESS_TYPE_LABELS[addr.type]}{addr.isPrimary && <span className="ml-1.5 text-brand-primary">· {t('primaryBadge')}</span>}</p>
                                 <p className="text-xs text-brand-slate truncate">{addr.street}, {addr.city}</p>
                               </div>
                               {isActive && <ChevronRight className="w-4 h-4 text-brand-primary flex-shrink-0" />}
@@ -575,7 +582,7 @@ function CheckoutPageContent() {
                           <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
                             <PenLine className="w-3.5 h-3.5 text-brand-slate" />
                           </div>
-                          <span className="text-xs font-semibold text-brand-slate">Enter a different address</span>
+                          <span className="text-xs font-semibold text-brand-slate">{t('enterDifferentAddress')}</span>
                         </button>
                       </div>
                     )}
@@ -590,31 +597,31 @@ function CheckoutPageContent() {
                         className="flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-brand-dark transition-colors"
                       >
                         <MapPin className="w-3.5 h-3.5" />
-                        Use a saved address
+                        {t('useSavedAddress')}
                       </button>
                     )}
                     <div>
                       <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                        Site Address *
+                        {t('siteAddressLabel')}
                       </label>
                       <textarea
                         value={formData.siteAddress}
                         onChange={(e) => setFormData({ ...formData, siteAddress: e.target.value })}
                         rows={3}
                         className={`${inputCls} resize-none`}
-                        placeholder="Building name, street address, area, landmark"
+                        placeholder={t('siteAddressPlaceholder')}
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                        Landmark (Optional)
+                        {t('landmarkLabel')}
                       </label>
                       <input
                         type="text"
                         value={formData.landmark}
                         onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
                         className={inputCls}
-                        placeholder="Nearby landmark for easier navigation"
+                        placeholder={t('landmarkPlaceholder')}
                       />
                     </div>
 
@@ -626,41 +633,41 @@ function CheckoutPageContent() {
                           onChange={(e) => setSaveAddress(e.target.checked)}
                           className="w-3.5 h-3.5 accent-brand-primary"
                         />
-                        <span className="text-xs font-semibold text-brand-charcoal">Save this address for future orders</span>
+                        <span className="text-xs font-semibold text-brand-charcoal">{t('saveAddressLabel')}</span>
                       </label>
 
                       {saveAddress && (
                         <div className="mt-3 space-y-3 pl-1">
                           <div className="flex gap-2">
-                            {(['home', 'work', 'other'] as AddressType[]).map((t) => {
-                              const Icon = ADDRESS_TYPE_ICONS[t];
+                            {(['home', 'work', 'other'] as AddressType[]).map((type) => {
+                              const Icon = ADDRESS_TYPE_ICONS[type];
                               return (
                                 <button
-                                  key={t}
+                                  key={type}
                                   type="button"
-                                  onClick={() => setNewAddressType(t)}
+                                  onClick={() => setNewAddressType(type)}
                                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                                    newAddressType === t
+                                    newAddressType === type
                                       ? 'bg-brand-primary text-white border-brand-primary'
                                       : 'bg-white text-brand-slate border-neutral-200 hover:border-brand-primary hover:text-brand-primary'
                                   }`}
                                 >
                                   <Icon className="w-3.5 h-3.5" />
-                                  {ADDRESS_TYPE_LABELS[t]}
+                                  {ADDRESS_TYPE_LABELS[type]}
                                 </button>
                               );
                             })}
                           </div>
                           <div>
                             <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                              City *
+                              {t('cityLabel')}
                             </label>
                             <input
                               type="text"
                               value={newAddressCity}
                               onChange={(e) => setNewAddressCity(e.target.value)}
                               className={inputCls}
-                              placeholder="e.g. Mumbai"
+                              placeholder={t('cityPlaceholder')}
                             />
                           </div>
                         </div>
@@ -673,7 +680,7 @@ function CheckoutPageContent() {
               <div className="border-t border-neutral-100 pt-6">
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <Clock className="w-5 h-5 text-brand-primary" />
-                  Delivery Options
+                  {t('deliveryOptions')}
                 </h2>
                 <div className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -692,8 +699,8 @@ function CheckoutPageContent() {
                         className="w-4 h-4 accent-brand-primary"
                       />
                       <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Urgent (30-60 min)</p>
-                        <p className="text-xs text-brand-slate">Deliver as soon as possible</p>
+                        <p className="font-semibold text-brand-charcoal text-sm">{t('urgentTitle')}</p>
+                        <p className="text-xs text-brand-slate">{t('urgentDesc')}</p>
                       </div>
                     </label>
                     <label
@@ -711,8 +718,8 @@ function CheckoutPageContent() {
                         className="w-4 h-4 accent-brand-primary"
                       />
                       <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Scheduled</p>
-                        <p className="text-xs text-brand-slate">Choose a delivery time</p>
+                        <p className="font-semibold text-brand-charcoal text-sm">{t('scheduledTitle')}</p>
+                        <p className="text-xs text-brand-slate">{t('scheduledDesc')}</p>
                       </div>
                     </label>
                   </div>
@@ -722,7 +729,7 @@ function CheckoutPageContent() {
                       <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
-                          Preferred Delivery Time *
+                          {t('preferredDeliveryTime')}
                         </span>
                       </label>
                       <input
@@ -739,7 +746,7 @@ function CheckoutPageContent() {
               <div className="border-t border-neutral-100 pt-6">
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-brand-primary" />
-                  Payment Method
+                  {t('paymentMethod')}
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <label
@@ -757,8 +764,8 @@ function CheckoutPageContent() {
                       className="w-4 h-4 accent-brand-primary"
                     />
                     <div>
-                      <p className="font-semibold text-brand-charcoal text-sm">Online Payment</p>
-                      <p className="text-xs text-brand-slate">UPI / Card / Net Banking</p>
+                      <p className="font-semibold text-brand-charcoal text-sm">{t('onlinePaymentTitle')}</p>
+                      <p className="text-xs text-brand-slate">{t('onlinePaymentDesc')}</p>
                     </div>
                   </label>
                   <label
@@ -778,8 +785,8 @@ function CheckoutPageContent() {
                     <div className="flex items-center gap-2">
                       <Banknote className="w-4 h-4 text-brand-slate flex-shrink-0" />
                       <div>
-                        <p className="font-semibold text-brand-charcoal text-sm">Cash on Delivery</p>
-                        <p className="text-xs text-brand-slate">Pay when your order arrives</p>
+                        <p className="font-semibold text-brand-charcoal text-sm">{t('codTitle')}</p>
+                        <p className="text-xs text-brand-slate">{t('codDesc')}</p>
                       </div>
                     </div>
                   </label>
@@ -793,15 +800,15 @@ function CheckoutPageContent() {
               >
                 {isSubmitting
                   ? paymentMethod === 'cod'
-                    ? 'Placing order…'
+                    ? t('placingOrder')
                     : paymentState === 'processing'
-                      ? 'Complete payment in popup…'
+                      ? t('completePaymentPopup')
                       : paymentState === 'verifying'
-                        ? 'Verifying payment…'
-                        : 'Initiating payment…'
+                        ? t('verifyingPayment')
+                        : t('initiatingPayment')
                   : paymentMethod === 'cod'
-                    ? 'Place Order'
-                    : 'Proceed to Pay'}
+                    ? t('placeOrderBtn')
+                    : t('proceedToPay')}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
             </form>
@@ -810,7 +817,7 @@ function CheckoutPageContent() {
           {/* Order Summary */}
           <div className="lg:col-span-1 min-w-0">
             <div className="card p-6 sticky top-24">
-              <h2 className="text-lg font-bold text-brand-charcoal mb-4">Order Summary</h2>
+              <h2 className="text-lg font-bold text-brand-charcoal mb-4">{t('orderSummary')}</h2>
 
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto scrollbar-thin">
                 {state.items.map((item) => (
@@ -825,7 +832,7 @@ function CheckoutPageContent() {
 
               <div className="border-t border-neutral-100 pt-4 space-y-3">
                 <div className="flex justify-between text-sm text-brand-slate">
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
 
@@ -834,11 +841,14 @@ function CheckoutPageContent() {
                     <Tag className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
                     {firstOrderDiscount > 0 ? (
                       <p className="text-xs text-brand-charcoal">
-                        <span className="font-bold">First order coupon applied!</span> {formatCurrency(firstOrderDiscountAmount)} off.
+                        <span className="font-bold">{t('firstOrderCouponApplied')}</span> {t('firstOrderCouponOff', { amount: formatCurrency(firstOrderDiscountAmount) })}
                       </p>
                     ) : (
                       <p className="text-xs text-brand-charcoal">
-                        Add {formatCurrency(Math.max(0, firstOrderMinOrder - getTotal()))} more to unlock {formatCurrency(firstOrderDiscountAmount)} off your first order!
+                        {t('firstOrderUnlockHint', {
+                          amount: formatCurrency(Math.max(0, firstOrderMinOrder - getTotal())),
+                          discount: formatCurrency(firstOrderDiscountAmount),
+                        })}
                       </p>
                     )}
                   </div>
@@ -846,7 +856,7 @@ function CheckoutPageContent() {
 
                 {firstOrderDiscount > 0 && (
                   <div className="flex justify-between text-sm text-green-700">
-                    <span>First order discount</span>
+                    <span>{t('firstOrderDiscount')}</span>
                     <span className="font-medium">−{formatCurrency(firstOrderDiscount)}</span>
                   </div>
                 )}
@@ -856,7 +866,7 @@ function CheckoutPageContent() {
                     <label className="flex items-center justify-between cursor-pointer select-none">
                       <span className="flex items-center gap-1.5 text-sm text-brand-charcoal font-medium">
                         <Coins className="w-4 h-4 text-brand-primary" />
-                        Use coins ({coinBalance} available)
+                        {t('useCoins', { balance: coinBalance })}
                       </span>
                       <input
                         type="checkbox"
@@ -881,7 +891,7 @@ function CheckoutPageContent() {
                           }}
                           className="w-24 px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
                         />
-                        <span className="text-xs text-brand-slate">coins = {formatCurrency(coinDiscount)} off (max {maxRedeemable})</span>
+                        <span className="text-xs text-brand-slate">{t('coinsHint', { amount: formatCurrency(coinDiscount), max: maxRedeemable })}</span>
                       </div>
                     )}
                   </div>
@@ -889,29 +899,29 @@ function CheckoutPageContent() {
 
                 {coinDiscount > 0 && (
                   <div className="flex justify-between text-sm text-green-700">
-                    <span>Coins discount</span>
+                    <span>{t('coinsDiscount')}</span>
                     <span className="font-medium">−{formatCurrency(coinDiscount)}</span>
                   </div>
                 )}
 
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
-                    <span>Total</span>
+                    <span>{t('total')}</span>
                     <span className="text-xl">{formatCurrency(getTotal() - firstOrderDiscount - coinDiscount)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-                <p className="text-sm text-green-800 font-semibold mb-1">Payment Method</p>
+                <p className="text-sm text-green-800 font-semibold mb-1">{t('paymentMethod')}</p>
                 <p className="text-sm text-green-700">
-                  {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI / Card / Net Banking)'}
+                  {paymentMethod === 'cod' ? t('paymentMethodValueCod') : t('paymentMethodValueOnline')}
                 </p>
               </div>
 
               {formData.deliveryType === 'urgent' && (
                 <div className="mt-4 p-4 bg-primary-50 border border-primary-200 rounded-xl">
-                  <p className="text-sm text-primary-700 font-semibold mb-1">Estimated Delivery</p>
+                  <p className="text-sm text-primary-700 font-semibold mb-1">{t('estimatedDelivery')}</p>
                   <p className="text-sm text-primary-600">{estimateDeliveryTime()}</p>
                 </div>
               )}

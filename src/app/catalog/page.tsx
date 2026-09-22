@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { ProductCard } from '@/components/ProductCard';
 import { Product } from '@/types';
@@ -74,6 +75,9 @@ function SkeletonCard() {
 function CatalogPageContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
+  const t            = useTranslations('catalog');
+  const tCategories   = useTranslations('categories');
+  const tc            = useTranslations('common');
 
   // ── Read initial state from URL ───────────────────────────────────────────
   const initialCategory = searchParams.get('category')  || '';
@@ -134,10 +138,10 @@ function CatalogPageContent() {
       setLoading(false);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      setError('Failed to load products. Please try again.');
+      setError(t('errorLoadingProducts'));
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Refetch whenever filter state changes
   useEffect(() => {
@@ -218,7 +222,9 @@ function CatalogPageContent() {
 
   // ── Derived values ────────────────────────────────────────────────────────
   const pages            = paginationRange(currentPage, totalPages);
-  const activeCategoryName = DB_CATEGORIES.find((c) => c.slug === activeCategory)?.name ?? null;
+  const activeCategoryName = DB_CATEGORIES.find((c) => c.slug === activeCategory)
+    ? tCategories(`${activeCategory}.full`)
+    : null;
   const isPriceFiltered  = activeMin > 0 || activeMax < MAX_PRICE;
   const rangeStart       = total > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd         = Math.min(currentPage * PAGE_SIZE, total);
@@ -234,39 +240,22 @@ function CatalogPageContent() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div>
             {loading ? (
-              <p className="text-[15px] text-brand-slate">Loading products…</p>
+              <p className="text-[15px] text-brand-slate">{t('loadingProducts')}</p>
             ) : error ? (
               <p className="text-[15px] text-red-600">{error}</p>
             ) : searchQuery ? (
               <p className="text-[15px] text-brand-slate">
-                <span className="font-semibold text-brand-charcoal">{total}</span>{' '}
-                results for{' '}
-                <span className="font-semibold text-brand-primary">&quot;{searchQuery}&quot;</span>
+                {t('resultsFor', { count: total, query: searchQuery })}
               </p>
             ) : activeCategoryName ? (
               <p className="text-[15px] text-brand-slate">
-                {total > 0 ? (
-                  <>
-                    Showing{' '}
-                    <span className="font-semibold text-brand-charcoal">{rangeStart}–{rangeEnd}</span>
-                    {' '}of{' '}
-                    <span className="font-semibold text-brand-charcoal">{total}</span>
-                    {' '}products in{' '}
-                    <span className="font-semibold text-brand-primary">{activeCategoryName}</span>
-                  </>
-                ) : (
-                  <>No products in <span className="font-semibold text-brand-primary">{activeCategoryName}</span></>
-                )}
+                {total > 0
+                  ? t('showingRange', { start: rangeStart, end: rangeEnd, total, category: activeCategoryName })
+                  : t('noProductsInCategory', { category: activeCategoryName })}
               </p>
             ) : (
               <p className="text-[15px] text-brand-slate">
-                {total > 0 ? (
-                  <>
-                    <span className="font-semibold text-brand-charcoal">{total}</span>{' '}products available
-                  </>
-                ) : (
-                  <>No products found</>
-                )}
+                {total > 0 ? t('productsAvailable', { count: total }) : t('noProductsFound')}
               </p>
             )}
           </div>
@@ -276,7 +265,7 @@ function CatalogPageContent() {
             className="h-11 px-5 bg-white border border-neutral-200 rounded-xl text-[14px] font-medium text-brand-charcoal hover:border-brand-primary hover:bg-primary-50 transition-all flex items-center gap-2 shadow-sm"
           >
             <SlidersHorizontal className="w-4 h-4 text-brand-primary" />
-            Filters
+            {t('filters')}
             {isPriceFiltered && (
               <span className="w-2 h-2 rounded-full bg-brand-primary flex-shrink-0" />
             )}
@@ -290,8 +279,8 @@ function CatalogPageContent() {
 
             <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between bg-gradient-to-r from-primary-50 to-white">
               <div>
-                <h2 className="text-[18px] font-bold text-brand-charcoal">Filters</h2>
-                <p className="text-[13px] text-brand-slate mt-1">Refine products instantly</p>
+                <h2 className="text-[18px] font-bold text-brand-charcoal">{t('filters')}</h2>
+                <p className="text-[13px] text-brand-slate mt-1">{t('filtersSubtitle')}</p>
               </div>
               <button
                 onClick={() => setShowFilters(false)}
@@ -306,7 +295,7 @@ function CatalogPageContent() {
               {/* Category chips */}
               <div>
                 <h3 className="text-[13px] uppercase tracking-wide font-semibold text-brand-steel mb-4">
-                  Categories
+                  {t('categoriesHeading')}
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -317,7 +306,7 @@ function CatalogPageContent() {
                         : 'bg-white border border-neutral-200 text-brand-charcoal hover:border-brand-primary hover:bg-primary-50'
                     }`}
                   >
-                    All Products
+                    {t('allProducts')}
                   </button>
                   {DB_CATEGORIES.map((cat) => (
                     <button
@@ -329,7 +318,7 @@ function CatalogPageContent() {
                           : 'bg-white border border-neutral-200 text-brand-charcoal hover:border-brand-primary hover:bg-primary-50'
                       }`}
                     >
-                      {cat.name}
+                      {tCategories(`${cat.slug}.full`)}
                     </button>
                   ))}
                 </div>
@@ -339,25 +328,25 @@ function CatalogPageContent() {
               <div>
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-[13px] uppercase tracking-wide font-semibold text-brand-steel">
-                    Price Range
+                    {t('priceRange')}
                   </h3>
                   <button
                     onClick={resetPriceDisplay}
                     className="text-[13px] font-medium text-brand-primary hover:text-brand-dark transition-colors"
                   >
-                    Reset
+                    {t('reset')}
                   </button>
                 </div>
 
                 <div className="flex items-center gap-4 mb-7">
                   <div className="flex-1">
-                    <p className="text-[12px] text-brand-steel mb-2">Minimum</p>
+                    <p className="text-[12px] text-brand-steel mb-2">{t('minimum')}</p>
                     <div className="h-11 rounded-xl border border-primary-200 bg-primary-50 px-4 flex items-center font-semibold text-brand-charcoal">
                       ₹{dispMin.toLocaleString('en-IN')}
                     </div>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[12px] text-brand-steel mb-2">Maximum</p>
+                    <p className="text-[12px] text-brand-steel mb-2">{t('maximum')}</p>
                     <div className="h-11 rounded-xl border border-primary-200 bg-primary-50 px-4 flex items-center font-semibold text-brand-charcoal">
                       {dispMax >= MAX_PRICE
                         ? `₹${(MAX_PRICE / 1000).toFixed(0)}k+`
@@ -410,10 +399,10 @@ function CatalogPageContent() {
 
             <div className="px-6 py-4 border-t border-neutral-100 bg-primary-50/40 flex items-center justify-between">
               <p className="text-[13px] text-brand-slate">
-                {loading ? 'Loading…' : `${total} products found`}
+                {loading ? tc('loading') : t('productsFoundCount', { count: total })}
               </p>
               <button onClick={resetFilters} className="btn-primary h-10 px-5 text-[14px]">
-                Reset Filters
+                {t('resetFilters')}
               </button>
             </div>
           </div>
@@ -427,7 +416,7 @@ function CatalogPageContent() {
               onClick={() => fetchProducts(activeCategory, searchQuery, currentPage, activeMin, activeMax)}
               className="btn-primary h-10 px-6 text-sm"
             >
-              Retry
+              {t('retry')}
             </button>
           </div>
         )}
@@ -452,10 +441,10 @@ function CatalogPageContent() {
         {!loading && !error && products.length === 0 && (
           <div className="card border border-neutral-100 rounded-3xl py-20 text-center">
             <Package className="w-16 h-16 text-brand-steel opacity-30 mx-auto mb-5" />
-            <h3 className="text-[22px] font-bold text-brand-charcoal mb-2">No products found</h3>
-            <p className="text-[14px] text-brand-slate mb-6">Try adjusting your filters or search query</p>
+            <h3 className="text-[22px] font-bold text-brand-charcoal mb-2">{t('noProductsFound')}</h3>
+            <p className="text-[14px] text-brand-slate mb-6">{t('emptyStateSubtitle')}</p>
             <button onClick={resetFilters} className="btn-primary h-11 px-6 text-[14px]">
-              Reset Filters
+              {t('resetFilters')}
             </button>
           </div>
         )}
@@ -478,7 +467,7 @@ function CatalogPageContent() {
                 )}
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Prev</span>
+                <span className="hidden sm:inline">{t('prev')}</span>
               </button>
 
               {/* Page numbers */}
@@ -519,15 +508,15 @@ function CatalogPageContent() {
                     : 'text-brand-charcoal bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary hover:bg-primary-50',
                 )}
               >
-                <span className="hidden sm:inline">Next</span>
+                <span className="hidden sm:inline">{t('next')}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Page info */}
             <p className="text-[13px] text-brand-steel">
-              Page {currentPage} of {totalPages}
-              {total > 0 && ` · ${total} product${total !== 1 ? 's' : ''} total`}
+              {t('pageOf', { current: currentPage, totalPages })}
+              {total > 0 && ` · ${t('totalProductsSuffix', { count: total })}`}
             </p>
           </div>
         )}
@@ -537,12 +526,13 @@ function CatalogPageContent() {
 }
 
 export default function CatalogPage() {
+  const t = useTranslations('catalog');
   return (
     <Suspense
       fallback={
         <div className="min-h-screen bg-brand-fog flex items-center justify-center gap-3 text-brand-slate">
           <Loader2 className="w-5 h-5 animate-spin text-brand-primary" />
-          Loading catalog…
+          {t('loadingCatalog')}
         </div>
       }
     >

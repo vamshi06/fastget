@@ -1,0 +1,172 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "s1": {
+      "heading": "1. Who we are",
+      "body": "FastGet is (“we”, “us”, “our”), registered at Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058. This Privacy Policy explains what information we collect through the FastGet website and mobile app, how we use it, and the choices you have."
+    },
+    "s2": {
+      "heading": "2. Information we collect",
+      "intro": "When you create an account, place an order, or contact support, we collect:",
+      "list": [
+        "Account details: name, email address, phone number, and password (stored as a one-way hash, never in plain text)",
+        "Delivery addresses you save to your account",
+        "Order history: items purchased, order status, and invoices",
+        "Communications you send us (e.g. support requests)"
+      ],
+      "outro": "We do not collect your device location or contacts, and the app requests no permissions beyond internet access."
+    },
+    "s3": {
+      "heading": "3. How we use your information",
+      "list": [
+        "To create and manage your account and process orders",
+        "To send order confirmations, delivery updates, and verification/password-reset emails",
+        "To provide customer support",
+        "To improve and secure our service"
+      ]
+    },
+    "s4": {
+      "heading": "4. Sharing with third parties",
+      "intro": "We share the minimum information necessary with the following service providers, who act on our behalf:",
+      "razorpay": "processes your payments (cards, UPI, net banking). Razorpay receives your payment details directly; FastGet never stores your card or UPI credentials.",
+      "resend": "delivers transactional emails (signup verification, password reset, order updates) on our behalf.",
+      "cloudinary": "hosts product images; no personal information is sent to Cloudinary.",
+      "neon": "stores our application database, including your account and order data, on infrastructure hosted in AWS ap-southeast-1.",
+      "outro": "We do not sell your personal information to third parties."
+    },
+    "s5": {
+      "heading": "5. Cookies and local storage",
+      "body": "We use a secure, encrypted session cookie to keep you signed in, and store your cart and wishlist locally on your device so they persist between visits. These are functional and are not used for advertising or cross-site tracking."
+    },
+    "s6": {
+      "heading": "6. Data retention",
+      "body": "We retain your account and order data for as long as your account is active, or as required to comply with legal, tax, and accounting obligations. You can request deletion at any time as described below."
+    },
+    "s7": {
+      "heading": "7. Your rights, including account deletion",
+      "p1": "You can review and update your saved addresses at any time from <account>Account</account> in the app. To permanently delete your account and associated data (addresses and wishlist), go to <deleteAccount>Account → Delete Account</deleteAccount> in the app or website and confirm with your password. This is available whether or not you have the app installed, by visiting our website. You can also request deletion by emailing <email>sukhmeet.bedi@elemantra.in</email>.",
+      "p2": "Order records required for tax/accounting purposes may be retained as required by law even after account deletion."
+    },
+    "s8": {
+      "heading": "8. Security",
+      "body": "Passwords are stored using one-way hashing (bcrypt). Data in transit is encrypted via HTTPS. Session cookies are HTTP-only and signed. Access to the production database is restricted to authorized personnel."
+    },
+    "s9": {
+      "heading": "9. Children's privacy",
+      "body": "FastGet is intended for business and contractor use and is not directed at children under 18. We do not knowingly collect data from children."
+    },
+    "s10": {
+      "heading": "10. Changes to this policy",
+      "body": "We may update this policy from time to time. Material changes will be reflected by updating the “Last updated” date above."
+    },
+    "s11": {
+      "heading": "11. Contact us",
+      "body": "For privacy questions or data requests, contact us at <email>sukhmeet.bedi@elemantra.in</email> or call +91 8847777020. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+    }
+  },
+  "refund": {
+    "title": "Refund Policy",
+    "s1": {
+      "heading": "1. Order cancellations",
+      "body": "Because FastGet delivers urgently within 30–60 minutes, orders can typically only be cancelled for a full refund before they are dispatched for delivery. Once an order is out for delivery, it can no longer be cancelled."
+    },
+    "s2": {
+      "heading": "2. Damaged, defective, or wrong items",
+      "body": "If you receive damaged, defective, or incorrect items, contact us within 24 hours of delivery at <email>sukhmeet.bedi@elemantra.in</email> with your order number and photos of the issue. We will arrange a replacement or a full refund for the affected items."
+    },
+    "s3": {
+      "heading": "3. Non-returnable items",
+      "body": "Due to the nature of building materials (cut-to-size items, custom orders, and bulk/loose materials), items that are not defective and have been delivered correctly are not eligible for return once accepted."
+    },
+    "s4": {
+      "heading": "4. Refund method and timeline",
+      "body": "Approved refunds are issued to your original payment method via Razorpay. Refunds typically reflect in your account within 5–7 business days, depending on your bank or payment provider."
+    },
+    "s5": {
+      "heading": "5. How to request a refund",
+      "body": "Email <email>sukhmeet.bedi@elemantra.in</email> or visit the Support page in the app with your order number and a brief description of the issue."
+    }
+  },
+  "shipping": {
+    "title": "Shipping Policy",
+    "s1": {
+      "heading": "1. Service area",
+      "body": "FastGet currently delivers to construction sites and businesses in Andheri, Goregaon, and Malad, Mumbai. We're working on expanding to more areas."
+    },
+    "s2": {
+      "heading": "2. Delivery time",
+      "body": "Most orders are delivered within 30–60 minutes of confirmation, subject to traffic, order size, and stock availability. You can track your order's status from <account>Account → Order History</account>."
+    },
+    "s3": {
+      "heading": "3. Delivery charges",
+      "body": "Delivery charges, if any, are shown at checkout before you complete payment."
+    },
+    "s4": {
+      "heading": "4. Failed or delayed delivery",
+      "body": "If our delivery agent is unable to reach you or the delivery address, we will attempt to contact you using the phone number on your order. Significant delays will be communicated via email or in-app order status updates."
+    },
+    "s5": {
+      "heading": "5. Questions",
+      "body": "Contact <email>sukhmeet.bedi@elemantra.in</email> for any delivery questions."
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "s1": {
+      "heading": "1. Acceptance of terms",
+      "body": "By creating an account or placing an order on FastGet (the “Service”), you agree to these Terms of Service. If you do not agree, please do not use the Service."
+    },
+    "s2": {
+      "heading": "2. Who can use FastGet",
+      "body": "FastGet is intended for contractors and businesses ordering building materials for delivery within our serviceable Mumbai locations (currently Andheri, Goregaon, and Malad). You must be at least 18 years old and able to enter into a binding contract to create an account."
+    },
+    "s3": {
+      "heading": "3. Your account",
+      "body": "You are responsible for keeping your password confidential and for all activity under your account. Notify us immediately at <email>sukhmeet.bedi@elemantra.in</email> if you suspect unauthorized use."
+    },
+    "s4": {
+      "heading": "4. Orders, pricing, and payment",
+      "list": [
+        "Product prices and availability are shown at the time of ordering and may change without notice.",
+        "Payments are processed securely through Razorpay (cards, UPI, net banking). We do not store your card or UPI credentials.",
+        "An order is confirmed only once payment is successfully authorized."
+      ]
+    },
+    "s5": {
+      "heading": "5. Delivery",
+      "body": "We aim to deliver within 30–60 minutes inside our serviceable areas, depending on order size, traffic, and stock availability. See our Shipping Policy for details."
+    },
+    "s6": {
+      "heading": "6. Cancellations and refunds",
+      "body": "Cancellation and refund eligibility is governed by our Refund Policy."
+    },
+    "s7": {
+      "heading": "7. Acceptable use",
+      "body": "You agree not to misuse the Service, including attempting to access other users' accounts, interfering with normal operation, or using the Service for any unlawful purpose."
+    },
+    "s8": {
+      "heading": "8. Intellectual property",
+      "body": "The FastGet name, logo, and app content are owned by FastGet and may not be used without permission."
+    },
+    "s9": {
+      "heading": "9. Limitation of liability",
+      "body": "FastGet is provided “as is”. To the extent permitted by law, FastGet is not liable for indirect or consequential losses arising from delays, stock unavailability, or third-party payment processing issues outside our reasonable control."
+    },
+    "s10": {
+      "heading": "10. Account termination",
+      "body": "You may delete your account at any time from Account → Delete Account. We may suspend or terminate accounts that violate these terms."
+    },
+    "s11": {
+      "heading": "11. Governing law",
+      "body": "These terms are governed by the laws of India, and disputes are subject to the exclusive jurisdiction of the courts in Mumbai, Maharashtra."
+    },
+    "s12": {
+      "heading": "12. Changes to these terms",
+      "body": "We may update these terms from time to time; continued use of the Service after changes constitutes acceptance."
+    },
+    "s13": {
+      "heading": "13. Contact us",
+      "body": "Questions about these terms? Email <email>sukhmeet.bedi@elemantra.in</email> or call +91 8847777020. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+    }
+  }
+}

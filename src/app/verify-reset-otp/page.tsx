@@ -3,9 +3,11 @@
 import { useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { KeyRound, XCircle, Loader2 } from 'lucide-react';
 
 function VerifyResetOtpContent() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const router = useRouter();
   const email = searchParams.get('email') || '';
@@ -51,7 +53,7 @@ function VerifyResetOtpContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) { setErrorMsg('Enter all 6 digits'); setState('error'); return; }
+    if (otp.length !== 6) { setErrorMsg(t('common.otpIncomplete')); setState('error'); return; }
 
     setState('loading');
     try {
@@ -65,11 +67,11 @@ function VerifyResetOtpContent() {
       if (data.success) {
         router.push(`/reset-password?token=${encodeURIComponent(data.token)}`);
       } else {
-        setErrorMsg(data.error || 'Verification failed.');
+        setErrorMsg(data.error || t('common.verificationFailed'));
         setState('error');
       }
     } catch {
-      setErrorMsg('A network error occurred. Please try again.');
+      setErrorMsg(t('common.networkError'));
       setState('error');
     }
   };
@@ -79,10 +81,10 @@ function VerifyResetOtpContent() {
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-neutral-100 px-8 py-10">
         <div className="text-center mb-6">
           <KeyRound className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <h2 className="text-2xl font-bold text-brand-charcoal">Enter reset code</h2>
+          <h2 className="text-2xl font-bold text-brand-charcoal">{t('verifyResetOtp.heading')}</h2>
           <p className="mt-1.5 text-sm text-brand-slate">
-            We sent a 6-digit code to{' '}
-            <span className="font-semibold text-brand-charcoal">{email || 'your email'}</span>
+            {t('common.sentCodeTo')}{' '}
+            <span className="font-semibold text-brand-charcoal">{email || t('common.yourEmailFallback')}</span>
           </p>
         </div>
 
@@ -120,15 +122,15 @@ function VerifyResetOtpContent() {
                        disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
           >
             {state === 'loading' ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
-            ) : 'Verify Code'}
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.verifying')}</>
+            ) : t('common.verifyCode')}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-brand-slate">
-          Didn&apos;t receive a code?{' '}
+          {t('common.didntReceiveCode')}{' '}
           <Link href="/forgot-password" className="text-brand-primary font-semibold hover:text-brand-dark">
-            Resend
+            {t('common.resend')}
           </Link>
         </p>
       </div>

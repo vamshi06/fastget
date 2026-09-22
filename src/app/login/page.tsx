@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { AlertCircle, ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react';
 
@@ -30,6 +31,8 @@ function AuthHero({ title }: { title: string }) {
 }
 
 function LoginForm() {
+  const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
@@ -50,9 +53,9 @@ function LoginForm() {
     setError(null);
     setUnverifiedEmail(null);
 
-    if (!email.trim()) { setError('Email is required'); return; }
-    if (!password)     { setError('Password is required'); return; }
-    if (!email.includes('@')) { setError('Please enter a valid email address'); return; }
+    if (!email.trim()) { setError(t('errors.emailRequired')); return; }
+    if (!password)     { setError(t('errors.passwordRequired')); return; }
+    if (!email.includes('@')) { setError(t('common.invalidEmail')); return; }
 
     setIsLoading(true);
     try {
@@ -70,14 +73,14 @@ function LoginForm() {
       }
 
       if (!response.ok) {
-        setError(data.error || 'Invalid email or password');
+        setError(data.error || t('errors.invalidCredentials'));
         return;
       }
 
       setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone, role: data.role });
       router.push(redirect as any);
     } catch {
-      setError('An error occurred during login. Please try again.');
+      setError(t('errors.genericLoginError'));
     } finally {
       setIsLoading(false);
     }
@@ -103,19 +106,17 @@ function LoginForm() {
     return (
       <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
         <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-        <AuthHero title="Check your email" />
+        <AuthHero title={t('login.checkEmailTitle')} />
         <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col items-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
           <Mail className="w-12 h-12 text-brand-primary mb-3" />
           <p className="text-sm text-brand-slate max-w-xs">
-            Please verify{' '}
-            <span className="font-semibold text-brand-charcoal">{unverifiedEmail}</span>{' '}
-            before logging in. Check your inbox (and spam folder) for the verification link.
+            {t('login.verifyPrompt', { email: unverifiedEmail })}
           </p>
 
           <div className="mt-6 w-full max-w-sm space-y-2">
             {resendState === 'sent' ? (
               <p className="text-sm text-green-700 font-semibold">
-                ✓ New verification email sent!
+                ✓ {t('login.resendSent')}
               </p>
             ) : (
               <button
@@ -123,7 +124,7 @@ function LoginForm() {
                 disabled={resendState === 'sending'}
                 className="w-full py-3.5 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
               >
-                {resendState === 'sending' ? 'Sending…' : 'Resend Verification Email'}
+                {resendState === 'sending' ? t('resendVerification.submitting') : t('login.resendButton')}
               </button>
             )}
 
@@ -135,7 +136,7 @@ function LoginForm() {
               }}
               className="w-full py-3.5 border border-neutral-200 hover:bg-brand-fog text-brand-charcoal font-semibold rounded-full text-sm transition-colors"
             >
-              Back to Login
+              {t('common.backToLogin')}
             </button>
           </div>
         </div>
@@ -148,9 +149,9 @@ function LoginForm() {
   return (
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-      <AuthHero title="Login" />
+      <AuthHero title={tc('login')} />
       <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
-      <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">Hello, Welcome back to our account!</p>
+      <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">{t('login.subtitle')}</p>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
@@ -162,21 +163,21 @@ function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-xs font-semibold text-brand-graphite mb-1.5">
-            Email
+            {t('login.emailLabel')}
           </label>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            placeholder={t('login.emailPlaceholder')}
             className="w-full px-4 py-3.5 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
           />
         </div>
 
         <div>
           <label htmlFor="password" className="block text-xs font-semibold text-brand-graphite mb-1.5">
-            Password
+            {t('login.passwordLabel')}
           </label>
           <div className="relative">
             <input
@@ -184,7 +185,7 @@ function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder={t('login.passwordPlaceholder')}
               className="w-full px-4 py-3.5 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
             />
             <button
@@ -202,7 +203,7 @@ function LoginForm() {
             href="/forgot-password"
             className="text-xs text-brand-primary hover:text-brand-dark font-semibold transition-colors"
           >
-            Forgot Password?
+            {t('login.forgotPassword')}
           </Link>
         </div>
 
@@ -211,19 +212,19 @@ function LoginForm() {
           disabled={isLoading}
           className="w-full py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
         >
-          {isLoading ? 'Signing in…' : 'Log In'}
+          {isLoading ? t('login.submitting') : tc('login')}
         </button>
       </form>
 
       <div className="flex-1 min-h-6 md:hidden" />
 
       <p className="text-center text-sm text-brand-slate pb-2 md:pb-0 md:mt-8">
-        Don&apos;t Have An Account?{' '}
+        {t('login.noAccount')}{' '}
         <Link
           href={redirect && redirect !== '/' ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'}
           className="text-brand-primary font-bold hover:text-brand-dark transition-colors"
         >
-          Sign Up
+          {tc('signup')}
         </Link>
       </p>
       </div>

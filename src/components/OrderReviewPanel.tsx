@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastContext';
 import { StarRating } from '@/components/StarRating';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -26,10 +27,11 @@ interface ReviewData {
 }
 
 function LockedNote() {
+  const t = useTranslations('order');
   return (
     <span className="flex items-center gap-1.5 text-xs text-brand-steel">
       <Lock className="w-3.5 h-3.5" />
-      Locked after {REVIEW_EDIT_WINDOW_MINUTES} min
+      {t('lockedAfterMin', { min: REVIEW_EDIT_WINDOW_MINUTES })}
     </span>
   );
 }
@@ -41,6 +43,8 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
   onDeleted: (sku: string) => void;
 }) {
   const { showToast } = useToast();
+  const t = useTranslations('order');
+  const tc = useTranslations('common');
   const [editing, setEditing] = useState(false);
   const [rating, setRating] = useState(item.review?.rating ?? 5);
   const [comment, setComment] = useState(item.review?.comment ?? '');
@@ -59,12 +63,12 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
         body: JSON.stringify({ orderId, productCode: item.sku, rating, comment }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Failed to save review');
-      showToast('Review saved', 'success');
+      if (!json.success) throw new Error(json.error || t('reviewSaveFailedFallback'));
+      showToast(t('reviewSaved'), 'success');
       onSaved(item.sku, { rating: json.data.rating, comment: json.data.comment, createdAt: json.data.createdAt });
       setEditing(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not save review', 'error');
+      showToast(err instanceof Error ? err.message : t('reviewSaveFailedGeneric'), 'error');
     } finally {
       setSaving(false);
     }
@@ -79,14 +83,14 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
         body: JSON.stringify({ orderId, productCode: item.sku }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Failed to delete review');
-      showToast('Review deleted', 'success');
+      if (!json.success) throw new Error(json.error || t('reviewDeleteFailedFallback'));
+      showToast(t('reviewDeleted'), 'success');
       onDeleted(item.sku);
       setRating(5);
       setComment('');
       setConfirmingDelete(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not delete review', 'error');
+      showToast(err instanceof Error ? err.message : t('reviewDeleteFailedGeneric'), 'error');
     } finally {
       setDeleting(false);
     }
@@ -107,7 +111,7 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
               onClick={() => setEditing(true)}
               className="text-xs font-semibold text-brand-primary hover:text-brand-dark"
             >
-              {item.review ? 'Edit Review' : 'Rate Product'}
+              {item.review ? t('editReview') : t('rateProduct')}
             </button>
           )}
           {item.review && (
@@ -115,15 +119,15 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
               onClick={() => setConfirmingDelete(true)}
               className="text-xs font-semibold text-red-600 hover:text-red-700"
             >
-              Delete
+              {tc('delete')}
             </button>
           )}
         </div>
 
         {confirmingDelete && (
           <ConfirmDeleteModal
-            title="Delete review?"
-            message={`Your review for "${item.name}" will be permanently removed.`}
+            title={t('deleteReviewTitle')}
+            message={t('deleteReviewMessage', { name: item.name })}
             pending={deleting}
             onCancel={() => setConfirmingDelete(false)}
             onConfirm={remove}
@@ -142,7 +146,7 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
         onChange={(e) => setComment(e.target.value)}
         maxLength={2000}
         rows={2}
-        placeholder="Optional comment"
+        placeholder={t('optionalCommentPlaceholder')}
         className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:border-brand-primary"
       />
       <div className="flex items-center gap-3">
@@ -151,10 +155,10 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
           disabled={saving}
           className="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-semibold hover:bg-brand-dark disabled:opacity-60"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('saving') : t('save')}
         </button>
         <button onClick={() => setEditing(false)} className="text-xs font-medium text-brand-slate hover:text-brand-charcoal">
-          Cancel
+          {tc('cancel')}
         </button>
       </div>
     </div>
@@ -164,6 +168,8 @@ function ItemRow({ orderId, item, onSaved, onDeleted }: {
 /** Expandable delivery-feedback + per-item review panel for a delivered order. */
 export function OrderReviewPanel({ orderId }: { orderId: string }) {
   const { showToast } = useToast();
+  const t = useTranslations('order');
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReviewData | null>(null);
@@ -188,9 +194,9 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
           }
         }
       })
-      .catch(() => showToast('Could not load review status', 'error'))
+      .catch(() => showToast(t('loadReviewStatusFailed'), 'error'))
       .finally(() => setLoading(false));
-  }, [open, data, orderId, showToast]);
+  }, [open, data, orderId, showToast, t]);
 
   const saveFeedback = async () => {
     setSavingFeedback(true);
@@ -201,15 +207,15 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
         body: JSON.stringify({ orderId, rating: feedbackRating, comment: feedbackComment }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Failed to save feedback');
-      showToast('Thanks for your feedback!', 'success');
+      if (!json.success) throw new Error(json.error || t('feedbackSaveFailedFallback'));
+      showToast(t('feedbackThanks'), 'success');
       setData((prev) =>
         prev
           ? { ...prev, feedback: { rating: json.data.rating, comment: json.data.comment, createdAt: json.data.createdAt } }
           : prev
       );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not save feedback', 'error');
+      showToast(err instanceof Error ? err.message : t('feedbackSaveFailedGeneric'), 'error');
     } finally {
       setSavingFeedback(false);
     }
@@ -224,14 +230,14 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
         body: JSON.stringify({ orderId }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Failed to delete feedback');
-      showToast('Feedback deleted', 'success');
+      if (!json.success) throw new Error(json.error || t('feedbackDeleteFailedFallback'));
+      showToast(t('feedbackDeleted'), 'success');
       setData((prev) => (prev ? { ...prev, feedback: null } : prev));
       setFeedbackRating(5);
       setFeedbackComment('');
       setConfirmingFeedbackDelete(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not delete feedback', 'error');
+      showToast(err instanceof Error ? err.message : t('feedbackDeleteFailedGeneric'), 'error');
     } finally {
       setDeletingFeedback(false);
     }
@@ -246,7 +252,7 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
         className="flex items-center gap-2 w-full px-5 py-3 text-sm font-semibold text-brand-primary hover:bg-primary-50 transition-colors"
       >
         <Star className="w-4 h-4" />
-        {open ? 'Hide Rating & Review' : 'Rate & Review'}
+        {open ? t('hideRatingReview') : t('rateAndReview')}
       </button>
 
       {open && (
@@ -254,14 +260,14 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
           {loading || !data ? (
             <div className="flex items-center gap-2 text-sm text-brand-slate py-3">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Loading…
+              {tc('loading')}
             </div>
           ) : (
             <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-xs font-bold text-brand-graphite uppercase tracking-wide">
-                    Delivery Experience
+                    {t('deliveryExperience')}
                   </h4>
                   {feedbackLocked && <LockedNote />}
                 </div>
@@ -272,7 +278,7 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
                   maxLength={2000}
                   rows={2}
                   disabled={feedbackLocked}
-                  placeholder="How was your delivery? (optional)"
+                  placeholder={t('deliveryFeedbackPlaceholder')}
                   className="w-full mt-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:border-brand-primary disabled:bg-neutral-50 disabled:text-brand-steel"
                 />
                 <div className="flex items-center gap-4 mt-2">
@@ -282,7 +288,7 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
                       disabled={savingFeedback}
                       className="px-4 py-2 rounded-lg bg-brand-primary text-white text-xs font-semibold hover:bg-brand-dark disabled:opacity-60"
                     >
-                      {savingFeedback ? 'Saving…' : data.feedback ? 'Update Feedback' : 'Submit Feedback'}
+                      {savingFeedback ? t('saving') : data.feedback ? t('updateFeedback') : t('submitFeedback')}
                     </button>
                   )}
                   {data.feedback && (
@@ -290,7 +296,7 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
                       onClick={() => setConfirmingFeedbackDelete(true)}
                       className="text-xs font-semibold text-red-600 hover:text-red-700"
                     >
-                      Delete Feedback
+                      {t('deleteFeedback')}
                     </button>
                   )}
                 </div>
@@ -299,7 +305,7 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
               {data.items.length > 0 && (
                 <div>
                   <h4 className="text-xs font-bold text-brand-graphite uppercase tracking-wide mb-1">
-                    Rate Products
+                    {t('rateProducts')}
                   </h4>
                   {data.items.map((item) => (
                     <ItemRow
@@ -331,8 +337,8 @@ export function OrderReviewPanel({ orderId }: { orderId: string }) {
 
       {confirmingFeedbackDelete && (
         <ConfirmDeleteModal
-          title="Delete feedback?"
-          message="Your delivery feedback for this order will be permanently removed."
+          title={t('deleteFeedbackTitle')}
+          message={t('deleteFeedbackMessage')}
           pending={deletingFeedback}
           onCancel={() => setConfirmingFeedbackDelete(false)}
           onConfirm={deleteFeedback}

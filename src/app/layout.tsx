@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
 import { CartProvider } from '@/components/CartContext';
 import { ToastProvider } from '@/components/ToastContext';
@@ -44,29 +46,34 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
-        <UserProvider>
-          <WishlistProvider>
-          <CartProvider>
-            <ToastProvider>
-              <LocationSplashProvider>
-                <AnnouncementBar />
-                <ConditionalHeader />
-                <main className="flex-grow flex flex-col" style={{ paddingBottom: 'var(--bottom-nav-space)' }}>
-                  {children}
-                </main>
-                <div className="hidden md:block">
-                  <ConditionalFooter />
-                </div>
-                <MobileBottomNav />
-              </LocationSplashProvider>
-            </ToastProvider>
-          </CartProvider>
-          </WishlistProvider>
-        </UserProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <UserProvider>
+            <WishlistProvider>
+            <CartProvider>
+              <ToastProvider>
+                <LocationSplashProvider>
+                  <AnnouncementBar />
+                  <ConditionalHeader />
+                  <main className="flex-grow flex flex-col" style={{ paddingBottom: 'var(--bottom-nav-space)' }}>
+                    {children}
+                  </main>
+                  <div className="hidden md:block">
+                    <ConditionalFooter />
+                  </div>
+                  <MobileBottomNav />
+                </LocationSplashProvider>
+              </ToastProvider>
+            </CartProvider>
+            </WishlistProvider>
+          </UserProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

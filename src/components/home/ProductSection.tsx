@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { HomeProductCard } from './HomeProductCard';
@@ -39,6 +40,8 @@ export function ProductSection({
   limit = 8,
   accentColor = 'brand-primary',
 }: ProductSectionProps) {
+  const t = useTranslations('home');
+  const tc = useTranslations('common');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,7 +82,7 @@ export function ProductSection({
           href={catalogHref as any}
           className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1 shrink-0"
         >
-          See All
+          {tc('seeAll')}
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -89,7 +92,7 @@ export function ProductSection({
         {/* Left arrow */}
         <button
           onClick={() => scroll('left')}
-          aria-label="Scroll left"
+          aria-label={t('scrollLeft')}
           className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full
                      bg-white border border-neutral-200 shadow-md
                      hidden sm:flex items-center justify-center
@@ -115,7 +118,7 @@ export function ProductSection({
         {/* Right arrow */}
         <button
           onClick={() => scroll('right')}
-          aria-label="Scroll right"
+          aria-label={t('scrollRight')}
           className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full
                      bg-white border border-neutral-200 shadow-md
                      hidden sm:flex items-center justify-center

@@ -2,8 +2,10 @@
 
 import { ProductFilterBar, FilterState } from '@/components/ProductFilterBar';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 export default function CatalogPage() {
+  const t = useTranslations('catalog');
   const [filters, setFilters] = useState<FilterState | null>(null);
 
   const handleFilterChange = (newFilters: FilterState) => {
@@ -56,7 +58,7 @@ export default function CatalogPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-bold text-brand-primary">₹999</span>
                   <button className="px-3 py-1 bg-brand-primary text-white text-sm rounded hover:bg-brand-dark">
-                    Add
+                    {t('add')}
                   </button>
                 </div>
               </div>
@@ -68,7 +70,7 @@ export default function CatalogPage() {
       {/* Debug Info */}
       {filters && (
         <div className="fixed bottom-4 right-4 bg-gray-900 text-white p-4 rounded-lg text-xs max-w-xs overflow-auto max-h-64 shadow-lg">
-          <h4 className="font-bold mb-2">Current Filters:</h4>
+          <h4 className="font-bold mb-2">{t('currentFilters')}</h4>
           <pre>{JSON.stringify(filters, null, 2)}</pre>
         </div>
       )}

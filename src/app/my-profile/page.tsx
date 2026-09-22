@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { FloatingInput } from '@/components/FloatingInput';
@@ -20,12 +21,14 @@ import {
 /* ─── Guest screen ───────────────────────────────────────────────────────── */
 
 function GuestProfile() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   return (
     <div className="min-h-screen bg-brand-fog flex flex-col">
       <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
-        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">My Profile</h1>
+        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">{t('profile.guestHeading')}</h1>
         <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          Log in to view and edit your profile details.
+          {t('profile.guestSubtitle')}
         </p>
       </div>
       <div className="px-4 pb-8 pt-6 space-y-3">
@@ -34,14 +37,14 @@ function GuestProfile() {
           className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
         >
           <LogIn className="w-5 h-5" />
-          Log In
+          {tc('login')}
         </Link>
         <Link
           href={'/signup?redirect=/my-profile' as any}
           className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
         >
           <UserPlus className="w-5 h-5" />
-          Create an Account
+          {t('guest.createAccount')}
         </Link>
       </div>
     </div>
@@ -51,6 +54,8 @@ function GuestProfile() {
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 
 export default function MyProfilePage() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   const { currentUser, isLoaded, setCurrentUser } = useUser();
   const { showToast } = useToast();
 
@@ -86,13 +91,13 @@ export default function MyProfilePage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to update profile');
+        throw new Error(data.error || t('profile.toastUpdateError'));
       }
       setCurrentUser({ ...currentUser, name: data.user.name, phone: data.user.phone });
       setEditing(false);
-      showToast('Profile updated', 'success');
+      showToast(t('profile.toastUpdateSuccess'), 'success');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Failed to update profile', 'error');
+      showToast(error instanceof Error ? error.message : t('profile.toastUpdateError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -113,13 +118,13 @@ export default function MyProfilePage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to save Telegram chat ID');
+        throw new Error(data.error || t('profile.toastTelegramError'));
       }
       setCurrentUser({ ...currentUser, telegramChatId: data.user.telegramChatId });
       setTelegramEditing(false);
-      showToast('Telegram notifications updated', 'success');
+      showToast(t('profile.toastTelegramSuccess'), 'success');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Failed to save Telegram chat ID', 'error');
+      showToast(error instanceof Error ? error.message : t('profile.toastTelegramError'), 'error');
     } finally {
       setTelegramSaving(false);
     }
@@ -137,7 +142,7 @@ export default function MyProfilePage() {
           >
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-black text-brand-charcoal">My Profile</h1>
+          <h1 className="text-2xl font-black text-brand-charcoal">{t('profile.heading')}</h1>
         </div>
 
         {/* Avatar card */}
@@ -155,7 +160,7 @@ export default function MyProfilePage() {
         {editing ? (
           <form onSubmit={handleSave} className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm space-y-4">
             <FloatingInput
-              label="Full Name *"
+              label={t('profile.fullNameLabel')}
               name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -163,7 +168,7 @@ export default function MyProfilePage() {
               maxLength={100}
             />
             <FloatingInput
-              label="Phone *"
+              label={t('profile.phoneLabel')}
               name="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -178,7 +183,7 @@ export default function MyProfilePage() {
                 className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors flex items-center justify-center gap-1.5"
               >
                 <X className="w-4 h-4" />
-                Cancel
+                {tc('cancel')}
               </button>
               <button
                 type="submit"
@@ -190,7 +195,7 @@ export default function MyProfilePage() {
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? t('profile.saving') : t('profile.saveChanges')}
               </button>
             </div>
           </form>
@@ -201,7 +206,7 @@ export default function MyProfilePage() {
                 <User className="w-4 h-4 text-brand-primary" />
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-xs text-brand-slate">Full Name</p>
+                <p className="text-xs text-brand-slate">{t('profile.fullName')}</p>
                 <p className="text-sm font-medium text-brand-charcoal">{currentUser.name}</p>
               </div>
             </div>
@@ -211,7 +216,7 @@ export default function MyProfilePage() {
                 <Mail className="w-4 h-4 text-brand-primary" />
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-xs text-brand-slate">Email</p>
+                <p className="text-xs text-brand-slate">{t('profile.email')}</p>
                 <p className="text-sm font-medium text-brand-charcoal">{currentUser.email}</p>
               </div>
             </div>
@@ -221,7 +226,7 @@ export default function MyProfilePage() {
                 <span className="text-brand-primary text-sm font-bold">#</span>
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-xs text-brand-slate">Phone</p>
+                <p className="text-xs text-brand-slate">{t('profile.phone')}</p>
                 <p className="text-sm font-medium text-brand-charcoal">
                   {currentUser.phone ? `+91 ${currentUser.phone.replace(/\D/g, '').slice(-10)}` : '—'}
                 </p>
@@ -233,7 +238,7 @@ export default function MyProfilePage() {
               className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-primary-50 text-brand-primary font-semibold text-sm hover:bg-primary-100 transition-colors border-t border-neutral-100"
             >
               <Pencil className="w-4 h-4" />
-              Edit Profile
+              {t('profile.editProfile')}
             </button>
           </div>
         )}
@@ -246,23 +251,22 @@ export default function MyProfilePage() {
                 <Send className="w-4 h-4 text-brand-primary" />
               </div>
               <div>
-                <p className="text-sm font-bold text-brand-charcoal">Telegram order alerts</p>
-                <p className="text-xs text-brand-slate">Get pinged on Telegram the moment a new order is placed.</p>
+                <p className="text-sm font-bold text-brand-charcoal">{t('profile.telegramTitle')}</p>
+                <p className="text-xs text-brand-slate">{t('profile.telegramSubtitle')}</p>
               </div>
             </div>
 
             {telegramEditing ? (
               <form onSubmit={handleSaveTelegram} className="mt-4 space-y-3">
                 <FloatingInput
-                  label="Telegram Chat ID"
+                  label={t('profile.telegramChatIdLabel')}
                   name="telegramChatId"
                   value={telegramChatId}
                   onChange={(e) => setTelegramChatId(e.target.value.replace(/[^\d-]/g, ''))}
                   maxLength={64}
                 />
                 <p className="text-xs text-brand-slate leading-relaxed">
-                  Open Telegram, message <strong>@userinfobot</strong> to get your numeric chat ID, and start
-                  a chat with the FastGet bot so it&apos;s allowed to message you. Leave blank to turn alerts off.
+                  {t('profile.telegramHelp')}
                 </p>
                 <div className="flex gap-2 pt-1">
                   <button
@@ -274,7 +278,7 @@ export default function MyProfilePage() {
                     className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <X className="w-4 h-4" />
-                    Cancel
+                    {tc('cancel')}
                   </button>
                   <button
                     type="submit"
@@ -286,14 +290,14 @@ export default function MyProfilePage() {
                     ) : (
                       <Check className="w-4 h-4" />
                     )}
-                    {telegramSaving ? 'Saving…' : 'Save'}
+                    {telegramSaving ? t('profile.saving') : t('profile.telegramSave')}
                   </button>
                 </div>
               </form>
             ) : (
               <div className="mt-3 flex items-center justify-between">
                 <p className="text-sm font-medium text-brand-charcoal">
-                  {currentUser.telegramChatId ? `Linked · ${currentUser.telegramChatId}` : 'Not linked'}
+                  {currentUser.telegramChatId ? t('profile.telegramLinked', { chatId: currentUser.telegramChatId }) : t('profile.telegramNotLinked')}
                 </p>
                 <button
                   onClick={() => {
@@ -303,7 +307,7 @@ export default function MyProfilePage() {
                   className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1"
                 >
                   <Pencil className="w-3.5 h-3.5" />
-                  {currentUser.telegramChatId ? 'Edit' : 'Link'}
+                  {currentUser.telegramChatId ? t('profile.telegramEdit') : t('profile.telegramLink')}
                 </button>
               </div>
             )}

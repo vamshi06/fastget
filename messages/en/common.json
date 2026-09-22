@@ -1,0 +1,23 @@
+{
+  "cart": "Cart",
+  "wishlist": "Wishlist",
+  "login": "Log In",
+  "signup": "Sign Up",
+  "signOut": "Sign Out",
+  "search": "Search",
+  "loading": "Loading…",
+  "viewCart": "View Cart",
+  "addedToCart": "{name} added",
+  "outOfStock": "Out of Stock",
+  "check": "Check",
+  "selectArea": "Select area",
+  "deliverTo": "Deliver to",
+  "mins": "Mins",
+  "seeAll": "See All",
+  "viewAll": "View All",
+  "close": "Close",
+  "browseProducts": "Browse Products",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "deleting": "Deleting…"
+}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { FloatingInput } from '@/components/FloatingInput';
@@ -30,10 +31,10 @@ const TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: string }
   other: MoreHorizontal,
 };
 
-const TYPE_LABELS: Record<AddressType, string> = {
-  home: 'Home',
-  work: 'Work',
-  other: 'Other',
+const TYPE_LABEL_KEYS: Record<AddressType, 'addresses.typeHome' | 'addresses.typeWork' | 'addresses.typeOther'> = {
+  home: 'addresses.typeHome',
+  work: 'addresses.typeWork',
+  other: 'addresses.typeOther',
 };
 
 const ADDRESS_TYPES: AddressType[] = ['home', 'work', 'other'];
@@ -59,19 +60,21 @@ const EMPTY_FORM: AddressFormState = {
 /* ─── Guest screen ───────────────────────────────────────────────────────── */
 
 function GuestAddresses() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   return (
     <div className="min-h-screen bg-brand-fog flex flex-col">
       <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
-        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">My Addresses</h1>
+        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">{t('addresses.guestHeading')}</h1>
         <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          Log in to save delivery addresses for faster checkout.
+          {t('addresses.guestSubtitle')}
         </p>
       </div>
       <div className="px-4 py-6 space-y-3">
         {[
-          { Icon: MapPin,     text: 'Save multiple delivery locations'     },
-          { Icon: Star,       text: 'Set a default address for quick orders' },
-          { Icon: Home,       text: 'Label addresses as Home, Work or Other' },
+          { Icon: MapPin,     text: t('addresses.benefit1') },
+          { Icon: Star,       text: t('addresses.benefit2') },
+          { Icon: Home,       text: t('addresses.benefit3') },
         ].map(({ Icon, text }) => (
           <div key={text} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-neutral-100">
             <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -87,14 +90,14 @@ function GuestAddresses() {
           className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
         >
           <LogIn className="w-5 h-5" />
-          Log In
+          {tc('login')}
         </Link>
         <Link
           href={'/signup?redirect=/my-addresses' as any}
           className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
         >
           <UserPlus className="w-5 h-5" />
-          Create an Account
+          {t('guest.createAccount')}
         </Link>
       </div>
     </div>
@@ -114,6 +117,8 @@ function AddressForm({
   onCancel: () => void;
   saving: boolean;
 }) {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   const [form, setForm] = useState<AddressFormState>(initial);
   const set = (k: keyof AddressFormState, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -129,24 +134,24 @@ function AddressForm({
       {/* Type selector */}
       <div>
         <label className="text-xs font-semibold text-brand-slate uppercase tracking-wide mb-2 block">
-          Address Type
+          {t('addresses.addressType')}
         </label>
         <div className="flex gap-2">
-          {ADDRESS_TYPES.map((t) => {
-            const Icon = TYPE_ICONS[t];
+          {ADDRESS_TYPES.map((addrType) => {
+            const Icon = TYPE_ICONS[addrType];
             return (
               <button
-                key={t}
+                key={addrType}
                 type="button"
-                onClick={() => set('type', t)}
+                onClick={() => set('type', addrType)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-sm font-semibold transition-colors ${
-                  form.type === t
+                  form.type === addrType
                     ? 'bg-brand-primary text-white border-brand-primary'
                     : 'bg-white text-brand-slate border-neutral-200 hover:border-brand-primary hover:text-brand-primary'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {TYPE_LABELS[t]}
+                {t(TYPE_LABEL_KEYS[addrType])}
               </button>
             );
           })}
@@ -155,7 +160,7 @@ function AddressForm({
 
       {/* Street */}
       <FloatingInput
-        label="Street Address *"
+        label={t('addresses.streetLabel')}
         name="street"
         value={form.street}
         onChange={(e) => set('street', e.target.value)}
@@ -164,7 +169,7 @@ function AddressForm({
 
       {/* Landmark */}
       <FloatingInput
-        label="Landmark (optional)"
+        label={t('addresses.landmarkLabel')}
         name="landmark"
         value={form.landmark}
         onChange={(e) => set('landmark', e.target.value)}
@@ -173,17 +178,17 @@ function AddressForm({
       {/* City + Phone */}
       <div className="grid grid-cols-2 gap-3">
         <FloatingInput
-          label="City *"
+          label={t('addresses.cityLabel')}
           name="city"
           value={form.city}
           onChange={(e) => set('city', e.target.value)}
           required
         />
         <FloatingInput
-          label="Phone *"
+          label={t('addresses.phoneLabel')}
           name="phone"
           value={form.phone}
-          
+
           onChange={(e) => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
           required
           maxLength={10}
@@ -198,7 +203,7 @@ function AddressForm({
           onChange={(e) => set('isPrimary', e.target.checked)}
           className="w-4 h-4 accent-brand-primary rounded"
         />
-        <span className="text-sm text-brand-charcoal font-medium">Set as primary address</span>
+        <span className="text-sm text-brand-charcoal font-medium">{t('addresses.setPrimary')}</span>
       </label>
 
       {/* Actions */}
@@ -209,7 +214,7 @@ function AddressForm({
           className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors flex items-center justify-center gap-1.5"
         >
           <X className="w-4 h-4" />
-          Cancel
+          {tc('cancel')}
         </button>
         <button
           type="submit"
@@ -221,7 +226,7 @@ function AddressForm({
           ) : (
             <Check className="w-4 h-4" />
           )}
-          {saving ? 'Saving…' : 'Save Address'}
+          {saving ? t('addresses.saving') : t('addresses.saveAddress')}
         </button>
       </div>
     </form>
@@ -247,6 +252,7 @@ function AddressCard({
   settingPrimary: boolean;
   hasPrimary: boolean;
 }) {
+  const t = useTranslations('account');
   const Icon = TYPE_ICONS[address.type];
 
   return (
@@ -256,11 +262,11 @@ function AddressCard({
           <div className="w-8 h-8 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
             <Icon className="w-4 h-4 text-brand-primary" />
           </div>
-          <span className="font-bold text-brand-charcoal text-sm">{TYPE_LABELS[address.type]}</span>
+          <span className="font-bold text-brand-charcoal text-sm">{t(TYPE_LABEL_KEYS[address.type])}</span>
           {address.isPrimary && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-primary/10 text-brand-primary text-xs font-semibold rounded-full">
               <Star className="w-3 h-3" />
-              Primary
+              {t('addresses.primary')}
             </span>
           )}
         </div>
@@ -268,7 +274,7 @@ function AddressCard({
           <button
             onClick={onEdit}
             className="p-2 rounded-xl text-brand-slate hover:text-brand-primary hover:bg-primary-50 transition-colors"
-            title="Edit address"
+            title={t('addresses.editTooltip')}
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -276,7 +282,7 @@ function AddressCard({
             onClick={onDelete}
             disabled={deleting}
             className="p-2 rounded-xl text-brand-slate hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-            title="Delete address"
+            title={t('addresses.deleteTooltip')}
           >
             {deleting ? (
               <div className="w-4 h-4 border-2 border-brand-slate/40 border-t-brand-slate rounded-full animate-spin" />
@@ -289,7 +295,7 @@ function AddressCard({
 
       <p className="text-brand-charcoal text-sm font-medium leading-snug">{address.street}</p>
       {address.landmark && (
-        <p className="text-brand-slate text-xs mt-0.5">Near {address.landmark}</p>
+        <p className="text-brand-slate text-xs mt-0.5">{t('addresses.near', { landmark: address.landmark })}</p>
       )}
       <p className="text-brand-slate text-sm mt-0.5">{address.city}</p>
       <p className="text-brand-slate text-xs mt-1">{address.phone}</p>
@@ -301,7 +307,7 @@ function AddressCard({
           className="mt-3 text-xs font-semibold text-brand-primary hover:underline disabled:opacity-40 flex items-center gap-1"
         >
           <Star className="w-3 h-3" />
-          {settingPrimary ? 'Switching…' : hasPrimary ? 'Switch to primary' : 'Set as primary'}
+          {settingPrimary ? t('addresses.switching') : hasPrimary ? t('addresses.switchToPrimary') : t('addresses.setAsPrimary')}
         </button>
       )}
     </div>
@@ -311,6 +317,8 @@ function AddressCard({
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 
 export default function MyAddressesPage() {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   const { currentUser, isLoaded } = useUser();
   const { showToast } = useToast();
 
@@ -332,11 +340,11 @@ export default function MyAddressesPage() {
       const data = await res.json();
       setAddresses(data.addresses);
     } catch {
-      showToast('Could not load addresses', 'error');
+      showToast(t('addresses.toastLoadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [currentUser, showToast]);
+  }, [currentUser, showToast, t]);
 
   useEffect(() => {
     if (isLoaded && currentUser) fetchAddresses();
@@ -354,9 +362,9 @@ export default function MyAddressesPage() {
       if (!res.ok) throw new Error();
       await fetchAddresses();
       setShowAddForm(false);
-      showToast('Address added successfully', 'success');
+      showToast(t('addresses.toastAddSuccess'), 'success');
     } catch {
-      showToast('Failed to add address', 'error');
+      showToast(t('addresses.toastAddError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -381,9 +389,9 @@ export default function MyAddressesPage() {
       }
       await fetchAddresses();
       setEditingId(null);
-      showToast('Address updated', 'success');
+      showToast(t('addresses.toastUpdateSuccess'), 'success');
     } catch {
-      showToast('Failed to update address', 'error');
+      showToast(t('addresses.toastUpdateError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -396,9 +404,9 @@ export default function MyAddressesPage() {
       if (!res.ok) throw new Error();
       setAddresses((prev) => prev.filter((a) => a.id !== id));
       setConfirmDeleteId(null);
-      showToast('Address removed', 'success');
+      showToast(t('addresses.toastRemoveSuccess'), 'success');
     } catch {
-      showToast('Failed to delete address', 'error');
+      showToast(t('addresses.toastRemoveError'), 'error');
     } finally {
       setDeletingId(null);
     }
@@ -415,9 +423,9 @@ export default function MyAddressesPage() {
       });
       if (!res.ok) throw new Error();
       await fetchAddresses();
-      showToast('Primary address updated', 'success');
+      showToast(t('addresses.toastPrimarySuccess'), 'success');
     } catch {
-      showToast('Failed to update primary address', 'error');
+      showToast(t('addresses.toastPrimaryError'), 'error');
     } finally {
       setSettingPrimaryId(null);
     }
@@ -440,9 +448,9 @@ export default function MyAddressesPage() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-black text-brand-charcoal">My Addresses</h1>
+              <h1 className="text-2xl font-black text-brand-charcoal">{t('addresses.heading')}</h1>
               <p className="text-sm text-brand-slate mt-0.5">
-                {loading ? 'Loading…' : `${addresses.length} saved address${addresses.length !== 1 ? 'es' : ''}`}
+                {loading ? tc('loading') : t('addresses.savedAddressCount', { count: addresses.length })}
               </p>
             </div>
           </div>
@@ -452,7 +460,7 @@ export default function MyAddressesPage() {
               className="flex items-center gap-1.5 px-4 py-2 bg-brand-primary text-white font-semibold text-sm rounded-xl hover:bg-brand-dark transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Add New
+              {t('addresses.addNew')}
             </button>
           )}
         </div>
@@ -460,7 +468,7 @@ export default function MyAddressesPage() {
         {/* Add form */}
         {showAddForm && (
           <div className="mb-4">
-            <p className="text-sm font-semibold text-brand-charcoal mb-2 px-1">New Address</p>
+            <p className="text-sm font-semibold text-brand-charcoal mb-2 px-1">{t('addresses.newAddressTitle')}</p>
             <AddressForm
               initial={EMPTY_FORM}
               onSave={handleAdd}
@@ -489,14 +497,14 @@ export default function MyAddressesPage() {
             <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <MapPin className="w-8 h-8 text-brand-primary" />
             </div>
-            <h2 className="text-lg font-bold text-brand-charcoal mb-1">No saved addresses</h2>
-            <p className="text-sm text-brand-slate mb-6">Add an address to speed up checkout.</p>
+            <h2 className="text-lg font-bold text-brand-charcoal mb-1">{t('addresses.noAddressesTitle')}</h2>
+            <p className="text-sm text-brand-slate mb-6">{t('addresses.noAddressesSubtitle')}</p>
             <button
               onClick={() => setShowAddForm(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white font-semibold rounded-2xl hover:bg-brand-dark transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Your First Address
+              {t('addresses.addFirstAddress')}
             </button>
           </div>
         )}
@@ -506,7 +514,7 @@ export default function MyAddressesPage() {
           {addresses.map((addr) =>
             editingId === addr.id ? (
               <div key={addr.id}>
-                <p className="text-sm font-semibold text-brand-charcoal mb-2 px-1">Edit Address</p>
+                <p className="text-sm font-semibold text-brand-charcoal mb-2 px-1">{t('addresses.editAddressTitle')}</p>
                 <AddressForm
                   initial={{
                     type: addr.type,
@@ -545,22 +553,22 @@ export default function MyAddressesPage() {
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <h2 className="text-lg font-bold text-brand-charcoal">Remove address?</h2>
+              <h2 className="text-lg font-bold text-brand-charcoal">{t('addresses.removeModalTitle')}</h2>
             </div>
-            <p className="text-sm text-brand-slate mb-5">This address will be permanently deleted.</p>
+            <p className="text-sm text-brand-slate mb-5">{t('addresses.removeModalMessage')}</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDeleteId(null)}
                 className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors"
               >
-                Cancel
+                {tc('cancel')}
               </button>
               <button
                 onClick={() => handleDelete(confirmDeleteId)}
                 disabled={!!deletingId}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-60"
               >
-                {deletingId ? 'Removing…' : 'Remove'}
+                {deletingId ? t('addresses.removing') : t('addresses.remove')}
               </button>
             </div>
           </div>

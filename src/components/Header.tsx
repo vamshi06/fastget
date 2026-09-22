@@ -3,28 +3,30 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 function CategoryNavRow() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get("category");
+  const tCategories = useTranslations("categories");
   const isCategoryActive = (categoryId: string) =>
     pathname === "/catalog" && currentCategory === categoryId;
   return (
     <nav className="hidden md:flex items-center gap-0.5 py-1 border-t border-neutral-100 overflow-x-auto hide-scrollbar">
-      {NAV_CATEGORIES.map((cat) => (
+      {NAV_CATEGORY_IDS.map((id) => (
         <Link
-          key={cat.id}
-          href={`/catalog?category=${cat.id}`}
+          key={id}
+          href={`/catalog?category=${id}`}
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150",
             "hover:bg-primary-50 hover:text-brand-primary",
-            isCategoryActive(cat.id)
+            isCategoryActive(id)
               ? "bg-primary-50 text-brand-primary font-semibold"
               : "text-brand-graphite font-medium",
           )}
         >
-          {cat.name}
+          {tCategories(`${id}.full`)}
         </Link>
       ))}
     </nav>
@@ -52,6 +54,7 @@ import {
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -73,10 +76,12 @@ function SearchSuggestions({
   onSelect: (product: Product) => void;
   onViewAll: () => void;
 }) {
+  const t = useTranslations("nav");
+
   if (!loading && results.length === 0) {
     return (
       <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 px-4 py-6 text-center text-sm text-brand-slate">
-        No products found for &quot;{query}&quot;
+        {t("noResults", { query })}
       </div>
     );
   }
@@ -84,7 +89,7 @@ function SearchSuggestions({
   return (
     <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 overflow-hidden">
       {loading && results.length === 0 ? (
-        <div className="px-4 py-6 text-center text-sm text-brand-slate">Searching…</div>
+        <div className="px-4 py-6 text-center text-sm text-brand-slate">{t("searching")}</div>
       ) : (
         <>
           <ul className="max-h-80 overflow-y-auto">
@@ -123,7 +128,7 @@ function SearchSuggestions({
             onClick={onViewAll}
             className="w-full px-4 py-3 text-sm font-medium text-brand-primary hover:bg-primary-50 transition-colors border-t border-neutral-100 text-left"
           >
-            See all results for &quot;{query}&quot;
+            {t("seeAllResultsFor", { query })}
           </button>
         </>
       )}
@@ -131,15 +136,15 @@ function SearchSuggestions({
   );
 }
 
-const NAV_CATEGORIES = [
-  { id: "tools-machines", name: "Tools & Machines" },
-  { id: "carpentry", name: "Carpentry" },
-  { id: "paints", name: "Paints & Polish" },
-  { id: "plumbing", name: "Plumbing" },
-  { id: "civil-materials", name: "Civil Materials" },
-  { id: "electrical", name: "Electrical" },
-  { id: "flooring-ceilings", name: "Flooring & Ceilings" },
-  { id: "glass-aluminium", name: "Glass & Aluminium" },
+const NAV_CATEGORY_IDS = [
+  "tools-machines",
+  "carpentry",
+  "paints",
+  "plumbing",
+  "civil-materials",
+  "electrical",
+  "flooring-ceilings",
+  "glass-aluminium",
 ];
 
 export function Header() {
@@ -149,6 +154,8 @@ export function Header() {
   const { selectedLocation, openSplash } = useLocationSplash();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("nav");
+  const tc = useTranslations("common");
 
   const itemCount = getItemCount();
 
@@ -281,25 +288,25 @@ export function Header() {
           {/* Delivery badge + location */}
           <button
             onClick={openSplash}
-            aria-label="Change delivery location"
+            aria-label={t("changeLocation")}
             className="flex items-center gap-2 flex-shrink-0 group"
           >
             <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
               <span className="text-[13px] font-black leading-none">~60</span>
               <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">
-                Mins
+                {tc("mins")}
               </span>
             </div>
             <div className="text-left">
               <p className="text-[9px] text-brand-steel uppercase tracking-wide leading-none">
-                Deliver to
+                {tc("deliverTo")}
               </p>
               <div className="flex items-center gap-0.5">
                 <span className="text-xs font-semibold text-brand-charcoal leading-none group-hover:text-brand-primary transition-colors">
                   {selectedLocation
                     ? (SERVICE_AREAS.find((a) => a.id === selectedLocation)
                         ?.name ?? selectedLocation)
-                    : "Select area"}
+                    : tc("selectArea")}
                 </span>
                 <ChevronDown className="w-3 h-3 text-brand-steel" />
               </div>
@@ -321,11 +328,12 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Right: Wishlist */}
+          {/* Right: Language + Wishlist */}
           <div className="flex items-center gap-1 flex-shrink-0">
+            <LanguageSwitcher className="px-2" />
             <Link
               href={"/wishlist" as any}
-              aria-label="Wishlist"
+              aria-label={tc("wishlist")}
               className="relative p-2 rounded-xl hover:bg-neutral-100 transition-colors"
             >
               <Heart
@@ -359,7 +367,7 @@ export function Header() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
           <input
             type="text"
-            placeholder="Search products, brands..."
+            placeholder={t("searchPlaceholderMobile")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => {
@@ -404,26 +412,26 @@ export function Header() {
           {/* Location selector — desktop */}
           <button
             onClick={openSplash}
-            aria-label="Change delivery location"
+            aria-label={t("changeLocation")}
             className="hidden md:flex items-center gap-2 shrink-0 group"
           >
             {/* Green badge — matches mobile */}
             <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
               <span className="text-[13px] font-black leading-none">~60</span>
               <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">
-                Mins
+                {tc("mins")}
               </span>
             </div>
             <div className="text-left">
               <p className="text-[9px] text-brand-steel uppercase tracking-wide leading-none">
-                Deliver to
+                {tc("deliverTo")}
               </p>
               <div className="flex items-center gap-0.5">
                 <span className="text-xs font-semibold text-brand-charcoal leading-none group-hover:text-brand-primary transition-colors">
                   {selectedLocation
                     ? (SERVICE_AREAS.find((a) => a.id === selectedLocation)
                         ?.name ?? selectedLocation)
-                    : "Select area"}
+                    : tc("selectArea")}
                 </span>
                 <ChevronDown className="w-3 h-3 text-brand-steel" />
               </div>
@@ -440,7 +448,7 @@ export function Header() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-brand-steel pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search for plywood, hinges, fittings..."
+                placeholder={t("searchPlaceholderDesktop")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => {
@@ -466,6 +474,7 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 ml-auto md:ml-0 shrink-0">
+            <LanguageSwitcher />
             {/* Wishlist */}
             <Link
               href={"/wishlist" as any}
@@ -480,7 +489,7 @@ export function Header() {
                   pathname === "/wishlist" && "fill-red-500 text-red-500",
                 )}
               />
-              <span className="hidden sm:inline text-sm">Wishlist</span>
+              <span className="hidden sm:inline text-sm">{tc("wishlist")}</span>
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
@@ -497,7 +506,7 @@ export function Header() {
               )}
             >
               <ShoppingCart className="w-5 h-5" />
-              <span className="hidden sm:inline text-sm">Cart</span>
+              <span className="hidden sm:inline text-sm">{tc("cart")}</span>
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-brand-primary text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse-glow">
                   {itemCount > 9 ? "9+" : itemCount}
@@ -544,15 +553,15 @@ export function Header() {
                         className="flex items-center gap-3 px-5 py-3.5 text-sm font-medium text-brand-charcoal bg-primary-50/60 hover:bg-primary-50 transition-colors border-b border-neutral-100"
                       >
                         <LayoutDashboard className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                        Admin Dashboard
+                        {t("adminDashboard")}
                       </Link>
                     )}
 
                     {/* Account links */}
                     {[
-                      { href: '/my-profile',   label: 'My Profile',    Icon: User          },
-                      { href: '/my-orders',    label: 'Order History', Icon: ClipboardList },
-                      { href: '/my-addresses', label: 'My Addresses',  Icon: MapPin        },
+                      { href: '/my-profile',   label: t('myProfile'),    Icon: User          },
+                      { href: '/my-orders',    label: t('orderHistory'), Icon: ClipboardList },
+                      { href: '/my-addresses', label: t('myAddresses'),  Icon: MapPin        },
                     ].map(({ href, label, Icon }) => (
                       <Link
                         key={href}
@@ -572,7 +581,7 @@ export function Header() {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
                     >
                       <Coins className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                      <span className="flex-1">My Coins</span>
+                      <span className="flex-1">{t('myCoins')}</span>
                       <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '—'}</span>
                     </Link>
 
@@ -583,7 +592,7 @@ export function Header() {
                       className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
                     >
                       <Headphones className="w-4 h-4 text-brand-slate flex-shrink-0" />
-                      FastGet Support
+                      {t('support')}
                     </Link>
 
                     {/* Policies accordion */}
@@ -592,16 +601,16 @@ export function Header() {
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
                     >
                       <BookOpen className="w-4 h-4 text-brand-slate flex-shrink-0" />
-                      <span className="flex-1 text-left">Policies</span>
+                      <span className="flex-1 text-left">{t('policies')}</span>
                       <ChevronDown className={cn('w-3.5 h-3.5 text-brand-steel transition-transform duration-200', showPolicies && 'rotate-180')} />
                     </button>
                     {showPolicies && (
                       <>
                         {[
-                          { href: '/shipping-policy', label: 'Shipping Policy', Icon: Truck     },
-                          { href: '/refund-policy',   label: 'Refund Policy',   Icon: RefreshCw },
-                          { href: '/privacy-policy',  label: 'Privacy Policy',  Icon: Lock      },
-                          { href: '/terms',           label: 'Terms of Service', Icon: FileText },
+                          { href: '/shipping-policy', label: t('shippingPolicy'), Icon: Truck     },
+                          { href: '/refund-policy',   label: t('refundPolicy'),   Icon: RefreshCw },
+                          { href: '/privacy-policy',  label: t('privacyPolicy'),  Icon: Lock      },
+                          { href: '/terms',           label: t('termsOfService'), Icon: FileText },
                         ].map(({ href, label, Icon }) => (
                           <Link
                             key={href}
@@ -622,7 +631,7 @@ export function Header() {
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 border-b border-neutral-100 transition-colors"
                     >
                       <LogOut className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                      Sign Out
+                      {tc('signOut')}
                     </button>
 
                     {/* Delete account */}
@@ -641,10 +650,10 @@ export function Header() {
                       : "text-brand-charcoal hover:bg-neutral-100",
                   )}
                 >
-                  Log In
+                  {tc('login')}
                 </Link>
                 <Link href="/signup" className="btn-primary">
-                  Sign Up
+                  {tc('signup')}
                 </Link>
               </div>
             )}

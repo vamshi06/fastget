@@ -1,131 +1,78 @@
+import { getTranslations } from "next-intl/server";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
 export const metadata = { title: "Terms of Service — FastGet" };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getTranslations("legal.terms");
+  const s4List = t.raw("s4.list") as string[];
+  const emailTag = {
+    email: (chunks: React.ReactNode) => (
+      <a
+        href="mailto:sukhmeet.bedi@elemantra.in"
+        className="text-brand-primary font-medium"
+      >
+        {chunks}
+      </a>
+    ),
+  };
+
   return (
-    <LegalPageLayout title="Terms of Service" updatedAt="16 June 2026">
-      <LegalSection heading="1. Acceptance of terms">
-        <p>
-          By creating an account or placing an order on FastGet (the
-          &ldquo;Service&rdquo;), you agree to these Terms of Service. If you do not
-          agree, please do not use the Service.
-        </p>
+    <LegalPageLayout title={t("title")} updatedAt="16 June 2026">
+      <LegalSection heading={t("s1.heading")}>
+        <p>{t("s1.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="2. Who can use FastGet">
-        <p>
-          FastGet is intended for contractors and businesses ordering building
-          materials for delivery within our serviceable Mumbai locations
-          (currently Andheri, Goregaon, and Malad). You must be at least 18
-          years old and able to enter into a binding contract to create an
-          account.
-        </p>
+      <LegalSection heading={t("s2.heading")}>
+        <p>{t("s2.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="3. Your account">
-        <p>
-          You are responsible for keeping your password confidential and for all
-          activity under your account. Notify us immediately at{" "}
-          <a
-            href="mailto:sukhmeet.bedi@elemantra.in"
-            className="text-brand-primary font-medium"
-          >
-            sukhmeet.bedi@elemantra.in
-          </a>{" "}
-          if you suspect unauthorized use.
-        </p>
+      <LegalSection heading={t("s3.heading")}>
+        <p>{t.rich("s3.body", emailTag)}</p>
       </LegalSection>
 
-      <LegalSection heading="4. Orders, pricing, and payment">
+      <LegalSection heading={t("s4.heading")}>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            Product prices and availability are shown at the time of ordering
-            and may change without notice.
-          </li>
-          <li>
-            Payments are processed securely through Razorpay (cards, UPI, net
-            banking). We do not store your card or UPI credentials.
-          </li>
-          <li>
-            An order is confirmed only once payment is successfully authorized.
-          </li>
+          {s4List.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
         </ul>
       </LegalSection>
 
-      <LegalSection heading="5. Delivery">
-        <p>
-          We aim to deliver within 30–60 minutes inside our serviceable areas,
-          depending on order size, traffic, and stock availability. See our
-          Shipping Policy for details.
-        </p>
+      <LegalSection heading={t("s5.heading")}>
+        <p>{t("s5.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="6. Cancellations and refunds">
-        <p>
-          Cancellation and refund eligibility is governed by our Refund Policy.
-        </p>
+      <LegalSection heading={t("s6.heading")}>
+        <p>{t("s6.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="7. Acceptable use">
-        <p>
-          You agree not to misuse the Service, including attempting to access
-          other users&apos; accounts, interfering with normal operation, or
-          using the Service for any unlawful purpose.
-        </p>
+      <LegalSection heading={t("s7.heading")}>
+        <p>{t("s7.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="8. Intellectual property">
-        <p>
-          The FastGet name, logo, and app content are owned by FastGet and may
-          not be used without permission.
-        </p>
+      <LegalSection heading={t("s8.heading")}>
+        <p>{t("s8.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="9. Limitation of liability">
-        <p>
-          FastGet is provided &ldquo;as is&rdquo;. To the extent permitted by
-          law, FastGet is not liable for indirect or consequential losses
-          arising from delays, stock unavailability, or third-party payment
-          processing issues outside our reasonable control.
-        </p>
+      <LegalSection heading={t("s9.heading")}>
+        <p>{t("s9.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="10. Account termination">
-        <p>
-          You may delete your account at any time from Account → Delete Account.
-          We may suspend or terminate accounts that violate these terms.
-        </p>
+      <LegalSection heading={t("s10.heading")}>
+        <p>{t("s10.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="11. Governing law">
-        <p>
-          These terms are governed by the laws of India, and disputes are
-          subject to the exclusive jurisdiction of the courts in Mumbai,
-          Maharashtra.
-        </p>
+      <LegalSection heading={t("s11.heading")}>
+        <p>{t("s11.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="12. Changes to these terms">
-        <p>
-          We may update these terms from time to time; continued use of the
-          Service after changes constitutes acceptance.
-        </p>
+      <LegalSection heading={t("s12.heading")}>
+        <p>{t("s12.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="13. Contact us">
-        <p>
-          Questions about these terms? Email{" "}
-          <a
-            href="mailto:sukhmeet.bedi@elemantra.in"
-            className="text-brand-primary font-medium"
-          >
-            sukhmeet.bedi@elemantra.in
-          </a>{" "}
-          or call +91 8847777020. FastGet, Office no - 17, 2nd Floor,
-          Bhavan&apos;s Campus, Sardar Patel Technology Business Incubator, Old
-          D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058.
-        </p>
+      <LegalSection heading={t("s13.heading")}>
+        <p>{t.rich("s13.body", emailTag)}</p>
       </LegalSection>
     </LegalPageLayout>
   );

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { HeroSection } from '@/components/home/HeroSection';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
@@ -6,6 +7,7 @@ import { getActiveFlashSale } from '@/lib/products';
 
 export default async function Home() {
   const flashSale = await getActiveFlashSale();
+  const t = await getTranslations('home');
 
   return (
     <div className="min-h-screen bg-brand-fog">
@@ -24,47 +26,47 @@ export default async function Home() {
 
         {/* Best Deals — all categories, show highest discount first */}
         <ProductSection
-          title="Best Deals"
-          subtitle="Lowest prices on construction materials"
+          title={t('bestDealsTitle')}
+          subtitle={t('bestDealsSubtitle')}
           limit={10}
         />
 
         {/* Carpentry section */}
         <ProductSection
-          title="Carpentry Essentials"
-          subtitle="Plywood, hinges, screws & more"
+          title={t('carpentryTitle')}
+          subtitle={t('carpentrySubtitle')}
           category="carpentry"
           limit={8}
         />
 
         {/* Civil materials spotlight */}
         <ProductSection
-          title="Cement & Civil Materials"
-          subtitle="Strongest prices on site basics"
+          title={t('civilTitle')}
+          subtitle={t('civilSubtitle')}
           category="civil-materials"
           limit={8}
         />
 
         {/* Plumbing section */}
         <ProductSection
-          title="Plumbing Supplies"
-          subtitle="CPVC, PVC, fittings & fixtures"
+          title={t('plumbingTitle')}
+          subtitle={t('plumbingSubtitle')}
           category="plumbing"
           limit={8}
         />
 
         {/* Electrical section */}
         <ProductSection
-          title="Electrical Materials"
-          subtitle="Wires, switches, boards & accessories"
+          title={t('electricalTitle')}
+          subtitle={t('electricalSubtitle')}
           category="electrical"
           limit={8}
         />
 
         {/* Tools section */}
         <ProductSection
-          title="Tools & Machines"
-          subtitle="Power tools, hand tools & equipment"
+          title={t('toolsTitle')}
+          subtitle={t('toolsSubtitle')}
           category="tools-machines"
           limit={8}
         />

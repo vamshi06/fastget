@@ -1,22 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const messages = [
-  'Free delivery on orders above ₹10,000 — serving Andheri, Goregaon & Malad 🚀',
-  '⚡ 60 minute delivery on construction materials in Mumbai',
-  'Carpentry · Plumbing · Hardware · Electrical & more — all in one place',
-];
-
 export function AnnouncementBar() {
+  const t = useTranslations('nav');
+  const messages = t.raw('announcements') as string[];
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrent((p) => (p + 1) % messages.length), 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [messages.length]);
 
   if (!visible) return null;
 
@@ -29,7 +26,7 @@ export function AnnouncementBar() {
         <button
           onClick={prev}
           className="text-white/70 hover:text-white transition-colors shrink-0"
-          aria-label="Previous announcement"
+          aria-label={t('prevAnnouncement')}
         >
           {/* <ChevronLeft className="w-4 h-4" /> */}
         </button>
@@ -39,7 +36,7 @@ export function AnnouncementBar() {
         <button
           onClick={next}
           className="text-white/70 hover:text-white transition-colors shrink-0"
-          aria-label="Next announcement"
+          aria-label={t('nextAnnouncement')}
         >
           {/* <ChevronRight className="w-4 h-4" /> */}
         </button>
@@ -47,7 +44,7 @@ export function AnnouncementBar() {
       <button
         onClick={() => setVisible(false)}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-        aria-label="Close announcement"
+        aria-label={t('closeAnnouncement')}
       >
         <X className="w-3.5 h-3.5" />
       </button>

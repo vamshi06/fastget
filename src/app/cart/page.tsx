@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
@@ -30,6 +31,8 @@ export default function CartPage() {
   } = useCart();
   const { currentUser } = useUser();
   const { showToast } = useToast();
+  const t = useTranslations('cart');
+  const tc = useTranslations('common');
 
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
@@ -65,12 +68,12 @@ export default function CartPage() {
     setRemovingId(item.product.id);
     try {
       removeItem(item.product.id);
-      showToast(`${item.product.name} removed from cart`, 'success', {
-        label: 'Undo',
+      showToast(t('itemRemoved', { name: item.product.name }), 'success', {
+        label: t('undo'),
         onClick: () => addItem(item.product, item.quantity),
       });
     } catch {
-      showToast('Could not remove item. Try again.', 'error');
+      showToast(t('removeFailed'), 'error');
     } finally {
       setTimeout(() => setRemovingId(null), 400);
     }
@@ -89,12 +92,9 @@ export default function CartPage() {
     setIsClearing(true);
     try {
       clearCart();
-      showToast(
-        count === 1 ? '1 item removed from cart' : `${count} items removed from cart`,
-        'success'
-      );
+      showToast(t('itemsCleared', { count }), 'success');
     } catch {
-      showToast('Could not clear cart. Try again.', 'error');
+      showToast(t('clearFailed'), 'error');
     } finally {
       setTimeout(() => setIsClearing(false), 400);
     }
@@ -107,13 +107,13 @@ export default function CartPage() {
           <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <ShoppingCart className="w-10 h-10 text-brand-steel" />
           </div>
-          <h1 className="text-2xl font-black text-brand-charcoal mb-2">Your cart is empty</h1>
+          <h1 className="text-2xl font-black text-brand-charcoal mb-2">{t('emptyTitle')}</h1>
           <p className="text-brand-slate mb-8">
-            Add some products to your cart and they will appear here
+            {t('emptyMessage')}
           </p>
           <Link href="/catalog" className="btn-primary inline-flex px-8 py-3">
             <Package className="w-5 h-5" />
-            Browse Products
+            {tc('browseProducts')}
           </Link>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-brand-fog py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-black text-brand-charcoal mb-8">Shopping Cart</h1>
+        <h1 className="text-2xl font-black text-brand-charcoal mb-8">{t('pageTitle')}</h1>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
@@ -151,7 +151,10 @@ export default function CartPage() {
                   </p>
                   {item.product.isFlashSale && !isFlashSaleEligible(item.product) && (
                     <p className="text-[11px] text-amber-600 font-medium mt-1">
-                      Add {formatCurrency(Math.max(0, (item.product.saleMinOrderRupees ?? 0) - getPreDiscountSubtotal(item.product.id)))} more of other products to unlock the {formatCurrency(item.product.price)} flash price
+                      {t('flashSaleUnlockHint', {
+                        amount: formatCurrency(Math.max(0, (item.product.saleMinOrderRupees ?? 0) - getPreDiscountSubtotal(item.product.id))),
+                        price: formatCurrency(item.product.price),
+                      })}
                     </p>
                   )}
                 </div>
@@ -165,7 +168,7 @@ export default function CartPage() {
                         ? 'text-brand-steel opacity-50 cursor-not-allowed'
                         : 'text-brand-steel hover:text-red-500 hover:bg-red-50'
                     }`}
-                    aria-label="Remove item"
+                    aria-label={t('removeItemAria')}
                   >
                     {removingId === item.product.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -204,18 +207,18 @@ export default function CartPage() {
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
-              Clear Cart
+              {t('clearCart')}
             </button>
           </div>
 
           {/* Order Summary */}
           <div className="lg:col-span-1 min-w-0">
             <div className="card p-6 sticky top-24">
-              <h2 className="text-lg font-bold text-brand-charcoal mb-5">Order Summary</h2>
+              <h2 className="text-lg font-bold text-brand-charcoal mb-5">{t('orderSummary')}</h2>
 
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm text-brand-slate">
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(getSubtotal())}</span>
                 </div>
 
@@ -224,11 +227,14 @@ export default function CartPage() {
                     <Tag className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
                     {firstOrderDiscount > 0 ? (
                       <p className="text-xs text-brand-charcoal">
-                        <span className="font-bold">First order coupon applied!</span> {formatCurrency(firstOrderDiscountAmount)} off.
+                        <span className="font-bold">{t('firstOrderCouponApplied')}</span> {t('firstOrderCouponOff', { amount: formatCurrency(firstOrderDiscountAmount) })}
                       </p>
                     ) : (
                       <p className="text-xs text-brand-charcoal">
-                        Add {formatCurrency(Math.max(0, firstOrderMinOrder - getTotal()))} more to unlock {formatCurrency(firstOrderDiscountAmount)} off your first order!
+                        {t('firstOrderUnlockHint', {
+                          amount: formatCurrency(Math.max(0, firstOrderMinOrder - getTotal())),
+                          discount: formatCurrency(firstOrderDiscountAmount),
+                        })}
                       </p>
                     )}
                   </div>
@@ -236,7 +242,7 @@ export default function CartPage() {
 
                 {firstOrderDiscount > 0 && (
                   <div className="flex justify-between text-sm text-green-700">
-                    <span>First order discount</span>
+                    <span>{t('firstOrderDiscount')}</span>
                     <span className="font-medium">−{formatCurrency(firstOrderDiscount)}</span>
                   </div>
                 )}
@@ -246,7 +252,7 @@ export default function CartPage() {
                     <label className="flex items-center justify-between cursor-pointer select-none">
                       <span className="flex items-center gap-1.5 text-sm text-brand-charcoal font-medium">
                         <Coins className="w-4 h-4 text-brand-primary" />
-                        Use coins ({coinBalance} available)
+                        {t('useCoins', { balance: coinBalance })}
                       </span>
                       <input
                         type="checkbox"
@@ -271,7 +277,7 @@ export default function CartPage() {
                           }}
                           className="w-24 px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
                         />
-                        <span className="text-xs text-brand-slate">coins = {formatCurrency(coinDiscount)} off (max {maxRedeemable})</span>
+                        <span className="text-xs text-brand-slate">{t('coinsHint', { amount: formatCurrency(coinDiscount), max: maxRedeemable })}</span>
                       </div>
                     )}
                   </div>
@@ -279,14 +285,14 @@ export default function CartPage() {
 
                 {coinDiscount > 0 && (
                   <div className="flex justify-between text-sm text-green-700">
-                    <span>Coins discount</span>
+                    <span>{t('coinsDiscount')}</span>
                     <span className="font-medium">−{formatCurrency(coinDiscount)}</span>
                   </div>
                 )}
 
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">
-                    <span>Total</span>
+                    <span>{t('total')}</span>
                     <span className="text-xl">{formatCurrency(getTotal() - firstOrderDiscount - coinDiscount)}</span>
                   </div>
                 </div>
@@ -296,12 +302,12 @@ export default function CartPage() {
                 href="/checkout"
                 className="btn-primary w-full py-3 justify-center"
               >
-                Proceed to Checkout
+                {t('proceedToCheckout')}
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
               <p className="text-center text-xs text-brand-steel mt-4">
-                💳 Pay on delivery available
+                {t('payOnDeliveryNote')}
               </p>
             </div>
           </div>

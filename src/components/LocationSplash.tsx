@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MapPin, X, ArrowRight, Loader2, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SERVICE_AREAS, type AreaId } from './LocationSplashContext';
@@ -29,6 +30,8 @@ interface Props {
 }
 
 export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
+  const t = useTranslations('location');
+  const tc = useTranslations('common');
   const [visible, setVisible]           = useState(false);
   const [closing, setClosing]           = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(initialSelected);
@@ -186,7 +189,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
         <button
           ref={closeRef}
           onClick={startClose}
-          aria-label="Close location selector"
+          aria-label={t('closeSelector')}
           className={cn(
             'absolute top-4 right-4',
             'w-8 h-8 flex items-center justify-center',
@@ -220,17 +223,17 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
               id="splash-title"
               className="text-[1.35rem] font-bold text-brand-charcoal leading-snug mb-1.5"
             >
-              Where should we deliver?
+              {t('heading')}
             </h2>
             <p className="text-sm text-brand-slate">
-              Fast delivery across selected service areas
+              {t('subheading')}
             </p>
           </div>
 
           {/* ── Location cards ──────────────────────────────── */}
           <div
             role="radiogroup"
-            aria-label="Select a delivery area"
+            aria-label={t('selectDeliveryArea')}
             className="grid grid-cols-3 gap-3 mb-6"
           >
             {SERVICE_AREAS.map((area) => {
@@ -280,7 +283,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
           <div className="flex items-center gap-3 mb-5" aria-hidden="true">
             <div className="flex-1 h-px bg-neutral-200" />
             <span className="text-[0.68rem] font-bold text-brand-steel tracking-widest uppercase">
-              Or enter pincode
+              {t('orEnterPincode')}
             </span>
             <div className="flex-1 h-px bg-neutral-200" />
           </div>
@@ -292,12 +295,12 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="Enter 6-digit pincode"
+              placeholder={t('pincodePlaceholder')}
               value={pincode}
               onChange={handlePincodeChange}
               onKeyDown={handlePincodeKeyDown}
               maxLength={6}
-              aria-label="6-digit pincode"
+              aria-label={t('pincodeAriaLabel')}
               aria-describedby={pincodeStatus !== 'idle' ? 'pincode-msg' : undefined}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-xl text-sm placeholder:text-brand-steel',
@@ -313,7 +316,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
             <button
               onClick={handlePincodeCheck}
               disabled={pincode.length !== 6 || pincodeStatus === 'checking'}
-              aria-label="Check pincode availability"
+              aria-label={t('checkPincodeAria')}
               className={cn(
                 'px-4 py-2.5 rounded-xl text-sm font-semibold min-w-[72px]',
                 'transition-all duration-150 active:scale-[0.97]',
@@ -325,7 +328,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
             >
               {pincodeStatus === 'checking'
                 ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                : 'Check'
+                : tc('check')
               }
             </button>
           </div>
@@ -339,7 +342,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
                 className="flex items-center gap-1.5 text-xs text-brand-success font-medium animate-fade-in"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                We deliver to {getAreaName(pincodeArea)} · {SERVICE_AREAS.find(a => a.id === pincodeArea)?.eta}
+                {t('weDeliverTo', { area: getAreaName(pincodeArea), eta: SERVICE_AREAS.find(a => a.id === pincodeArea)?.eta ?? '' })}
               </p>
             )}
             {pincodeStatus === 'invalid' && (
@@ -349,7 +352,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
                 className="flex items-center gap-1.5 text-xs text-red-500 font-medium animate-fade-in"
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                We don&apos;t deliver to this pincode yet
+                {t('noDeliveryPincode')}
               </p>
             )}
           </div>
@@ -360,8 +363,8 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
             disabled={!ctaReady}
             aria-label={
               ctaReady
-                ? `Confirm delivery to ${getAreaName(activeSelection!)}`
-                : 'Select a delivery area to continue'
+                ? t('confirmDeliveryTo', { area: getAreaName(activeSelection!) })
+                : t('selectAreaToContinue')
             }
             className={cn(
               'w-full flex items-center justify-center gap-2',
@@ -374,11 +377,11 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
           >
             {ctaReady ? (
               <>
-                Deliver to {getAreaName(activeSelection!)}
+                {t('deliverToArea', { area: getAreaName(activeSelection!) })}
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </>
             ) : (
-              'Select a delivery area to continue'
+              t('selectAreaToContinue')
             )}
           </button>
         </div>

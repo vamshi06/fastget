@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Zap, ArrowRight, Package } from 'lucide-react';
 import type { ActiveFlashSale } from '@/lib/products';
 
@@ -28,6 +29,7 @@ function pad(n: number) {
 }
 
 export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
+  const t = useTranslations('home');
   const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(sale.saleEndsAt));
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
           style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.35)' }}
         >
           <Zap className="w-3 h-3 fill-current" />
-          FLASH SALE · LIMITED TIME
+          {t('flashSale')}
         </span>
 
         {/* Product row: image + name/price */}
@@ -96,7 +98,7 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
                 ₹{sale.originalPriceRupees}
               </span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white text-red-700">
-                {discountPct}% OFF
+                {t('offLabel', { pct: discountPct })}
               </span>
             </div>
           </div>
@@ -104,7 +106,7 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
 
         {sale.minOrderRupees != null && sale.minOrderRupees > 0 && (
           <p className="text-[11px] text-white/70 mb-2">
-            Add ₹{sale.minOrderRupees}+ of other products to your cart to unlock this price
+            {t('addMoreToUnlock', { amount: sale.minOrderRupees })}
           </p>
         )}
 
@@ -130,7 +132,7 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
           <span
             className="inline-flex items-center gap-1 px-4 py-2 rounded-xl font-semibold text-xs text-red-700 bg-white flex-shrink-0"
           >
-            Grab It Now
+            {t('grabItNow')}
             <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>

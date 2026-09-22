@@ -1,0 +1,23 @@
+{
+  "cart": "कार्ट",
+  "wishlist": "विशलिस्ट",
+  "login": "लॉग इन",
+  "signup": "साइन अप",
+  "signOut": "साइन आउट",
+  "search": "खोजें",
+  "loading": "लोड हो रहा है…",
+  "viewCart": "कार्ट देखें",
+  "addedToCart": "{name} जोड़ा गया",
+  "outOfStock": "स्टॉक में नहीं",
+  "check": "जांचें",
+  "selectArea": "क्षेत्र चुनें",
+  "deliverTo": "डिलीवरी पता",
+  "mins": "मिनट",
+  "seeAll": "सभी देखें",
+  "viewAll": "सभी देखें",
+  "close": "बंद करें",
+  "browseProducts": "उत्पाद देखें",
+  "cancel": "रद्द करें",
+  "delete": "हटाएं",
+  "deleting": "हटाया जा रहा है…"
+}

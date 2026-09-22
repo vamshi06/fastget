@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
@@ -35,6 +36,8 @@ export default function ProductDetailPage() {
 
   const { state, addItem, updateQuantity, removeItem } = useCart();
   const { showToast } = useToast();
+  const t  = useTranslations('product');
+  const tc = useTranslations('common');
 
   const [product,           setProduct]           = useState<ProductWithVariants | null>(null);
   const [loading,           setLoading]           = useState(true);
@@ -53,13 +56,14 @@ export default function ProductDetailPage() {
     fetch(`/api/products/${productId}`)
       .then((r) => r.json())
       .then((json) => {
-        if (!json.success) throw new Error(json.error || 'Product not found');
+        if (!json.success) throw new Error(json.error || t('productNotFoundTitle'));
         const p: ProductWithVariants = json.data;
         setProduct(p);
         if (p.variants?.length) setSelectedVariant(p.variants[0]);
       })
-      .catch((err) => setError(err.message || 'Failed to load product'))
+      .catch((err) => setError(err.message || t('failedToLoadProduct')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   // ── Fetch related products when category is known ─────────────────────────
@@ -105,13 +109,13 @@ export default function ProductDetailPage() {
       const safeQuantity = Math.max(moq, quantity);
       if (cartQuantity === 0) {
         addItem(cartProduct, safeQuantity);
-        showToast(`${product.name} added to cart`, 'success', { label: 'View Cart', href: '/cart' });
+        showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
       } else {
         updateQuantity(product.id, safeQuantity);
-        showToast('Quantity updated in cart', 'success', { label: 'View Cart', href: '/cart' });
+        showToast(t('quantityUpdated'), 'success', { label: tc('viewCart'), href: '/cart' });
       }
     } catch {
-      showToast('Could not add item. Try again.', 'error');
+      showToast(t('couldNotAddItem'), 'error');
     } finally {
       setTimeout(() => setIsAdding(false), 400);
     }
@@ -123,12 +127,12 @@ export default function ProductDetailPage() {
     try {
       removeItem(product.id);
       setQuantity(moq);
-      showToast(`${product.name} removed from cart`, 'success', {
-        label: 'Undo',
+      showToast(t('removedFromCart', { name: product.name }), 'success', {
+        label: t('undo'),
         onClick: () => addItem(product, prev),
       });
     } catch {
-      showToast('Could not remove item. Try again.', 'error');
+      showToast(t('couldNotRemoveItem'), 'error');
     }
   };
 
@@ -137,7 +141,7 @@ export default function ProductDetailPage() {
     return (
       <div className="min-h-screen bg-brand-fog flex items-center justify-center gap-3 text-brand-slate">
         <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
-        Loading product…
+        {t('loadingProduct')}
       </div>
     );
   }
@@ -150,11 +154,11 @@ export default function ProductDetailPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">Product Not Found</h1>
-          <p className="text-brand-slate mb-8">{error || "The product you're looking for doesn't exist."}</p>
+          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">{t('productNotFoundTitle')}</h1>
+          <p className="text-brand-slate mb-8">{error || t('productNotFoundMessage')}</p>
           <Link href="/catalog" className="btn-primary inline-flex px-6 py-3">
             <ArrowLeft className="w-5 h-5" />
-            Back to Catalog
+            {t('backToCatalog')}
           </Link>
         </div>
       </div>
@@ -171,7 +175,7 @@ export default function ProductDetailPage() {
         <div className="mb-8 flex items-center gap-2 text-sm flex-wrap">
           <Link href="/catalog" className="text-brand-primary hover:text-brand-dark flex items-center gap-1 font-medium">
             <ArrowLeft className="w-4 h-4" />
-            Catalog
+            {t('catalogBreadcrumb')}
           </Link>
           {product.category && (
             <>
@@ -220,7 +224,7 @@ export default function ProductDetailPage() {
               )}
               <h1 className="text-3xl font-black text-brand-charcoal mb-1">{product.name}</h1>
               {product.sku && (
-                <p className="text-xs text-brand-steel">SKU: {selectedVariant?.sku ?? product.sku}</p>
+                <p className="text-xs text-brand-steel">{t('sku', { sku: selectedVariant?.sku ?? product.sku })}</p>
               )}
             </div>
 
@@ -236,14 +240,14 @@ export default function ProductDetailPage() {
               )}
               {discount > 0 && (
                 <span className="bg-green-100 text-green-800 text-sm font-bold px-2.5 py-1 rounded-full">
-                  {discount}% off
+                  {t('percentOff', { discount })}
                 </span>
               )}
               <span className="text-brand-slate text-sm mb-0.5">/ {product.unit}</span>
             </div>
             {product.isFlashSale && product.saleMinOrderRupees != null && product.saleMinOrderRupees > 0 && (
               <p className="text-xs text-amber-600 font-medium -mt-2">
-                ⚡ Flash price applies once you have {formatCurrency(product.saleMinOrderRupees)}+ of other products in your cart
+                {t('flashPriceNote', { amount: formatCurrency(product.saleMinOrderRupees) })}
               </p>
             )}
 
@@ -251,7 +255,7 @@ export default function ProductDetailPage() {
             {variants.length > 1 && (
               <div className="border-t border-neutral-100 pt-5">
                 <h3 className="text-sm font-semibold text-brand-graphite mb-3 uppercase tracking-wide">
-                  Select Size / Type
+                  {t('selectSizeType')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {variants.map((v) => {
@@ -278,7 +282,7 @@ export default function ProductDetailPage() {
             {/* Description */}
             {product.description && (
               <div className="border-t border-neutral-100 pt-5">
-                <h3 className="text-sm font-bold text-brand-charcoal mb-2">Description</h3>
+                <h3 className="text-sm font-bold text-brand-charcoal mb-2">{t('description')}</h3>
                 <p className="text-brand-slate text-sm leading-relaxed">{product.description}</p>
               </div>
             )}
@@ -286,7 +290,7 @@ export default function ProductDetailPage() {
             {/* Attributes */}
             {selectedVariant && Object.keys(selectedVariant.attributes).length > 0 && (
               <div className="border-t border-neutral-100 pt-5">
-                <h3 className="text-sm font-bold text-brand-charcoal mb-3">Specifications</h3>
+                <h3 className="text-sm font-bold text-brand-charcoal mb-3">{t('specifications')}</h3>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {Object.entries(selectedVariant.attributes)
                     .filter(([, v]) => v)
@@ -304,7 +308,7 @@ export default function ProductDetailPage() {
             {selectedVariant && selectedVariant.moq > 1 && (
               <p className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5">
                 <Tag className="w-4 h-4 flex-shrink-0" />
-                Minimum order quantity: {selectedVariant.moq} {product.unit}
+                {t('minOrderQty', { moq: selectedVariant.moq, unit: product.unit })}
               </p>
             )}
 
@@ -312,15 +316,15 @@ export default function ProductDetailPage() {
             <div className="border-t border-neutral-100 pt-5">
               {product.stockStatus === 'out' ? (
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-100 text-neutral-500">
-                  Out of Stock
+                  {tc('outOfStock')}
                 </span>
               ) : product.stockStatus === 'low' ? (
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
-                  Low Stock
+                  {t('lowStock')}
                 </span>
               ) : (
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                  In Stock
+                  {t('inStock')}
                 </span>
               )}
             </div>
@@ -329,7 +333,7 @@ export default function ProductDetailPage() {
             <div className="border-t border-neutral-100 pt-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-brand-graphite mb-3 uppercase tracking-wide">
-                  Quantity
+                  {t('quantity')}
                 </label>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 p-1 bg-primary-50 rounded-xl border border-primary-200">
@@ -351,7 +355,7 @@ export default function ProductDetailPage() {
                     </button>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-brand-steel uppercase tracking-wide">Total</p>
+                    <p className="text-xs text-brand-steel uppercase tracking-wide">{t('total')}</p>
                     <p className="text-xl font-black text-brand-charcoal">
                       {formatCurrency(effectivePrice * quantity)}
                     </p>
@@ -365,7 +369,7 @@ export default function ProductDetailPage() {
                     disabled
                     className="w-full py-4 text-base bg-neutral-100 text-neutral-400 rounded-xl cursor-not-allowed font-medium"
                   >
-                    Out of Stock
+                    {tc('outOfStock')}
                   </button>
                 ) : (
                   <button
@@ -376,12 +380,12 @@ export default function ProductDetailPage() {
                     {isAdding ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        {cartQuantity === 0 ? 'Adding…' : 'Updating…'}
+                        {cartQuantity === 0 ? t('adding') : t('updating')}
                       </>
                     ) : (
                       <>
                         <ShoppingCart className="w-5 h-5" />
-                        {cartQuantity === 0 ? 'Add to Cart' : 'Update Cart'}
+                        {cartQuantity === 0 ? t('addToCart') : t('updateCart')}
                       </>
                     )}
                   </button>
@@ -390,13 +394,13 @@ export default function ProductDetailPage() {
                 {cartQuantity > 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-brand-slate">
-                      In cart: <span className="font-semibold text-brand-charcoal">{cartQuantity}</span>
+                      {t('inCart', { count: cartQuantity })}
                     </span>
                     <button
                       onClick={handleRemoveFromCart}
                       className="text-red-600 hover:text-red-700 font-medium transition-colors"
                     >
-                      Remove
+                      {t('remove')}
                     </button>
                   </div>
                 )}
@@ -411,7 +415,7 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div>
-            <h2 className="text-2xl font-black text-brand-charcoal mb-6">Related Products</h2>
+            <h2 className="text-2xl font-black text-brand-charcoal mb-6">{t('relatedProducts')}</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />

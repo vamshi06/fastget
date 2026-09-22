@@ -3,6 +3,7 @@
 import { Plus, Minus, Package, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { Product } from '@/types';
@@ -14,6 +15,8 @@ interface HomeProductCardProps {
 export function HomeProductCard({ product }: HomeProductCardProps) {
   const { state, addItem, updateQuantity } = useCart();
   const { showToast } = useToast();
+  const t = useTranslations('home');
+  const tc = useTranslations('common');
 
   const cartItem = state.items.find(i => i.product.id === product.id);
   const qty = cartItem?.quantity ?? 0;
@@ -29,7 +32,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     addItem(product, 1);
-    showToast(`${product.name} added`, 'success', { label: 'View Cart', href: '/cart' });
+    showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
@@ -71,18 +74,18 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
         {product.isFlashSale ? (
           <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none animate-pulse">
             <Zap className="w-2 h-2 fill-current" />
-            ₹{product.price} DEAL
+            {t('dealLabel', { price: product.price })}
           </div>
         ) : discountPct >= 3 && (
           <div className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
-            {discountPct}% OFF
+            {t('offLabel', { pct: discountPct })}
           </div>
         )}
 
         {/* Out of stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-            <span className="text-[9px] font-semibold text-neutral-500">Out of Stock</span>
+            <span className="text-[9px] font-semibold text-neutral-500">{tc('outOfStock')}</span>
           </div>
         )}
 
@@ -128,7 +131,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
         {/* Savings */}
         {savings > 0 && (
           <p className="text-[9px] font-bold text-green-600 mb-0.5">
-            ₹{savings.toLocaleString('en-IN')} OFF
+            {t('amountOffLabel', { amount: savings.toLocaleString('en-IN') })}
           </p>
         )}
 

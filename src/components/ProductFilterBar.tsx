@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   X,
   ChevronDown,
@@ -40,14 +41,14 @@ export interface ProductFilterBarProps {
   initialFilters?: Partial<FilterState>;
 }
 
-const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
-  { value: 'recommended',    label: 'Recommended' },
-  { value: 'best_selling',   label: 'Best Selling' },
-  { value: 'new_arrivals',   label: 'New Arrivals' },
-  { value: 'price_low_high', label: 'Price: Low to High' },
-  { value: 'price_high_low', label: 'Price: High to Low' },
-  { value: 'highest_rated',  label: 'Highest Rated' },
-  { value: 'discount_high_low', label: 'Discount %: High to Low' },
+const SORT_OPTIONS: Array<{ value: SortOption; labelKey: string }> = [
+  { value: 'recommended',    labelKey: 'sortRecommended' },
+  { value: 'best_selling',   labelKey: 'sortBestSelling' },
+  { value: 'new_arrivals',   labelKey: 'sortNewArrivals' },
+  { value: 'price_low_high', labelKey: 'sortPriceLowHigh' },
+  { value: 'price_high_low', labelKey: 'sortPriceHighLow' },
+  { value: 'highest_rated',  labelKey: 'sortHighestRated' },
+  { value: 'discount_high_low', labelKey: 'sortDiscountHighLow' },
 ];
 
 const DISCOUNT_OPTIONS = [10, 20, 30, 50];
@@ -66,6 +67,7 @@ export function ProductFilterBar({
   onFilterChange,
   initialFilters = {},
 }: ProductFilterBarProps) {
+  const t = useTranslations('catalog');
   const [filters, setFilters] = useState<FilterState>({
     sort: 'recommended',
     priceRange: { min: 0, max: 10000 },
@@ -138,7 +140,7 @@ export function ProductFilterBar({
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors text-sm font-medium text-brand-graphite"
             >
-              <span>Sort</span>
+              <span>{t('sort')}</span>
               {showSortMenu ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
@@ -154,7 +156,7 @@ export function ProductFilterBar({
                         : 'text-brand-graphite hover:bg-neutral-50'
                     }`}
                   >
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </button>
                 ))}
               </div>
@@ -168,7 +170,7 @@ export function ProductFilterBar({
                 onClick={() => setShowSortMenu(!showSortMenu)}
                 className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors text-sm font-medium text-brand-graphite"
               >
-                <span>Sort</span>
+                <span>{t('sort')}</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
 
@@ -184,7 +186,7 @@ export function ProductFilterBar({
                           : 'text-brand-graphite hover:bg-neutral-50'
                       }`}
                     >
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -196,7 +198,7 @@ export function ProductFilterBar({
               className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors text-sm font-medium text-brand-graphite"
             >
               <Filter className="w-4 h-4" />
-              <span>Filters</span>
+              <span>{t('filters')}</span>
               {activeFiltersCount > 0 && (
                 <span className="ml-0.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-brand-primary rounded-full">
                   {activeFiltersCount}
@@ -207,7 +209,7 @@ export function ProductFilterBar({
 
           {/* Product count */}
           <div className="ml-auto hidden sm:block text-sm text-brand-slate">
-            Showing <span className="font-semibold text-brand-charcoal">{productCount}</span> results
+            {t('resultsCount', { count: productCount })}
           </div>
         </div>
       </div>
@@ -219,7 +221,7 @@ export function ProductFilterBar({
             <div className="flex flex-wrap gap-2 items-center">
               {(filters.priceRange.min > 0 || filters.priceRange.max < 10000) && (
                 <div className={activeChipCls}>
-                  <span>Price: ₹{filters.priceRange.min}–₹{filters.priceRange.max}</span>
+                  <span>{t('priceChip', { min: filters.priceRange.min, max: filters.priceRange.max })}</span>
                   <button onClick={() => handleFilterChange({ priceRange: { min: 0, max: 10000 } })} className="hover:text-primary-900"><X className="w-3 h-3" /></button>
                 </div>
               )}
@@ -237,24 +239,24 @@ export function ProductFilterBar({
               ))}
               {filters.minRating > 0 && (
                 <div className={activeChipCls}>
-                  <span>{filters.minRating}★ & above</span>
+                  <span>{t('ratingAndAbove', { rating: filters.minRating })}</span>
                   <button onClick={() => handleFilterChange({ minRating: 0 })} className="hover:text-primary-900"><X className="w-3 h-3" /></button>
                 </div>
               )}
               {filters.minDiscount > 0 && (
                 <div className={activeChipCls}>
-                  <span>{filters.minDiscount}%+ discount</span>
+                  <span>{t('discountChip', { discount: filters.minDiscount })}</span>
                   <button onClick={() => handleFilterChange({ minDiscount: 0 })} className="hover:text-primary-900"><X className="w-3 h-3" /></button>
                 </div>
               )}
               {filters.inStockOnly && (
                 <div className={activeChipCls}>
-                  <span>In Stock Only</span>
+                  <span>{t('inStockOnly')}</span>
                   <button onClick={() => handleFilterChange({ inStockOnly: false })} className="hover:text-primary-900"><X className="w-3 h-3" /></button>
                 </div>
               )}
               <button onClick={handleClearAllFilters} className="ml-auto text-xs text-red-600 hover:text-red-700 font-medium underline">
-                Clear All
+                {t('clearAll')}
               </button>
             </div>
           </div>
@@ -269,13 +271,13 @@ export function ProductFilterBar({
             {/* Price */}
             <div>
               <button onClick={() => toggleFilterExpanded('price')} className="flex items-center justify-between w-full mb-3">
-                <h3 className="text-sm font-semibold text-brand-charcoal">Price Range</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal">{t('priceRange')}</h3>
                 {expandedFilters.price ? <ChevronUp className="w-4 h-4 text-brand-slate" /> : <ChevronDown className="w-4 h-4 text-brand-slate" />}
               </button>
               {expandedFilters.price && (
                 <div className="flex gap-2">
-                  <input type="number" placeholder="Min" value={filters.priceRange.min} onChange={e => handlePriceChange('min', parseInt(e.target.value) || 0)} className={filterInputCls} />
-                  <input type="number" placeholder="Max" value={filters.priceRange.max} onChange={e => handlePriceChange('max', parseInt(e.target.value) || 10000)} className={filterInputCls} />
+                  <input type="number" placeholder={t('minPlaceholder')} value={filters.priceRange.min} onChange={e => handlePriceChange('min', parseInt(e.target.value) || 0)} className={filterInputCls} />
+                  <input type="number" placeholder={t('maxPlaceholder')} value={filters.priceRange.max} onChange={e => handlePriceChange('max', parseInt(e.target.value) || 10000)} className={filterInputCls} />
                 </div>
               )}
             </div>
@@ -283,7 +285,7 @@ export function ProductFilterBar({
             {/* Category */}
             <div>
               <button onClick={() => toggleFilterExpanded('category')} className="flex items-center justify-between w-full mb-3">
-                <h3 className="text-sm font-semibold text-brand-charcoal">Category</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal">{t('category')}</h3>
                 {expandedFilters.category ? <ChevronUp className="w-4 h-4 text-brand-slate" /> : <ChevronDown className="w-4 h-4 text-brand-slate" />}
               </button>
               {expandedFilters.category && (
@@ -301,7 +303,7 @@ export function ProductFilterBar({
             {/* Brand */}
             <div>
               <button onClick={() => toggleFilterExpanded('brand')} className="flex items-center justify-between w-full mb-3">
-                <h3 className="text-sm font-semibold text-brand-charcoal">Brand</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal">{t('brand')}</h3>
                 {expandedFilters.brand ? <ChevronUp className="w-4 h-4 text-brand-slate" /> : <ChevronDown className="w-4 h-4 text-brand-slate" />}
               </button>
               {expandedFilters.brand && (
@@ -319,7 +321,7 @@ export function ProductFilterBar({
             {/* Rating */}
             <div>
               <button onClick={() => toggleFilterExpanded('rating')} className="flex items-center justify-between w-full mb-3">
-                <h3 className="text-sm font-semibold text-brand-charcoal">Rating</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal">{t('rating')}</h3>
                 {expandedFilters.rating ? <ChevronUp className="w-4 h-4 text-brand-slate" /> : <ChevronDown className="w-4 h-4 text-brand-slate" />}
               </button>
               {expandedFilters.rating && (
@@ -329,7 +331,7 @@ export function ProductFilterBar({
                       <input type="checkbox" checked={filters.minRating === r} onChange={() => handleRatingChange(r)} className={checkboxCls} />
                       <div className="flex items-center gap-1">
                         {[...Array(r)].map((_, i) => <Star key={i} className="w-3 h-3 fill-brand-primary text-brand-primary" />)}
-                        <span className="text-sm text-brand-graphite">{r}★ & above</span>
+                        <span className="text-sm text-brand-graphite">{t('ratingAndAbove', { rating: r })}</span>
                       </div>
                     </label>
                   ))}
@@ -340,7 +342,7 @@ export function ProductFilterBar({
             {/* Discount */}
             <div>
               <button onClick={() => toggleFilterExpanded('discount')} className="flex items-center justify-between w-full mb-3">
-                <h3 className="text-sm font-semibold text-brand-charcoal">Discount</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal">{t('discount')}</h3>
                 {expandedFilters.discount ? <ChevronUp className="w-4 h-4 text-brand-slate" /> : <ChevronDown className="w-4 h-4 text-brand-slate" />}
               </button>
               {expandedFilters.discount && (
@@ -348,7 +350,7 @@ export function ProductFilterBar({
                   {DISCOUNT_OPTIONS.map(d => (
                     <label key={d} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={filters.minDiscount === d} onChange={() => handleDiscountChange(d)} className={checkboxCls} />
-                      <span className="text-sm text-brand-graphite">{d}%+</span>
+                      <span className="text-sm text-brand-graphite">{t('discountPlus', { discount: d })}</span>
                     </label>
                   ))}
                 </div>
@@ -356,7 +358,7 @@ export function ProductFilterBar({
               <div className="mt-4 pt-4 border-t border-neutral-100">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={filters.inStockOnly} onChange={e => handleFilterChange({ inStockOnly: e.target.checked })} className={checkboxCls} />
-                  <span className="text-sm text-brand-graphite">In Stock Only</span>
+                  <span className="text-sm text-brand-graphite">{t('inStockOnly')}</span>
                 </label>
               </div>
             </div>
@@ -371,7 +373,7 @@ export function ProductFilterBar({
           <div className="fixed inset-0 bg-black/50 z-30 sm:hidden" onClick={() => setShowMobileFilters(false)} />
           <div className="fixed inset-y-0 right-0 z-40 w-full max-w-xs bg-white shadow-lg overflow-y-auto sm:hidden">
             <div className="sticky top-0 flex items-center justify-between px-4 py-4 border-b border-neutral-100 bg-white">
-              <h2 className="text-lg font-semibold text-brand-charcoal">Filters</h2>
+              <h2 className="text-lg font-semibold text-brand-charcoal">{t('filters')}</h2>
               <button onClick={() => setShowMobileFilters(false)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-brand-slate" />
               </button>
@@ -380,16 +382,16 @@ export function ProductFilterBar({
             <div className="p-4 space-y-5">
               {/* Price */}
               <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Price Range</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">{t('priceRange')}</h3>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="Min" value={filters.priceRange.min} onChange={e => handlePriceChange('min', parseInt(e.target.value) || 0)} className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary text-brand-charcoal" />
-                  <input type="number" placeholder="Max" value={filters.priceRange.max} onChange={e => handlePriceChange('max', parseInt(e.target.value) || 10000)} className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary text-brand-charcoal" />
+                  <input type="number" placeholder={t('minPlaceholder')} value={filters.priceRange.min} onChange={e => handlePriceChange('min', parseInt(e.target.value) || 0)} className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary text-brand-charcoal" />
+                  <input type="number" placeholder={t('maxPlaceholder')} value={filters.priceRange.max} onChange={e => handlePriceChange('max', parseInt(e.target.value) || 10000)} className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary text-brand-charcoal" />
                 </div>
               </div>
 
               {/* Category */}
               <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Category</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">{t('category')}</h3>
                 <div className="space-y-2">
                   {categories.map(cat => (
                     <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
@@ -402,7 +404,7 @@ export function ProductFilterBar({
 
               {/* Brand */}
               <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Brand</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">{t('brand')}</h3>
                 <div className="space-y-2">
                   {brands.map(b => (
                     <label key={b} className="flex items-center gap-2 cursor-pointer">
@@ -415,14 +417,14 @@ export function ProductFilterBar({
 
               {/* Rating */}
               <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Rating</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">{t('rating')}</h3>
                 <div className="space-y-2">
                   {RATING_OPTIONS.map(r => (
                     <label key={r} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={filters.minRating === r} onChange={() => handleRatingChange(r)} className={checkboxCls} />
                       <div className="flex items-center gap-1">
                         {[...Array(r)].map((_, i) => <Star key={i} className="w-3 h-3 fill-brand-primary text-brand-primary" />)}
-                        <span className="text-sm text-brand-graphite">{r}★ & above</span>
+                        <span className="text-sm text-brand-graphite">{t('ratingAndAbove', { rating: r })}</span>
                       </div>
                     </label>
                   ))}
@@ -431,12 +433,12 @@ export function ProductFilterBar({
 
               {/* Discount */}
               <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Discount</h3>
+                <h3 className="text-sm font-semibold text-brand-charcoal mb-3">{t('discount')}</h3>
                 <div className="space-y-2">
                   {DISCOUNT_OPTIONS.map(d => (
                     <label key={d} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={filters.minDiscount === d} onChange={() => handleDiscountChange(d)} className={checkboxCls} />
-                      <span className="text-sm text-brand-graphite">{d}%+</span>
+                      <span className="text-sm text-brand-graphite">{t('discountPlus', { discount: d })}</span>
                     </label>
                   ))}
                 </div>
@@ -446,18 +448,18 @@ export function ProductFilterBar({
               <div className="pt-4 border-t border-neutral-100">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={filters.inStockOnly} onChange={e => handleFilterChange({ inStockOnly: e.target.checked })} className={checkboxCls} />
-                  <span className="text-sm text-brand-graphite">In Stock Only</span>
+                  <span className="text-sm text-brand-graphite">{t('inStockOnly')}</span>
                 </label>
               </div>
 
               {activeFiltersCount > 0 && (
                 <button onClick={() => { handleClearAllFilters(); setShowMobileFilters(false); }} className="w-full mt-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-xl transition-colors">
-                  Clear All Filters
+                  {t('clearAllFilters')}
                 </button>
               )}
 
               <button onClick={() => setShowMobileFilters(false)} className="btn-primary w-full mt-2">
-                Apply Filters
+                {t('applyFilters')}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
 
 function AuthHero({ title }: { title: string }) {
@@ -29,6 +30,7 @@ function AuthHero({ title }: { title: string }) {
 }
 
 function VerifyEmailContent() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const router = useRouter();
   const prefillEmail = searchParams.get('email') || '';
@@ -75,8 +77,8 @@ function VerifyEmailContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.includes('@')) { setErrorMsg('Please enter a valid email address'); setState('error'); return; }
-    if (otp.length !== 6) { setErrorMsg('Enter all 6 digits'); setState('error'); return; }
+    if (!email.includes('@')) { setErrorMsg(t('common.invalidEmail')); setState('error'); return; }
+    if (otp.length !== 6) { setErrorMsg(t('common.otpIncomplete')); setState('error'); return; }
 
     setState('loading');
     try {
@@ -90,11 +92,11 @@ function VerifyEmailContent() {
         setState('success');
         setTimeout(() => router.push('/login'), 2500);
       } else {
-        setErrorMsg(data.error || 'Verification failed.');
+        setErrorMsg(data.error || t('common.verificationFailed'));
         setState('error');
       }
     } catch {
-      setErrorMsg('A network error occurred. Please try again.');
+      setErrorMsg(t('common.networkError'));
       setState('error');
     }
   };
@@ -102,15 +104,15 @@ function VerifyEmailContent() {
   if (state === 'success') {
     return (
       <div className="flex-1 flex flex-col">
-        <AuthHero title="Email verified!" />
+        <AuthHero title={t('verifyEmail.heroTitle')} />
         <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center">
           <CheckCircle2 className="w-14 h-14 text-green-500 mb-4" />
-          <p className="text-sm text-brand-slate">Your account is active. Taking you to login…</p>
+          <p className="text-sm text-brand-slate">{t('verifyEmail.successMessage')}</p>
           <Link
             href="/login"
             className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
           >
-            Go to Login
+            {t('common.goToLogin')}
           </Link>
         </div>
       </div>
@@ -119,13 +121,13 @@ function VerifyEmailContent() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <AuthHero title="Verify your email" />
+      <AuthHero title={t('verifyEmail.heroTitle')} />
       <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 pt-6 pb-6 shadow-xl flex flex-col justify-center">
         <div className="text-center mb-5">
           <Mail className="w-10 h-10 text-brand-primary mx-auto mb-3" />
           <p className="text-sm text-brand-slate">
-            We sent a 6-digit code to{' '}
-            <span className="font-semibold text-brand-charcoal">{email || 'your email'}</span>
+            {t('common.sentCodeTo')}{' '}
+            <span className="font-semibold text-brand-charcoal">{email || t('common.yourEmailFallback')}</span>
           </p>
         </div>
 
@@ -140,7 +142,7 @@ function VerifyEmailContent() {
           {!prefillEmail && (
             <input
               type="email"
-              placeholder="Email address"
+              placeholder={t('verifyEmail.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-neutral-200 rounded-2xl text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary"
@@ -174,18 +176,18 @@ function VerifyEmailContent() {
                        disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
           >
             {state === 'loading' ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
-            ) : 'Verify'}
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.verifying')}</>
+            ) : t('common.verify')}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-brand-slate">
-          Didn&apos;t receive a code?{' '}
+          {t('common.didntReceiveCode')}{' '}
           <Link
             href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}` as any}
             className="text-brand-primary font-semibold hover:text-brand-dark"
           >
-            Resend
+            {t('common.resend')}
           </Link>
         </p>
       </div>

@@ -1,33 +1,45 @@
-import { LegalPageLayout, LegalSection } from '@/components/LegalPageLayout';
+import { getTranslations } from "next-intl/server";
+import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
-export const metadata = { title: 'Shipping Policy — FastGet' };
+export const metadata = { title: "Shipping Policy — FastGet" };
 
-export default function ShippingPolicyPage() {
+export default async function ShippingPolicyPage() {
+  const t = await getTranslations("legal.shipping");
+
   return (
-    <LegalPageLayout title="Shipping Policy" updatedAt="16 June 2026">
-      <LegalSection heading="1. Service area">
-        <p>FastGet currently delivers to construction sites and businesses in Andheri, Goregaon, and Malad, Mumbai. We&apos;re working on expanding to more areas.</p>
+    <LegalPageLayout title={t("title")} updatedAt="16 June 2026">
+      <LegalSection heading={t("s1.heading")}>
+        <p>{t("s1.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="2. Delivery time">
+      <LegalSection heading={t("s2.heading")}>
         <p>
-          Most orders are delivered within 30–60 minutes of confirmation, subject to traffic,
-          order size, and stock availability. You can track your order&apos;s status from{' '}
-          <strong>Account → Order History</strong>.
+          {t.rich("s2.body", {
+            account: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </LegalSection>
 
-      <LegalSection heading="3. Delivery charges">
-        <p>Delivery charges, if any, are shown at checkout before you complete payment.</p>
+      <LegalSection heading={t("s3.heading")}>
+        <p>{t("s3.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="4. Failed or delayed delivery">
-        <p>If our delivery agent is unable to reach you or the delivery address, we will attempt to contact you using the phone number on your order. Significant delays will be communicated via email or in-app order status updates.</p>
+      <LegalSection heading={t("s4.heading")}>
+        <p>{t("s4.body")}</p>
       </LegalSection>
 
-      <LegalSection heading="5. Questions">
+      <LegalSection heading={t("s5.heading")}>
         <p>
-          Contact <a href="mailto:sukhmeet.bedi@elemantra.in" className="text-brand-primary font-medium">sukhmeet.bedi@elemantra.in</a> for any delivery questions.
+          {t.rich("s5.body", {
+            email: (chunks) => (
+              <a
+                href="mailto:sukhmeet.bedi@elemantra.in"
+                className="text-brand-primary font-medium"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
       </LegalSection>
     </LegalPageLayout>

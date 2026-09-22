@@ -1,0 +1,16 @@
+{
+  "closeSelector": "Close location selector",
+  "heading": "Where should we deliver?",
+  "subheading": "Fast delivery across selected service areas",
+  "selectDeliveryArea": "Select a delivery area",
+  "orEnterPincode": "Or enter pincode",
+  "pincodePlaceholder": "Enter 6-digit pincode",
+  "pincodeAriaLabel": "6-digit pincode",
+  "checkPincodeAria": "Check pincode availability",
+  "checking": "Checking…",
+  "weDeliverTo": "We deliver to {area} · {eta}",
+  "noDeliveryPincode": "We don't deliver to this pincode yet",
+  "confirmDeliveryTo": "Confirm delivery to {area}",
+  "selectAreaToContinue": "Select a delivery area to continue",
+  "deliverToArea": "Deliver to {area}"
+}

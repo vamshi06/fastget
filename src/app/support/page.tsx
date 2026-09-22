@@ -1,20 +1,23 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Mail, Phone, FileText, Truck, RefreshCw, Lock } from "lucide-react";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
 export const metadata = { title: "Support — FastGet" };
 
-const POLICY_LINKS = [
-  { href: "/shipping-policy", label: "Shipping Policy", Icon: Truck },
-  { href: "/refund-policy", label: "Refund Policy", Icon: RefreshCw },
-  { href: "/privacy-policy", label: "Privacy Policy", Icon: Lock },
-  { href: "/terms", label: "Terms of Service", Icon: FileText },
-];
+export default async function SupportPage() {
+  const t = await getTranslations("support");
 
-export default function SupportPage() {
+  const POLICY_LINKS = [
+    { href: "/shipping-policy", label: t("commonTopics.shippingPolicy"), Icon: Truck },
+    { href: "/refund-policy", label: t("commonTopics.refundPolicy"), Icon: RefreshCw },
+    { href: "/privacy-policy", label: t("commonTopics.privacyPolicy"), Icon: Lock },
+    { href: "/terms", label: t("commonTopics.termsOfService"), Icon: FileText },
+  ];
+
   return (
-    <LegalPageLayout title="FastGet Support" updatedAt="16 June 2026">
-      <LegalSection heading="Get in touch">
+    <LegalPageLayout title={t("pageTitle")} updatedAt="16 June 2026">
+      <LegalSection heading={t("getInTouch.heading")}>
         <div className="space-y-3">
           <a
             href="mailto:sukhmeet.bedi@elemantra.in"
@@ -28,12 +31,10 @@ export default function SupportPage() {
             +91 8847777020
           </div>
         </div>
-        <p className="mt-3">
-          For order issues, include your order number so we can help faster.
-        </p>
+        <p className="mt-3">{t("getInTouch.orderNote")}</p>
       </LegalSection>
 
-      <LegalSection heading="Common topics">
+      <LegalSection heading={t("commonTopics.heading")}>
         <ul className="space-y-2">
           {POLICY_LINKS.map(({ href, label, Icon }) => (
             <li key={href}>
@@ -49,11 +50,11 @@ export default function SupportPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection heading="Manage your account">
+      <LegalSection heading={t("manageAccount.heading")}>
         <p>
-          You can update your saved addresses, view order history, or
-          permanently delete your account from <strong>Account</strong> in the
-          app or on the website.
+          {t.rich("manageAccount.body", {
+            account: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </LegalSection>
     </LegalPageLayout>

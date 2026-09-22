@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 
 interface ConfirmDeleteModalProps {
@@ -15,11 +16,12 @@ interface ConfirmDeleteModalProps {
 export function ConfirmDeleteModal({
   title,
   message,
-  confirmLabel = 'Delete',
+  confirmLabel,
   pending = false,
   onCancel,
   onConfirm,
 }: ConfirmDeleteModalProps) {
+  const tc = useTranslations('common');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -36,14 +38,14 @@ export function ConfirmDeleteModal({
             disabled={pending}
             className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors disabled:opacity-60"
           >
-            Cancel
+            {tc('cancel')}
           </button>
           <button
             onClick={onConfirm}
             disabled={pending}
             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-60"
           >
-            {pending ? 'Deleting…' : confirmLabel}
+            {pending ? tc('deleting') : (confirmLabel ?? tc('delete'))}
           </button>
         </div>
       </div>

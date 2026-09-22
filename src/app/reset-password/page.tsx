@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, LockKeyhole, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { FloatingInput } from '@/components/FloatingInput';
 
@@ -30,6 +31,7 @@ function AuthHero({ title }: { title: string }) {
 }
 
 function ResetPasswordForm() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token') || '';
@@ -43,17 +45,17 @@ function ResetPasswordForm() {
     return (
       <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
         <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-        <AuthHero title="Invalid link" />
+        <AuthHero title={t('resetPassword.invalidLinkTitle')} />
         <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:px-14">
           <XCircle className="w-14 h-14 text-red-500 mb-4" />
           <p className="text-sm text-brand-slate">
-            This password reset link is invalid. Please request a new one.
+            {t('resetPassword.invalidLinkMessage')}
           </p>
           <Link
             href="/forgot-password"
             className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
           >
-            Request New Link
+            {t('resetPassword.requestNewLink')}
           </Link>
         </div>
         </div>
@@ -65,17 +67,17 @@ function ResetPasswordForm() {
     return (
       <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
         <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-        <AuthHero title="Password reset!" />
+        <AuthHero title={t('resetPassword.successTitle')} />
         <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:px-14">
           <CheckCircle2 className="w-14 h-14 text-green-500 mb-4" />
           <p className="text-sm text-brand-slate">
-            Your password has been changed successfully. You can now log in.
+            {t('resetPassword.successMessage')}
           </p>
           <Link
             href="/login"
             className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
           >
-            Go to Login
+            {t('common.goToLogin')}
           </Link>
         </div>
         </div>
@@ -95,11 +97,11 @@ function ResetPasswordForm() {
       /[0-9]/.test(password) &&
       /[^A-Za-z0-9]/.test(password);
     if (!strongPassword) {
-      setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.');
+      setError(t('errors.passwordWeak'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('errors.passwordMismatch'));
       return;
     }
 
@@ -113,7 +115,7 @@ function ResetPasswordForm() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error || 'Reset failed. The link may have expired.');
+        setError(data.error || t('resetPassword.genericResetFailed'));
         setState('error');
         return;
       }
@@ -122,7 +124,7 @@ function ResetPasswordForm() {
       // Auto-redirect to login after 3 seconds
       setTimeout(() => router.push('/login'), 3000);
     } catch {
-      setError('A network error occurred. Please try again.');
+      setError(t('common.networkError'));
       setState('error');
     }
   };
@@ -130,23 +132,23 @@ function ResetPasswordForm() {
   return (
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-      <AuthHero title="Set new password" />
+      <AuthHero title={t('resetPassword.heroTitle')} />
       <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-6 pb-6 shadow-xl flex flex-col justify-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:px-14 md:py-10">
         <div className="text-center mb-5">
           <LockKeyhole className="w-10 h-10 text-brand-primary mx-auto mb-3" />
-          <p className="text-sm text-brand-slate">Use 8+ characters with an uppercase letter, a lowercase letter, a number, and a symbol.</p>
+          <p className="text-sm text-brand-slate">{t('resetPassword.passwordHint')}</p>
         </div>
 
         {(error || state === 'error') && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
             <p className="text-red-800 text-sm">
-              {error || 'Reset failed.'}
+              {error || t('resetPassword.genericResetFailed')}
               {state === 'error' && (
                 <>
                   {' '}
                   <Link href="/forgot-password" className="underline font-semibold">
-                    Request a new link.
+                    {t('resetPassword.requestNewLinkInline')}
                   </Link>
                 </>
               )}
@@ -156,14 +158,14 @@ function ResetPasswordForm() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <FloatingInput
-            label="New Password"
+            label={t('resetPassword.newPasswordLabel')}
             name="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <FloatingInput
-            label="Confirm Password"
+            label={t('resetPassword.confirmPasswordLabel')}
             name="confirmPassword"
             type="password"
             value={confirmPassword}
@@ -174,13 +176,13 @@ function ResetPasswordForm() {
             disabled={state === 'loading'}
             className="w-full py-3.5 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm disabled:opacity-50 flex items-center justify-center transition-colors mt-1"
           >
-            {state === 'loading' ? 'Resetting…' : 'Reset Password'}
+            {state === 'loading' ? t('resetPassword.submitting') : t('resetPassword.submit')}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-brand-slate md:mt-8">
           <Link href="/login" className="text-brand-primary font-semibold hover:text-brand-dark">
-            Back to Login
+            {t('common.backToLogin')}
           </Link>
         </p>
       </div>

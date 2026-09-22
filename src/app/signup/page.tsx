@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 function AuthHero({ title }: { title: string }) {
@@ -29,6 +30,8 @@ function AuthHero({ title }: { title: string }) {
 }
 
 function SignupForm() {
+  const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const searchParams = useSearchParams();
   const router = useRouter();
   const redirect = searchParams.get('redirect') || '/';
@@ -57,20 +60,20 @@ function SignupForm() {
 
     // Mirrors the server rules (src/lib/validation.ts + utils.ts NAME_REGEX).
     const nameRegex = new RegExp(String.raw`^[\p{L}\p{M}'.\-\s]{2,}$`, 'u');
-    if (!formData.name.trim()) { setError('Full name is required'); return; }
-    if (formData.name.trim().length > 120) { setError('Name must be at most 120 characters'); return; }
-    if (!nameRegex.test(formData.name.trim())) { setError('Please enter a valid name (letters, spaces, apostrophes and hyphens only)'); return; }
-    if (!formData.email.includes('@')) { setError('Please enter a valid email address'); return; }
+    if (!formData.name.trim()) { setError(t('errors.nameRequired')); return; }
+    if (formData.name.trim().length > 120) { setError(t('errors.nameTooLong')); return; }
+    if (!nameRegex.test(formData.name.trim())) { setError(t('errors.nameInvalid')); return; }
+    if (!formData.email.includes('@')) { setError(t('common.invalidEmail')); return; }
     const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) { setError('Please enter a valid 10-digit phone number'); return; }
+    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) { setError(t('errors.phoneInvalid')); return; }
     const pw = formData.password;
     const strongPassword =
       pw.length >= 8 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
     if (!strongPassword) {
-      setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.');
+      setError(t('errors.passwordWeak'));
       return;
     }
-    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
+    if (formData.password !== formData.confirmPassword) { setError(t('errors.passwordMismatch')); return; }
 
     setIsLoading(true);
     try {
@@ -87,14 +90,14 @@ function SignupForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Signup failed');
+        setError(data.error || t('errors.signupFailed'));
         return;
       }
 
       const email = data.email || formData.email.toLowerCase().trim();
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch {
-      setError('An error occurred during signup. Please try again.');
+      setError(t('errors.genericSignupError'));
     } finally {
       setIsLoading(false);
     }
@@ -103,9 +106,9 @@ function SignupForm() {
   return (
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
-      <AuthHero title="Sign up" />
+      <AuthHero title={tc('signup')} />
       <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-5 pb-4 shadow-xl flex flex-col justify-center overflow-hidden md:w-[58%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:overflow-visible md:px-14 md:py-10">
-      <p className="text-sm text-brand-slate mb-3 md:text-base md:mb-6">Let&apos;s get you set up in a minute!</p>
+      <p className="text-sm text-brand-slate mb-3 md:text-base md:mb-6">{t('signup.subtitle')}</p>
 
       {error && (
         <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
@@ -117,7 +120,7 @@ function SignupForm() {
       <form onSubmit={handleSubmit} className="space-y-2.5 md:space-y-4">
         <div>
           <label htmlFor="name" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            Full Name
+            {t('signup.fullNameLabel')}
           </label>
           <input
             id="name"
@@ -125,14 +128,14 @@ function SignupForm() {
             type="text"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Your full name"
+            placeholder={t('signup.fullNamePlaceholder')}
             className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
           />
         </div>
 
         <div>
           <label htmlFor="email" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            Email
+            {t('signup.emailLabel')}
           </label>
           <input
             id="email"
@@ -140,14 +143,14 @@ function SignupForm() {
             type="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="Enter your email"
+            placeholder={t('signup.emailPlaceholder')}
             className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
           />
         </div>
 
         <div>
           <label htmlFor="phone" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            Phone Number
+            {t('signup.phoneLabel')}
           </label>
           <input
             id="phone"
@@ -155,7 +158,7 @@ function SignupForm() {
             type="tel"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="10-digit mobile number"
+            placeholder={t('signup.phonePlaceholder')}
             maxLength={10}
             className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
           />
@@ -163,7 +166,7 @@ function SignupForm() {
 
         <div>
           <label htmlFor="password" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            Password
+            {t('signup.passwordLabel')}
           </label>
           <div className="relative">
             <input
@@ -172,7 +175,7 @@ function SignupForm() {
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
-              placeholder="8+ chars: upper, lower, number & symbol"
+              placeholder={t('signup.passwordPlaceholder')}
               className="w-full px-4 py-2.5 md:py-3 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
             />
             <button
@@ -187,7 +190,7 @@ function SignupForm() {
 
         <div>
           <label htmlFor="confirmPassword" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            Confirm Password
+            {t('signup.confirmPasswordLabel')}
           </label>
           <div className="relative">
             <input
@@ -196,7 +199,7 @@ function SignupForm() {
               type={showConfirmPassword ? 'text' : 'password'}
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder="Re-enter your password"
+              placeholder={t('signup.confirmPasswordPlaceholder')}
               className="w-full px-4 py-2.5 md:py-3 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
             />
             <button
@@ -214,17 +217,17 @@ function SignupForm() {
           disabled={isLoading}
           className="w-full py-3 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
         >
-          {isLoading ? 'Creating Account…' : 'Sign Up'}
+          {isLoading ? t('signup.submitting') : tc('signup')}
         </button>
       </form>
 
       <p className="text-center text-sm text-brand-slate mt-3 md:mt-6">
-        Already Have An Account?{' '}
+        {t('signup.haveAccount')}{' '}
         <Link
           href={redirect && redirect !== '/' ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
           className="text-brand-primary font-bold hover:text-brand-dark transition-colors"
         >
-          Log In
+          {tc('login')}
         </Link>
       </p>
       </div>

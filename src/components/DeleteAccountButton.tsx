@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Trash2, X } from 'lucide-react';
 import { useUser } from './UserContext';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,8 @@ import { cn } from '@/lib/utils';
  * wrapper doesn't support window.prompt, only alert/confirm.
  */
 export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | 'dropdown' }) {
+  const t = useTranslations('account');
+  const tc = useTranslations('common');
   const { currentUser, deleteAccount } = useUser();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -24,7 +27,7 @@ export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | '
 
   const handleConfirm = async () => {
     if (!password) {
-      setError('Enter your password to confirm.');
+      setError(t('deleteAccount.passwordRequiredError'));
       return;
     }
     setSubmitting(true);
@@ -32,7 +35,7 @@ export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | '
     const ok = await deleteAccount(currentUser.id, password);
     setSubmitting(false);
     if (!ok) {
-      setError('Incorrect password. Please try again.');
+      setError(t('deleteAccount.incorrectPasswordError'));
       return;
     }
     setOpen(false);
@@ -61,12 +64,12 @@ export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | '
             <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
               <Trash2 className="w-5 h-5 text-red-500" />
             </div>
-            <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">Delete Account</span>
+            <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">{t('deleteAccount.label')}</span>
           </>
         ) : (
           <>
             <Trash2 className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <span className="text-red-600">Delete Account</span>
+            <span className="text-red-600">{t('deleteAccount.label')}</span>
           </>
         )}
       </button>
@@ -75,20 +78,19 @@ export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | '
         <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-brand-charcoal">Delete Account</h2>
-              <button onClick={closeModal} aria-label="Close">
+              <h2 className="text-base font-bold text-brand-charcoal">{t('deleteAccount.modalTitle')}</h2>
+              <button onClick={closeModal} aria-label={tc('close')}>
                 <X className="w-5 h-5 text-brand-steel" />
               </button>
             </div>
             <p className="text-sm text-brand-slate mb-4">
-              This permanently deletes your account, addresses, and wishlist. This cannot be undone.
-              Enter your password to confirm.
+              {t('deleteAccount.modalMessage')}
             </p>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={t('deleteAccount.passwordPlaceholder')}
               className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-red-200"
             />
             {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
@@ -97,14 +99,14 @@ export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | '
                 onClick={closeModal}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-200 text-brand-charcoal"
               >
-                Cancel
+                {tc('cancel')}
               </button>
               <button
                 onClick={handleConfirm}
                 disabled={submitting}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white disabled:opacity-60"
               >
-                {submitting ? 'Deleting…' : 'Delete'}
+                {submitting ? tc('deleting') : tc('delete')}
               </button>
             </div>
           </div>

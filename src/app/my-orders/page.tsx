@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
-import { Order, OrderStatus, ORDER_STATUS_LABELS } from '@/types';
+import { Order, OrderStatus } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { OrderReviewPanel } from '@/components/OrderReviewPanel';
 import {
@@ -53,6 +54,8 @@ function formatOrderTime(iso: string) {
 /* ─── Guest screen ──────────────────────────────────────────────────────── */
 
 function GuestOrders() {
+  const t = useTranslations('order');
+  const tc = useTranslations('common');
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden">
       {/* Background photo */}
@@ -69,19 +72,19 @@ function GuestOrders() {
       {/* Content */}
       <div className="relative z-10 flex flex-col flex-1 justify-between px-6 pt-10 pb-6">
         <div className="text-center">
-          <h1 className="text-3xl font-black text-white tracking-tight">My Orders</h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">{t('myOrdersTitle')}</h1>
           <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-            Log in to view your order history and track every delivery in real time.
+            {t('guestSubtitle')}
           </p>
         </div>
 
         {/* Benefits */}
         <div className="space-y-1">
           {[
-            { Icon: Truck,    text: 'Live delivery tracking for every order'     },
-            { Icon: Package,  text: 'Full order history, receipts & invoices'    },
-            { Icon: Zap,      text: 'Faster checkout with saved addresses'       },
-            { Icon: Shield,   text: 'Secure payments & order protection'         },
+            { Icon: Truck,    text: t('benefitLiveTracking')   },
+            { Icon: Package,  text: t('benefitOrderHistory')   },
+            { Icon: Zap,      text: t('benefitFasterCheckout') },
+            { Icon: Shield,   text: t('benefitSecurePayments') },
           ].map(({ Icon, text }) => (
             <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
               <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -99,14 +102,14 @@ function GuestOrders() {
             className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
           >
             <LogIn className="w-5 h-5" />
-            Log In
+            {tc('login')}
           </Link>
           <Link
             href={'/signup?redirect=/my-orders' as any}
             className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
           >
             <UserPlus className="w-5 h-5" />
-            Create an Account
+            {t('createAccount')}
           </Link>
         </div>
       </div>
@@ -118,9 +121,19 @@ function GuestOrders() {
 
 export default function MyOrdersPage() {
   const { currentUser, isLoaded } = useUser();
+  const t = useTranslations('order');
+  const tc = useTranslations('common');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+    received: t('statusLabels.received'),
+    eta_assigned: t('statusLabels.eta_assigned'),
+    out_for_delivery: t('statusLabels.out_for_delivery'),
+    delivered: t('statusLabels.delivered'),
+    cancelled: t('statusLabels.cancelled'),
+  };
 
   useEffect(() => {
     if (!isLoaded || !currentUser) return;
@@ -137,7 +150,7 @@ export default function MyOrdersPage() {
       const data = await res.json();
       setOrders(data.orders);
     } catch {
-      setError('Could not load your orders. Please try again.');
+      setError(t('loadOrdersFailed'));
     } finally {
       setLoading(false);
     }
@@ -156,9 +169,9 @@ export default function MyOrdersPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-black text-brand-charcoal">My Orders</h1>
+            <h1 className="text-2xl font-black text-brand-charcoal">{t('myOrdersTitle')}</h1>
             <p className="text-sm text-brand-slate mt-1">
-              {loading ? 'Loading…' : `${orders.length} order${orders.length !== 1 ? 's' : ''} placed`}
+              {loading ? tc('loading') : t('ordersPlacedCount', { count: orders.length })}
             </p>
           </div>
           <button
@@ -167,7 +180,7 @@ export default function MyOrdersPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium text-brand-graphite hover:border-brand-primary hover:text-brand-primary transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('refresh')}
           </button>
         </div>
 
@@ -204,12 +217,12 @@ export default function MyOrdersPage() {
             <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <ShoppingBag className="w-8 h-8 text-brand-primary" />
             </div>
-            <h2 className="text-lg font-bold text-brand-charcoal mb-2">No orders yet</h2>
+            <h2 className="text-lg font-bold text-brand-charcoal mb-2">{t('noOrdersTitle')}</h2>
             <p className="text-sm text-brand-slate mb-6">
-              Your order history will appear here once you place an order.
+              {t('noOrdersMessage')}
             </p>
             <Link href="/catalog" className="btn-primary inline-flex px-6 py-3">
-              Browse Products
+              {tc('browseProducts')}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -254,7 +267,7 @@ export default function MyOrdersPage() {
                       ))}
                       {order.items.length > 3 && (
                         <p className="text-xs text-brand-steel">
-                          +{order.items.length - 3} more item{order.items.length - 3 !== 1 ? 's' : ''}
+                          {t('moreItems', { count: order.items.length - 3 })}
                         </p>
                       )}
                     </div>
@@ -265,7 +278,7 @@ export default function MyOrdersPage() {
                         <span className="line-clamp-2">{order.siteAddress}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-brand-steel mb-0.5">Total</p>
+                        <p className="text-xs text-brand-steel mb-0.5">{t('total')}</p>
                         <p className="text-base font-black text-brand-charcoal">{formatCurrency(order.total)}</p>
                       </div>
                     </div>
@@ -277,8 +290,8 @@ export default function MyOrdersPage() {
                   >
                     <span className="text-sm font-medium text-brand-primary">
                       {order.status === 'delivered' || order.status === 'cancelled'
-                        ? 'View Order Details'
-                        : 'Track Order'}
+                        ? t('viewOrderDetails')
+                        : t('trackOrder')}
                     </span>
                     <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
                   </Link>

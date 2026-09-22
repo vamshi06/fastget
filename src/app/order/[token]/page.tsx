@@ -2,15 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCart } from "@/components/CartContext";
 import { useToast } from "@/components/ToastContext";
 import Link from "next/link";
-import {
-  Order,
-  OrderStatus,
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_DESCRIPTIONS,
-} from "@/types";
+import { Order, OrderStatus } from "@/types";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 import {
   Package,
@@ -53,6 +49,22 @@ export default function OrderStatusPage() {
   const token = (params.token as string).toLowerCase();
   const { clearCart } = useCart();
   const { showToast } = useToast();
+  const t = useTranslations("order");
+
+  const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+    received: t("statusLabels.received"),
+    eta_assigned: t("statusLabels.eta_assigned"),
+    out_for_delivery: t("statusLabels.out_for_delivery"),
+    delivered: t("statusLabels.delivered"),
+    cancelled: t("statusLabels.cancelled"),
+  };
+  const ORDER_STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
+    received: t("statusDescriptions.received"),
+    eta_assigned: t("statusDescriptions.eta_assigned"),
+    out_for_delivery: t("statusDescriptions.out_for_delivery"),
+    delivered: t("statusDescriptions.delivered"),
+    cancelled: t("statusDescriptions.cancelled"),
+  };
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,18 +82,18 @@ export default function OrderStatusPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch order");
+        throw new Error(data.error || t('fetchOrderFailed'));
       }
 
       setOrder(data.order);
       setLastUpdated(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load order");
+      setError(err instanceof Error ? err.message : t('loadOrderFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (token) {
@@ -122,14 +134,14 @@ export default function OrderStatusPage() {
       const res = await fetch(`/api/orders/${token}/cancel`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        setCancelError(data.error || 'Failed to cancel order');
+        setCancelError(data.error || t('cancelOrderFailed'));
         return;
       }
       setShowCancelModal(false);
-      showToast('Your order has been cancelled successfully.', 'success');
+      showToast(t('orderCancelledToast'), 'success');
       router.push('/my-orders');
     } catch {
-      setCancelError('Network error — please try again');
+      setCancelError(t('networkError'));
     } finally {
       setCancelling(false);
     }
@@ -143,7 +155,7 @@ export default function OrderStatusPage() {
       <div className="min-h-screen bg-brand-fog flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-          <p className="text-brand-slate">Loading your order...</p>
+          <p className="text-brand-slate">{t('loadingOrder')}</p>
         </div>
       </div>
     );
@@ -157,14 +169,14 @@ export default function OrderStatusPage() {
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-brand-charcoal mb-2">
-            Order Not Found
+            {t('orderNotFound')}
           </h1>
           <p className="text-brand-slate mb-8">
-            {error || "We could not find an order with this token."}
+            {error || t('orderNotFoundMessage')}
           </p>
           <Link href="/my-orders" className="btn-primary inline-flex px-6 py-3">
             <ChevronLeft className="w-5 h-5" />
-            Go Back
+            {t('goBack')}
           </Link>
         </div>
       </div>
@@ -192,16 +204,16 @@ export default function OrderStatusPage() {
             className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal font-medium text-sm transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Back to Home
+            {t('backToHome')}
           </Link>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="flex items-center gap-2 px-4 py-2 text-brand-slate hover:text-brand-charcoal rounded-xl hover:bg-white transition-all disabled:opacity-50 text-sm font-medium"
-            title="Refresh order status"
+            title={t('refreshOrderStatusTitle')}
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {refreshing ? t('refreshing') : t('refresh')}
           </button>
         </div>
 
@@ -210,10 +222,9 @@ export default function OrderStatusPage() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-yellow-800 text-sm">Payment Not Confirmed</p>
+              <p className="font-semibold text-yellow-800 text-sm">{t('paymentNotConfirmed')}</p>
               <p className="text-yellow-700 text-sm mt-0.5">
-                Your payment has not been captured yet. If you completed a UPI or card payment, it may take a
-                few minutes. If the issue persists, please contact support.
+                {t('paymentNotConfirmedMessage')}
               </p>
             </div>
           </div>
@@ -223,13 +234,13 @@ export default function OrderStatusPage() {
         <div className="card p-6 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div className="min-w-0">
-              <h1 className="text-2xl font-black text-brand-charcoal break-all">Order #{order.statusToken.toUpperCase()}</h1>
+              <h1 className="text-2xl font-black text-brand-charcoal break-all">{t('orderNumber', { token: order.statusToken.toUpperCase() })}</h1>
               <p className="text-brand-slate mt-1 text-sm">
-                Placed on {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
+                {t('placedOn', { date: formatDate(order.createdAt), time: formatTime(order.createdAt) })}
               </p>
               {lastUpdated && (
                 <p className="text-xs text-brand-steel mt-1">
-                  Last updated: {formatTime(lastUpdated.toISOString())}
+                  {t('lastUpdated', { time: formatTime(lastUpdated.toISOString()) })}
                 </p>
               )}
             </div>
@@ -242,7 +253,7 @@ export default function OrderStatusPage() {
           <div className="bg-brand-fog rounded-xl p-4 border border-neutral-100">
             <p className="text-brand-slate text-sm leading-relaxed">
               {order.status === 'cancelled' && order.paymentMethod === 'razorpay' && !order.paymentStatus
-                ? 'Payment was not completed. No charge was made. You can place a new order anytime.'
+                ? t('paymentNotCompletedNoCharge')
                 : ORDER_STATUS_DESCRIPTIONS[order.status]}
             </p>
             {order.eta &&
@@ -250,19 +261,19 @@ export default function OrderStatusPage() {
               order.status !== "cancelled" && (
                 <div className="mt-3 flex items-center gap-2 text-brand-primary font-semibold text-sm">
                   <Clock className="w-4 h-4" />
-                  Estimated delivery: {order.eta}
+                  {t('estimatedDeliveryPrefix', { eta: order.eta })}
                 </div>
               )}
             {order.status === "delivered" && (
               <p className="mt-3 text-green-700 font-semibold text-sm">
-                Delivery completed successfully
+                {t('deliveryCompletedSuccessfully')}
               </p>
             )}
             {order.status === "cancelled" && (
               <p className="mt-3 text-red-700 font-semibold text-sm">
                 {order.paymentMethod === 'razorpay' && !order.paymentStatus
-                  ? 'Payment was not completed — this order was not placed.'
-                  : 'This order has been cancelled.'}
+                  ? t('paymentNotCompletedOrderNotPlaced')
+                  : t('statusDescriptions.cancelled')}
               </p>
             )}
           </div>
@@ -272,7 +283,7 @@ export default function OrderStatusPage() {
         {!isOrderCancelled && (
           <div className="card p-6 sm:p-8 mb-6">
             <h2 className="text-lg font-bold text-brand-charcoal mb-6">
-              Order Timeline
+              {t('orderTimeline')}
             </h2>
             <div className="relative">
               <div className="absolute top-5 left-0 right-0 h-1 bg-neutral-200 rounded"></div>
@@ -326,7 +337,7 @@ export default function OrderStatusPage() {
             <div className="card p-6">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-brand-primary" />
-                Delivery Address
+                {t('deliveryAddress')}
               </h2>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -342,7 +353,7 @@ export default function OrderStatusPage() {
                     <p className="text-brand-charcoal font-medium">{order.siteAddress}</p>
                     {order.landmark && (
                       <p className="text-brand-slate text-sm mt-1">
-                        Landmark: {order.landmark}
+                        {t('landmarkPrefix', { landmark: order.landmark })}
                       </p>
                     )}
                   </div>
@@ -351,7 +362,7 @@ export default function OrderStatusPage() {
                   <Clock className="w-5 h-5 text-brand-steel mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-brand-charcoal font-medium">
-                      {order.deliveryType === "urgent" ? "Urgent Delivery" : "Scheduled Delivery"}
+                      {order.deliveryType === "urgent" ? t('urgentDelivery') : t('scheduledDelivery')}
                     </p>
                     {order.scheduledTime && (
                       <p className="text-brand-slate text-sm">
@@ -366,7 +377,7 @@ export default function OrderStatusPage() {
             {/* Order Items */}
             <div className="card p-6">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">
-                Order Items ({order.items.length})
+                {t('orderItemsCount', { count: order.items.length })}
               </h2>
               <div className="space-y-1">
                 {order.items.map((item, index) => (
@@ -376,7 +387,7 @@ export default function OrderStatusPage() {
                   >
                     <div className="flex-grow">
                       <h3 className="font-medium text-brand-charcoal text-sm">{item.name}</h3>
-                      <p className="text-xs text-brand-steel">SKU: {item.sku}</p>
+                      <p className="text-xs text-brand-steel">{t('skuPrefix', { sku: item.sku })}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-brand-charcoal text-sm">× {item.quantity}</p>
@@ -393,34 +404,34 @@ export default function OrderStatusPage() {
             {/* Payment Summary */}
             <div className="card p-6 top-20">
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">
-                Payment Details
+                {t('paymentDetails')}
               </h2>
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between text-sm text-brand-slate">
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span className="font-medium text-brand-charcoal">{formatCurrency(order.subtotal)}</span>
                 </div>
                 {order.discount > 0 && (
                   <div className="flex justify-between text-sm text-green-700">
-                    <span>First order discount</span>
+                    <span>{t('firstOrderDiscount')}</span>
                     <span className="font-medium">−{formatCurrency(order.discount)}</span>
                   </div>
                 )}
                 <div className="border-t border-neutral-100 pt-3 flex justify-between">
-                  <span className="font-bold text-brand-charcoal">Total Amount</span>
+                  <span className="font-bold text-brand-charcoal">{t('totalAmount')}</span>
                   <span className="text-xl font-black text-brand-primary">{formatCurrency(order.total)}</span>
                 </div>
               </div>
               <div className="bg-brand-fog rounded-xl p-3 text-sm border border-neutral-100">
                 <p className="text-brand-slate">
-                  <span className="font-semibold text-brand-charcoal">Payment Method:</span>
+                  <span className="font-semibold text-brand-charcoal">{t('paymentMethodLabel')}</span>
                 </p>
                 <p className="text-brand-charcoal font-medium mt-1">
-                  {order.paymentMethod === 'razorpay' ? 'Online Payment (Razorpay)' : 'Cash on Delivery'}
+                  {order.paymentMethod === 'razorpay' ? t('paymentMethodOnline') : t('paymentMethodCod')}
                 </p>
                 {order.paymentMethod === 'razorpay' && (
                   <p className={`text-xs font-semibold mt-2 ${order.paymentStatus === 'captured' ? 'text-green-700' : 'text-yellow-700'}`}>
-                    {order.paymentStatus === 'captured' ? 'Payment Confirmed' : 'Awaiting Payment'}
+                    {order.paymentStatus === 'captured' ? t('paymentConfirmed') : t('awaitingPayment')}
                   </p>
                 )}
               </div>
@@ -428,14 +439,14 @@ export default function OrderStatusPage() {
 
             {/* Actions */}
             <div className="card p-6">
-              <h3 className="font-bold text-brand-charcoal mb-3">Quick Actions</h3>
+              <h3 className="font-bold text-brand-charcoal mb-3">{t('quickActions')}</h3>
               <div className="space-y-2">
                 <button
                   onClick={handleCopyToken}
                   className="btn-secondary w-full py-2.5 text-sm"
                 >
                   <Copy className="w-4 h-4" />
-                  {copied ? "Copied!" : "Copy Order Token"}
+                  {copied ? t('copied') : t('copyOrderToken')}
                 </button>
                 <button
                   type="button"
@@ -452,7 +463,7 @@ export default function OrderStatusPage() {
                   className="btn-secondary w-full py-2.5 text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Print Receipt
+                  {t('printReceipt')}
                 </button>
                 {isCancellable && (
                   <button
@@ -460,7 +471,7 @@ export default function OrderStatusPage() {
                     className="w-full py-2.5 text-sm font-semibold flex items-center justify-center gap-2 rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                   >
                     <XCircle className="w-4 h-4" />
-                    Cancel Order
+                    {t('cancelOrder')}
                   </button>
                 )}
               </div>
@@ -468,16 +479,16 @@ export default function OrderStatusPage() {
 
             {/* Support Card */}
             <div className="bg-primary-50 rounded-2xl border border-primary-200 p-6">
-              <h3 className="font-bold text-brand-charcoal mb-2">Need Help?</h3>
+              <h3 className="font-bold text-brand-charcoal mb-2">{t('needHelp')}</h3>
               <p className="text-sm text-brand-slate mb-4">
-                Contact our support team if you have any questions about your order.
+                {t('needHelpMessage')}
               </p>
               <a
                 href="tel:+918847777020"
                 className="btn-primary w-full py-2.5 text-sm"
               >
                 <Phone className="w-4 h-4" />
-                Call Support
+                {t('callSupport')}
               </a>
             </div>
           </div>
@@ -496,10 +507,10 @@ export default function OrderStatusPage() {
               <p className="inv-company-name">FastGet</p>
             </div>
             <p className="inv-company-sub">
-              Rapid Construction Delivery &nbsp;|&nbsp; fastget.in
+              {t('invoiceTagline')} &nbsp;|&nbsp; fastget.in
             </p>
           </div>
-          <div className="inv-invoice-badge"><em>Invoice</em></div>
+          <div className="inv-invoice-badge"><em>{t('invoiceLabel')}</em></div>
         </div>
 
         {/* Yellow tab accent below badge */}
@@ -508,34 +519,34 @@ export default function OrderStatusPage() {
         {/* Bill To + Invoice meta */}
         <div className="inv-info-row">
           <div className="inv-bill-to">
-            <p className="inv-info-label">BILL TO:</p>
+            <p className="inv-info-label">{t('billTo')}</p>
             <p className="inv-party-name">{order.customerName}</p>
             <p className="inv-party-line">{order.siteAddress}</p>
             {order.landmark && (
-              <p className="inv-party-line">Landmark: {order.landmark}</p>
+              <p className="inv-party-line">{t('landmarkPrefix', { landmark: order.landmark })}</p>
             )}
             <p className="inv-party-line">{order.customerPhone}</p>
           </div>
           <div className="inv-meta-block">
             <p className="inv-meta-num">#{order.statusToken.toUpperCase()}</p>
             <div className="inv-meta-row">
-              <span className="inv-meta-key">Issue Date:</span>
+              <span className="inv-meta-key">{t('issueDate')}</span>
               <span className="inv-meta-val">{formatDate(order.createdAt)}</span>
             </div>
             {order.eta ? (
               <div className="inv-meta-row">
-                <span className="inv-meta-key">ETA:</span>
+                <span className="inv-meta-key">{t('etaLabel')}</span>
                 <span className="inv-meta-val">{order.eta}</span>
               </div>
             ) : order.scheduledTime ? (
               <div className="inv-meta-row">
-                <span className="inv-meta-key">Scheduled:</span>
+                <span className="inv-meta-key">{t('scheduledLabel')}</span>
                 <span className="inv-meta-val">{formatDate(order.scheduledTime)}</span>
               </div>
             ) : null}
             <hr className="inv-meta-divider" />
             <div className="inv-meta-row inv-meta-total">
-              <span className="inv-meta-key">Total Amount Due:</span>
+              <span className="inv-meta-key">{t('totalAmountDue')}</span>
               <span className="inv-meta-val">{formatCurrency(order.total)}</span>
             </div>
           </div>
@@ -544,18 +555,17 @@ export default function OrderStatusPage() {
         <hr className="inv-divider" />
 
         <p className="inv-intro">
-          This invoice has been generated for the following order placed on{" "}
-          {formatDate(order.createdAt)} at {formatTime(order.createdAt)}.
+          {t('invoiceIntro', { date: formatDate(order.createdAt), time: formatTime(order.createdAt) })}
         </p>
 
         {/* Items table */}
         <table className="inv-table">
           <thead>
             <tr>
-              <th style={{ width: "45%" }}>Item</th>
-              <th style={{ width: "12%", textAlign: "center" }}>Quantity</th>
-              <th style={{ width: "22%", textAlign: "right" }}>Price per Unit</th>
-              <th style={{ width: "21%", textAlign: "right" }}>Cost</th>
+              <th style={{ width: "45%" }}>{t('itemHeader')}</th>
+              <th style={{ width: "12%", textAlign: "center" }}>{t('quantityHeader')}</th>
+              <th style={{ width: "22%", textAlign: "right" }}>{t('pricePerUnitHeader')}</th>
+              <th style={{ width: "21%", textAlign: "right" }}>{t('costHeader')}</th>
             </tr>
           </thead>
           <tbody>
@@ -576,32 +586,32 @@ export default function OrderStatusPage() {
         {/* Payment methods (left) + Totals (right) */}
         <div className="inv-bottom-row">
           <div className="inv-payment-block">
-            <p className="inv-payment-title">Our Payment Methods:</p>
+            <p className="inv-payment-title">{t('ourPaymentMethods')}</p>
             {order.paymentMethod === "razorpay" ? (
               <>
-                <p className="inv-payment-line">Online Payment (Razorpay)</p>
+                <p className="inv-payment-line">{t('paymentMethodOnline')}</p>
                 <p className="inv-payment-line">
-                  Status:{" "}
-                  {order.paymentStatus === "captured" ? "Confirmed" : "Pending"}
+                  {t('invoiceStatusLabel')}{" "}
+                  {order.paymentStatus === "captured" ? t('invoiceStatusConfirmed') : t('invoiceStatusPending')}
                 </p>
               </>
             ) : (
-              <p className="inv-payment-line">Cash on Delivery (Pay at site)</p>
+              <p className="inv-payment-line">{t('codPayAtSite')}</p>
             )}
           </div>
           <div className="inv-totals-block">
             <div className="inv-totals-row">
-              <span className="inv-totals-label">Sub Total</span>
+              <span className="inv-totals-label">{t('subTotal')}</span>
               <span className="inv-totals-value">{formatCurrency(order.subtotal)}</span>
             </div>
             {order.discount > 0 && (
               <div className="inv-totals-row">
-                <span className="inv-totals-label">First Order Discount</span>
+                <span className="inv-totals-label">{t('firstOrderDiscount')}</span>
                 <span className="inv-totals-value">−{formatCurrency(order.discount)}</span>
               </div>
             )}
             <div className="inv-totals-row inv-totals-grand">
-              <span className="inv-totals-label">Total Due</span>
+              <span className="inv-totals-label">{t('totalDue')}</span>
               <span className="inv-totals-value">{formatCurrency(order.total)}</span>
             </div>
           </div>
@@ -621,21 +631,18 @@ export default function OrderStatusPage() {
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <XCircle className="w-5 h-5 text-red-600" />
               </div>
-              <h2 className="text-lg font-bold text-brand-charcoal">Cancel this order?</h2>
+              <h2 className="text-lg font-bold text-brand-charcoal">{t('cancelModalTitle')}</h2>
             </div>
 
             <p className="text-brand-slate text-sm mb-3">
-              Are you sure you want to cancel order{" "}
-              <span className="font-semibold text-brand-charcoal">#{order.statusToken.toUpperCase()}</span>?
-              This action cannot be undone.
+              {t('cancelModalMessage', { token: order.statusToken.toUpperCase() })}
             </p>
 
             {order.paymentMethod === 'razorpay' && order.paymentStatus === 'captured' && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4">
-                <p className="text-yellow-800 text-sm font-medium">Refund Notice</p>
+                <p className="text-yellow-800 text-sm font-medium">{t('refundNoticeTitle')}</p>
                 <p className="text-yellow-700 text-sm mt-0.5">
-                  Your online payment of {formatCurrency(order.total)} will be refunded to your original payment
-                  method within 5–7 business days.
+                  {t('refundNoticeMessage', { amount: formatCurrency(order.total) })}
                 </p>
               </div>
             )}
@@ -652,7 +659,7 @@ export default function OrderStatusPage() {
                 disabled={cancelling}
                 className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-brand-charcoal font-semibold text-sm hover:bg-neutral-50 transition-colors disabled:opacity-50"
               >
-                Keep Order
+                {t('keepOrder')}
               </button>
               <button
                 onClick={handleCancelOrder}
@@ -662,10 +669,10 @@ export default function OrderStatusPage() {
                 {cancelling ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Cancelling...
+                    {t('cancelling')}
                   </>
                 ) : (
-                  'Yes, Cancel Order'
+                  t('confirmCancelOrder')
                 )}
               </button>
             </div>
