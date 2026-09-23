@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
@@ -38,8 +38,9 @@ export default function ProductDetailPage() {
   const { showToast } = useToast();
   const t  = useTranslations('product');
   const tc = useTranslations('common');
+  const locale = useLocale();
 
-  const [product,           setProduct]           = useState<ProductWithVariants | null>(null);
+  const [product,          setProduct]           = useState<ProductWithVariants | null>(null);
   const [loading,           setLoading]           = useState(true);
   const [error,             setError]             = useState<string | null>(null);
   const [selectedVariant,   setSelectedVariant]   = useState<Variant | null>(null);
@@ -53,7 +54,7 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/products/${productId}`)
+    fetch(`/api/products/${productId}?lang=${locale}`)
       .then((r) => r.json())
       .then((json) => {
         if (!json.success) throw new Error(json.error || t('productNotFoundTitle'));
@@ -64,12 +65,12 @@ export default function ProductDetailPage() {
       .catch((err) => setError(err.message || t('failedToLoadProduct')))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId]);
+  }, [productId, locale]);
 
   // ── Fetch related products when category is known ─────────────────────────
   useEffect(() => {
     if (!product?.category) return;
-    fetch(`/api/products?category=${product.category}&limit=5`)
+    fetch(`/api/products?category=${product.category}&limit=5&lang=${locale}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
@@ -79,7 +80,7 @@ export default function ProductDetailPage() {
         }
       })
       .catch(() => {/* ignore related products error */});
-  }, [product?.category, productId]);
+  }, [product?.category, productId, locale]);
 
   // Keep local quantity in sync with cart, respecting the variant's MOQ
   const cartItem     = product ? state.items.find((i) => i.product.id === product.id) : undefined;

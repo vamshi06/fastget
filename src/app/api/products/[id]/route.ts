@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProductWithVariants } from '@/lib/products';
 import { logger } from '@/lib/logger';
+import { isLocale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,9 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
     }
 
-    const product = await getProductWithVariants(id);
+    // ?lang= rather than the locale cookie — the response is publicly cached by URL
+    const langRaw = request.nextUrl.searchParams.get('lang') ?? undefined;
+    const product = await getProductWithVariants(id, isLocale(langRaw) ? langRaw : undefined);
 
     if (!product) {
       logger.api('GET', '/api/products/[id]', 404, Date.now() - start);

@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { ProductCard } from '@/components/ProductCard';
 import { Product } from '@/types';
@@ -78,6 +78,7 @@ function CatalogPageContent() {
   const t            = useTranslations('catalog');
   const tCategories   = useTranslations('categories');
   const tc            = useTranslations('common');
+  const locale        = useLocale();
 
   // ── Read initial state from URL ───────────────────────────────────────────
   const initialCategory = searchParams.get('category')  || '';
@@ -121,6 +122,7 @@ function CatalogPageContent() {
       const params = new URLSearchParams({
         limit:  String(PAGE_SIZE),
         offset: String((page - 1) * PAGE_SIZE),
+        lang:   locale,
       });
       if (cat)              params.set('category',  cat);
       if (q)                params.set('q',         q);
@@ -141,13 +143,13 @@ function CatalogPageContent() {
       setError(t('errorLoadingProducts'));
       setLoading(false);
     }
-  }, [t]);
+  }, [t, locale]);
 
-  // Refetch whenever filter state changes
+  // Refetch whenever filter state (or the language) changes
   useEffect(() => {
     fetchProducts(activeCategory, searchQuery, currentPage, activeMin, activeMax);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory, searchQuery, currentPage, activeMin, activeMax]);
+  }, [activeCategory, searchQuery, currentPage, activeMin, activeMax, locale]);
 
   // Sync URL → state on browser back/forward
   useEffect(() => {

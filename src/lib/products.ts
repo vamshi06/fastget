@@ -2,6 +2,24 @@ import { neon } from '@neondatabase/serverless';
 import { CategoryDB, CategoryId, Product, ProductDB, ProductVariant } from '@/types';
 import { logger } from '@/lib/logger';
 import { rankByFuzzyMatch } from '@/lib/fuzzySearch';
+import { defaultLocale, type Locale } from '@/i18n/config';
+
+// ── Product translations ─────────────────────────────────────────────────────
+
+/** True when product names should be read from product_translations. */
+function wantsTranslation(locale?: Locale): locale is Locale {
+  return !!locale && locale !== defaultLocale;
+}
+
+/**
+ * The product_translations table arrives via migration 021. Until that has run,
+ * catalog queries that join it would fail outright — callers use this to retry
+ * in English instead of returning an empty catalog.
+ */
+function isMissingTranslationsTable(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes('product_translations') && msg.includes('does not exist');
+}
 
 // ── Shared catalogue query fragment ──────────────────────────────────────────
 
@@ -85,6 +103,7 @@ export interface CatalogParams {
   offset?:       number;
   minPrice?:     number; // in rupees (inclusive)
   maxPrice?:     number; // in rupees (inclusive)
+  locale?:       Locale; // non-default locale → translated names, English fallback
 }
 
 export interface CatalogResult {
@@ -199,7 +218,8 @@ function categoryTableRowToProduct(row: any): Product {
   const priceVal   = Number(row.price)     || 0;
   const mrpVal     = Number(row.mrp_price) || 0;
   const brand      = (row.brand as string) || '';
-  const rawName    = (row.name  as string) || '';
+  // name_i18n / description_i18n are only present when a locale was requested
+  const rawName    = (row.name_i18n as string) || (row.name as string) || '';
   const productCode = (row.product_code as string);
   const saleActive = isSaleActive(row);
   const effectivePriceVal = saleActive ? Number(row.sale_price) : priceVal;
@@ -220,7 +240,7 @@ function categoryTableRowToProduct(row: any): Product {
     productCode:  productCode,
     name:         displayName,
     brand:        brand || undefined,
-    description:  row.description || '',
+    description:  row.description_i18n || row.description || '',
     price:        Math.round(effectivePriceVal / 100),
     mrpPrice:     mrpVal > 0 ? Math.round(mrpVal / 100) : undefined,
     unit:         row.uom || 'piece',
@@ -250,7 +270,8 @@ export async function getProductsFromCategoryTables(
   params: CatalogParams = {},
 ): Promise<CatalogResult> {
   const sqlClient = getUnpooledClient();
-  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice } = params;
+  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale } = params;
+  const translate = wantsTranslation(locale);
 
   try {
     // Resolve which table/view to query
@@ -264,19 +285,32 @@ export async function getProductsFromCategoryTables(
       return { products: [], total: 0 };
     }
 
+    // When translating, wrap the table so the translated name/description ride
+    // along as extra columns and the WHERE/ORDER clauses below stay unqualified.
+    // The locale is always bound as $1.
+    const source = translate
+      ? `(SELECT c.*, t.name AS name_i18n, t.description AS description_i18n
+            FROM ${tableName} c
+            LEFT JOIN product_translations t
+              ON t.product_code = c.product_code AND t.locale = $1) src`
+      : tableName;
+
     // Price filter (and optionally search) as WHERE args — split out so the
     // fuzzy fallback below can re-run price/category filters without the
     // exact-substring search clause.
     const buildFilters = (includeSearch: boolean) => {
-      const args: unknown[] = [];
+      const args: unknown[] = translate ? [locale] : [];
       const clauses: string[] = ['TRUE'];
 
       if (includeSearch && search?.trim()) {
         const pat = `%${search.trim()}%`;
         args.push(pat, pat, pat);
         const n = args.length;
+        // Match the English name too — plenty of shoppers type in English
+        // even with the site in Hindi.
+        const translatedMatch = translate ? ` OR COALESCE(name_i18n,'') ILIKE $${n - 2}` : '';
         clauses.push(
-          `(name ILIKE $${n - 2} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
+          `(name ILIKE $${n - 2}${translatedMatch} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
         );
       }
 
@@ -298,8 +332,8 @@ export async function getProductsFromCategoryTables(
     const countArgs  = [...filterArgs];
     const limitIdx   = rowsArgs.length - 1;
     const offsetIdx  = rowsArgs.length;
-    const rowsQuery  = `SELECT * FROM ${tableName} WHERE ${whereStr} ORDER BY brand ASC, name ASC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-    const countQuery = `SELECT COUNT(*) AS total FROM ${tableName} WHERE ${whereStr}`;
+    const rowsQuery  = `SELECT * FROM ${source} WHERE ${whereStr} ORDER BY brand ASC, name ASC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+    const countQuery = `SELECT COUNT(*) AS total FROM ${source} WHERE ${whereStr}`;
 
     // Debug logging (set DEBUG_CATALOG=1 to enable)
     if (process.env.DEBUG_CATALOG === '1') {
@@ -322,11 +356,19 @@ export async function getProductsFromCategoryTables(
     if (search?.trim() && total === 0 && offset === 0) {
       const { where: fallbackWhere, args: fallbackArgs } = buildFilters(false);
       const candidateRows = await sqlClient.query(
-        `SELECT * FROM ${tableName} WHERE ${fallbackWhere}`,
+        `SELECT * FROM ${source} WHERE ${fallbackWhere}`,
         fallbackArgs as any[],
       ) as any[];
-      const candidates = candidateRows.map(categoryTableRowToProduct);
-      const fuzzyMatches = rankByFuzzyMatch(search, candidates, limit);
+      // Score typos against the English names, then return the (possibly
+      // translated) products for display.
+      const candidates = candidateRows.map(r =>
+        categoryTableRowToProduct({ ...r, name_i18n: null, description_i18n: null }),
+      );
+      const displayById = new Map(
+        candidateRows.map(r => [r.product_code as string, categoryTableRowToProduct(r)]),
+      );
+      const fuzzyMatches = rankByFuzzyMatch(search, candidates, limit)
+        .map(p => displayById.get(p.id) ?? p);
 
       if (fuzzyMatches.length > 0) {
         products = fuzzyMatches;
@@ -365,6 +407,10 @@ export async function getProductsFromCategoryTables(
 
     return { products, total };
   } catch (error) {
+    if (translate && isMissingTranslationsTable(error)) {
+      logger.warn('Products', 'product_translations missing (run migration 021) — serving English');
+      return getProductsFromCategoryTables({ ...params, locale: undefined });
+    }
     logger.error('Products', 'getProductsFromCategoryTables failed', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -387,21 +433,26 @@ export interface ActiveFlashSale {
  * Fetch the flash sale ending soonest that is currently active (used to
  * drive the homepage promo banner). Returns null when nothing is running.
  */
-export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
+export async function getActiveFlashSale(locale?: Locale): Promise<ActiveFlashSale | null> {
   const sql = getUnpooledClient();
+  const translate = wantsTranslation(locale);
   try {
-    const rows = await sql`
-      SELECT product_code, name, brand, image_url, price, sale_price, sale_ends_at, sale_min_order_paise
-      FROM products_catalog_view
-      WHERE sale_price IS NOT NULL
-        AND NOW() BETWEEN sale_starts_at AND sale_ends_at
-      ORDER BY sale_ends_at ASC
-      LIMIT 1
-    `;
+    // The translation join (locale bound as $1) is only added for non-English.
+    const rows = await sql.query(
+      `SELECT cv.product_code, cv.name, ${translate ? 't.name' : 'NULL'} AS name_i18n,
+              cv.brand, cv.image_url, cv.price, cv.sale_price, cv.sale_ends_at, cv.sale_min_order_paise
+         FROM products_catalog_view cv
+         ${translate ? 'LEFT JOIN product_translations t ON t.product_code = cv.product_code AND t.locale = $1' : ''}
+        WHERE cv.sale_price IS NOT NULL
+          AND NOW() BETWEEN cv.sale_starts_at AND cv.sale_ends_at
+        ORDER BY cv.sale_ends_at ASC
+        LIMIT 1`,
+      translate ? [locale] : [],
+    ) as any[];
     if (rows.length === 0) return null;
     const r = rows[0] as any;
     const brand = (r.brand as string) || '';
-    const rawName = (r.name as string) || '';
+    const rawName = (r.name_i18n as string) || (r.name as string) || '';
     const displayName = brand && rawName.startsWith(brand + ' ')
       ? rawName.slice(brand.length + 1)
       : rawName;
@@ -416,6 +467,7 @@ export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
       minOrderRupees:       r.sale_min_order_paise != null ? Math.round(Number(r.sale_min_order_paise) / 100) : undefined,
     };
   } catch (error) {
+    if (translate && isMissingTranslationsTable(error)) return getActiveFlashSale();
     logger.error('Products', 'getActiveFlashSale failed', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -423,8 +475,16 @@ export async function getActiveFlashSale(): Promise<ActiveFlashSale | null> {
   }
 }
 
+/** Brand-stripped English name, matching what the English catalog shows. */
+function englishDisplayName(row: { name?: string | null; brand?: string | null }): string {
+  const brand = row.brand || '';
+  const rawName = row.name || '';
+  return brand && rawName.startsWith(brand + ' ') ? rawName.slice(brand.length + 1) : rawName;
+}
+
 /** Per-product trusted pricing breakdown returned by getTrustedPricingInfo. */
 export interface TrustedPriceInfo {
+  name: string; // English display name (brand prefix stripped), for order records
   originalPaise: number;
   salePaise: number | null;
   saleActive: boolean;
@@ -457,7 +517,7 @@ export async function getTrustedPricingInfo(
   const sql = getUnpooledClient();
   try {
     const rows = (await sql.query(
-      `SELECT product_code, price, sale_price, sale_min_order_paise,
+      `SELECT product_code, name, brand, price, sale_price, sale_min_order_paise,
               (sale_price IS NOT NULL AND NOW() BETWEEN sale_starts_at AND sale_ends_at) AS sale_active
          FROM products_catalog_view
         WHERE product_code = ANY($1::text[])`,
@@ -465,6 +525,7 @@ export async function getTrustedPricingInfo(
     )) as any[];
     for (const r of rows) {
       out.set(r.product_code as string, {
+        name: englishDisplayName(r),
         originalPaise: Number(r.price),
         salePaise: r.sale_price != null ? Number(r.sale_price) : null,
         saleActive: Boolean(r.sale_active),
@@ -475,7 +536,7 @@ export async function getTrustedPricingInfo(
     const missing = codes.filter((c) => !out.has(c));
     if (missing.length > 0) {
       const legacy = (await sql.query(
-        `SELECT COALESCE(product_code, id::text) AS product_code, price
+        `SELECT COALESCE(product_code, id::text) AS product_code, name, brand, price
            FROM products
           WHERE COALESCE(product_code, id::text) = ANY($1::text[])`,
         [missing],
@@ -483,7 +544,10 @@ export async function getTrustedPricingInfo(
       for (const r of legacy) {
         const code = r.product_code as string;
         if (!out.has(code)) {
-          out.set(code, { originalPaise: Number(r.price), salePaise: null, saleActive: false, minOrderPaise: null });
+          out.set(code, {
+            name: englishDisplayName(r),
+            originalPaise: Number(r.price), salePaise: null, saleActive: false, minOrderPaise: null,
+          });
         }
       }
     }
@@ -517,8 +581,12 @@ export interface ProductDetail extends Product {
  * Lookup by product_code (the stable SKU from the sheet) OR by UUID.
  * product_code is tried first; falls back to UUID for backward compat.
  */
-export async function getProductWithVariants(identifier: string): Promise<ProductDetail | null> {
+export async function getProductWithVariants(
+  identifier: string,
+  locale?: Locale,
+): Promise<ProductDetail | null> {
   const sql = getUnpooledClient();
+  const translate = wantsTranslation(locale);
   try {
     // products_catalog_view holds the authoritative image_url from the
     // category-specific tables (background-removed Cloudinary URLs).
@@ -528,9 +596,9 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       SELECT
         p.id                           AS db_id,
         COALESCE(p.product_code, p.id::text) AS product_code,
-        p.name,
+        COALESCE(${translate ? 't.name, ' : ''}p.name) AS name,
         COALESCE(p.brand,'')           AS brand,
-        COALESCE(p.description,'')     AS description,
+        COALESCE(${translate ? 't.description, ' : ''}p.description,'') AS description,
         p.price                        AS base_price_paise,
         COALESCE(cv.image_url, p.image_url, '') AS image_url,
         COALESCE(p.uom,'')             AS product_uom,
@@ -540,18 +608,21 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN products_catalog_view cv
         ON cv.product_code = COALESCE(p.product_code, p.id::text)
+      ${translate ? `LEFT JOIN product_translations t
+        ON t.product_code = COALESCE(p.product_code, p.id::text) AND t.locale = $2` : ''}
     `;
+    const lookupArgs = translate ? [identifier, locale] : [identifier];
 
     // Try product_code first, then UUID, so both URL formats work
     let productRows = await sql.query(
       `${PRODUCT_SELECT} WHERE p.product_code = $1 AND p.status = 'active' LIMIT 1`,
-      [identifier],
+      lookupArgs,
     ) as any[];
 
     if (!productRows.length) {
       productRows = await sql.query(
         `${PRODUCT_SELECT} WHERE p.id::text = $1 AND p.status = 'active' LIMIT 1`,
-        [identifier],
+        lookupArgs,
       ) as any[];
     }
 
@@ -642,6 +713,7 @@ export async function getProductWithVariants(identifier: string): Promise<Produc
 
     return product;
   } catch (error) {
+    if (translate && isMissingTranslationsTable(error)) return getProductWithVariants(identifier);
     logger.error('Products', 'getProductWithVariants failed', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -1173,6 +1245,72 @@ export async function getProductRawRow(productCode: string): Promise<RawProductR
   }
 }
 
+export interface ProductTranslation {
+  name: string;
+  description: string | null;
+  reviewed: boolean;
+}
+
+/** Fetch one product's translation for a locale, or null if there is none. */
+export async function getProductTranslation(
+  productCode: string,
+  locale: Locale,
+): Promise<ProductTranslation | null> {
+  const sqlClient = getUnpooledClient();
+  try {
+    const rows = await sqlClient.query(
+      `SELECT name, description, reviewed FROM product_translations
+        WHERE product_code = $1 AND locale = $2`,
+      [productCode, locale],
+    ) as any[];
+    return rows.length > 0 ? (rows[0] as ProductTranslation) : null;
+  } catch (error) {
+    if (!isMissingTranslationsTable(error)) {
+      logger.error('Products', 'getProductTranslation failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return null;
+  }
+}
+
+/**
+ * Save an admin-entered translation. A blank name removes the translation so
+ * the product falls back to its English name.
+ */
+export async function saveProductTranslation(
+  productCode: string,
+  locale: Locale,
+  name: string | null,
+  description: string | null,
+  reviewed: boolean,
+): Promise<boolean> {
+  const sqlClient = getUnpooledClient();
+  try {
+    if (!name) {
+      await sqlClient.query(
+        'DELETE FROM product_translations WHERE product_code = $1 AND locale = $2',
+        [productCode, locale],
+      );
+      return true;
+    }
+    await sqlClient.query(
+      `INSERT INTO product_translations (product_code, locale, name, description, reviewed)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (product_code, locale) DO UPDATE
+         SET name = EXCLUDED.name, description = EXCLUDED.description,
+             reviewed = EXCLUDED.reviewed, updated_at = NOW()`,
+      [productCode, locale, name, description, reviewed],
+    );
+    return true;
+  } catch (error) {
+    logger.error('Products', 'saveProductTranslation failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
 /**
  * Update a row in the appropriate category-specific table.
  * Only the fields provided in `updates` are changed.
@@ -1306,6 +1444,12 @@ export async function deleteProductFromCategoryTable(
     }
     if (productsId) {
       await sqlClient.query('DELETE FROM products WHERE id = $1', [productsId]);
+    }
+    try {
+      await sqlClient.query('DELETE FROM product_translations WHERE product_code = $1', [productCode]);
+    } catch (error) {
+      // Table may not exist yet (migration 021) — nothing to clean up then
+      if (!isMissingTranslationsTable(error)) throw error;
     }
     return true;
   } catch (error) {

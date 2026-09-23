@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { HomeProductCard } from './HomeProductCard';
@@ -42,6 +42,7 @@ export function ProductSection({
 }: ProductSectionProps) {
   const t = useTranslations('home');
   const tc = useTranslations('common');
+  const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,7 @@ export function ProductSection({
     if (category) params.set('category', category);
     if (searchQuery) params.set('q', searchQuery);
     params.set('limit', String(limit));
+    params.set('lang', locale);
 
     fetch(`/api/products?${params.toString()}`)
       .then(r => r.json())
@@ -59,7 +61,7 @@ export function ProductSection({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [category, searchQuery, limit]);
+  }, [category, searchQuery, limit, locale]);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;

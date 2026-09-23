@@ -24,7 +24,12 @@ interface FormData {
   saleStartsAt: string; // datetime-local value, e.g. "2026-08-15T10:57"
   saleEndsAt: string;
   saleMinOrder: string; // optional min cart value (rupees) to unlock the sale price
+  nameHi: string;
+  descriptionHi: string;
+  hiReviewed: boolean;
 }
+
+type HindiFields = Pick<FormData, 'nameHi' | 'descriptionHi' | 'hiReviewed'>;
 
 /** ISO timestamp -> local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
 function toDatetimeLocal(iso: string): string {
@@ -48,7 +53,10 @@ export default function EditProductPage() {
     name: '', brand: '', description: '', price: '', mrpPrice: '',
     moq: '1', uom: '', imageUrl: '', status: 'active', stockQuantity: '0',
     salePrice: '', saleStartsAt: '', saleEndsAt: '', saleMinOrder: '',
+    nameHi: '', descriptionHi: '', hiReviewed: false,
   });
+  // Hindi fields as loaded — PATCH only sends them when they change
+  const [loadedHindi, setLoadedHindi] = useState<HindiFields>({ nameHi: '', descriptionHi: '', hiReviewed: false });
   const [categorySlug, setCategorySlug] = useState('');
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -78,6 +86,14 @@ export default function EditProductPage() {
           saleStartsAt:  d.saleStartsAt ? toDatetimeLocal(d.saleStartsAt) : '',
           saleEndsAt:    d.saleEndsAt   ? toDatetimeLocal(d.saleEndsAt)   : '',
           saleMinOrder:  d.saleMinOrder !== '' && d.saleMinOrder != null ? String(d.saleMinOrder) : '',
+          nameHi:        d.nameHi        ?? '',
+          descriptionHi: d.descriptionHi ?? '',
+          hiReviewed:    Boolean(d.hiReviewed),
+        });
+        setLoadedHindi({
+          nameHi:        d.nameHi        ?? '',
+          descriptionHi: d.descriptionHi ?? '',
+          hiReviewed:    Boolean(d.hiReviewed),
         });
         setCategorySlug(d.categorySlug ?? '');
       })
@@ -90,6 +106,12 @@ export default function EditProductPage() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Editing the Hindi text means a person has looked at it
+  const handleHindiChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value, hiReviewed: true }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -138,6 +160,18 @@ export default function EditProductPage() {
         saleEndsAt:    formData.saleEndsAt   ? new Date(formData.saleEndsAt).toISOString()   : null,
         saleMinOrder:  allSale && formData.saleMinOrder ? parseFloat(formData.saleMinOrder) : null,
       };
+
+      const hindiChanged =
+        formData.nameHi.trim()        !== loadedHindi.nameHi ||
+        formData.descriptionHi.trim() !== loadedHindi.descriptionHi ||
+        formData.hiReviewed           !== loadedHindi.hiReviewed;
+      if (hindiChanged) {
+        payload.hindi = {
+          name:        formData.nameHi.trim()        || null,
+          description: formData.descriptionHi.trim() || null,
+          reviewed:    formData.hiReviewed,
+        };
+      }
 
       const res = await fetch(`/admin/api/products/${encodeURIComponent(productCode)}`, {
         method:  'PATCH',
@@ -234,6 +268,45 @@ export default function EditProductPage() {
               rows={3} placeholder="Product features and specifications…"
               className={`${inputCls} resize-none`} disabled={saving} />
           </div>
+        </fieldset>
+
+        {/* ── Hindi ───────────────────────────────────── */}
+        <fieldset className="space-y-4">
+          <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full flex items-center justify-between gap-2">
+            <span>Hindi (हिंदी)</span>
+            {formData.nameHi && (
+              <span className={`normal-case text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
+                formData.hiReviewed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {formData.hiReviewed ? 'Reviewed' : 'Machine translated — needs review'}
+              </span>
+            )}
+          </legend>
+
+          <div>
+            <label className={labelCls}>Hindi Name</label>
+            <input type="text" name="nameHi" value={formData.nameHi} onChange={handleHindiChange}
+              placeholder="e.g. सीपीवीसी पाइप (1&quot;)" className={inputCls} disabled={saving} lang="hi" />
+            <p className="text-xs text-brand-steel mt-1">
+              Shown when the site is in Hindi. Keep brand names, sizes and model numbers as they are.
+              Leave blank to show the English name.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelCls}>Hindi Description</label>
+            <textarea name="descriptionHi" value={formData.descriptionHi} onChange={handleHindiChange}
+              rows={3} className={`${inputCls} resize-none`} disabled={saving} lang="hi" />
+          </div>
+
+          {formData.nameHi && (
+            <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-brand-graphite">
+              <input type="checkbox" checked={formData.hiReviewed}
+                onChange={(e) => setFormData((prev) => ({ ...prev, hiReviewed: e.target.checked }))}
+                className="accent-brand-primary" disabled={saving} />
+              Hindi translation checked
+            </label>
+          )}
         </fieldset>
 
         {/* ── Pricing ─────────────────────────────────── */}

@@ -1,12 +1,14 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { HeroSection } from '@/components/home/HeroSection';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
 import { FlashSaleBanner } from '@/components/home/FlashSaleBanner';
 import { getActiveFlashSale } from '@/lib/products';
+import { isLocale } from '@/i18n/config';
 
 export default async function Home() {
-  const flashSale = await getActiveFlashSale();
+  const locale = await getLocale();
+  const flashSale = await getActiveFlashSale(isLocale(locale) ? locale : undefined);
   const t = await getTranslations('home');
 
   return (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProductsFromCategoryTables, getProductCatalog } from '@/lib/products';
 import { logger } from '@/lib/logger';
+import { isLocale } from '@/i18n/config';
 
 // Public browse endpoint: sanitize/clamp query params rather than reject, so a
 // malformed param degrades gracefully instead of breaking the catalog.
@@ -30,6 +31,9 @@ function clampPrice(raw: string | null): number | undefined {
  *   q         – free-text search
  *   limit     – max results (default 500, max 500)
  *   offset    – pagination offset (default 0)
+ *   lang      – locale for product names (e.g. "hi"); English when absent.
+ *               A query param rather than the locale cookie, because this
+ *               response is publicly cached by URL.
  */
 export async function GET(request: NextRequest) {
   const start = Date.now();
@@ -39,6 +43,8 @@ export async function GET(request: NextRequest) {
     const search   = sp.get('q')?.slice(0, 100) || undefined;
     const limit    = clampInt(sp.get('limit'), 24, 1, 500);
     const offset   = clampInt(sp.get('offset'), 0, 0, 1_000_000);
+    const langRaw  = sp.get('lang') ?? undefined;
+    const locale   = isLocale(langRaw) ? langRaw : undefined;
     let   minPrice = clampPrice(sp.get('min_price'));
     let   maxPrice = clampPrice(sp.get('max_price'));
     // Drop an inverted range rather than silently returning nothing.
@@ -57,7 +63,7 @@ export async function GET(request: NextRequest) {
     // Use category tables by default; fall back to legacy products table
     const useLegacy = process.env.LEGACY_PRODUCTS_TABLE === '1';
     const fetchFn   = useLegacy ? getProductCatalog : getProductsFromCategoryTables;
-    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset, minPrice, maxPrice });
+    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset, minPrice, maxPrice, locale });
 
     if (process.env.DEBUG_CATALOG === '1') {
       console.debug('[api/products] returned count:', products.length, '/ total in DB:', total);

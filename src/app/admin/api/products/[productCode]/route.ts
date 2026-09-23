@@ -6,6 +6,8 @@ import {
   updateVariantFields,
   upsertInventoryStock,
   deleteProductFromCategoryTable,
+  getProductTranslation,
+  saveProductTranslation,
 } from '@/lib/products';
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -65,6 +67,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       `;
       stockQuantity = Number((invRows[0] as any)?.stock_quantity ?? 0);
     }
+    const hindi = await getProductTranslation(productCode, 'hi');
 
     // Convert paise → rupees for the form
     return NextResponse.json({
@@ -88,6 +91,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         saleStartsAt:  row.sale_starts_at ?? '',
         saleEndsAt:    row.sale_ends_at   ?? '',
         saleMinOrder:  row.sale_min_order_paise ? Math.round(row.sale_min_order_paise / 100) : '',
+        nameHi:        hindi?.name        ?? '',
+        descriptionHi: hindi?.description ?? '',
+        hiReviewed:    hindi?.reviewed    ?? false,
       },
     });
   } catch (error) {
@@ -157,6 +163,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const saleMinOrderInPaise = saleMinOrderProvided
       ? (saleMinOrder != null ? Math.round(saleMinOrder * 100) : null)
       : undefined;
+
+    // Hindi translation — only sent when the admin touched it, so a price-only
+    // edit doesn't mark an unchecked machine translation as reviewed.
+    // Blank name removes the translation (falls back to English).
+    const hindiProvided = typeof body.hindi === 'object' && body.hindi !== null;
+    const nameHi = hindiProvided && !isBlank(body.hindi.name)
+      ? requireString(body.hindi.name, 'Hindi name', { max: 200 })
+      : null;
+    const descriptionHi = hindiProvided && !isBlank(body.hindi.description)
+      ? requireString(body.hindi.description, 'Hindi description', { max: 2000 })
+      : null;
+    const hiReviewed = hindiProvided && body.hindi.reviewed === true;
 
     // Fetch current row to get source_table and products_id
     const row = await getProductRawRow(productCode);
@@ -236,6 +254,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       // Update stock in inventory table (product_variants.stock_quantity doesn't exist in prod)
       if (stock !== undefined) {
         await upsertInventoryStock(row.variant_id, stock);
+      }
+    }
+
+    if (hindiProvided) {
+      const ok = await saveProductTranslation(productCode, 'hi', nameHi, descriptionHi, hiReviewed);
+      if (!ok) {
+        return NextResponse.json(
+          { success: false, error: 'Product saved, but the Hindi translation could not be saved.' },
+          { status: 500 },
+        );
       }
     }
 

@@ -111,7 +111,9 @@ export async function priceOrderFromCatalog(
       info.saleActive && saleUnit != null && (minOrder == null || otherItemsSubtotal >= minOrder);
     const unit = saleEligible ? saleUnit! : originalUnit;
     subtotal += unit * i.quantity;
-    items.push({ sku: i.code, name: i.name, quantity: i.quantity, price: unit });
+    // Record the catalog's English name — the client's name may be a
+    // translation (Hindi UI), and order records / invoices / admin stay English.
+    items.push({ sku: i.code, name: info.name || i.name, quantity: i.quantity, price: unit });
   }
 
   const convenienceFee = Math.round(subtotal * (CONVENIENCE_FEE_PERCENTAGE / 100));

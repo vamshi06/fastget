@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 function CategoryNavRow() {
   const pathname = usePathname();
@@ -156,6 +156,7 @@ export function Header() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tc = useTranslations("common");
+  const locale = useLocale();
 
   const itemCount = getItemCount();
 
@@ -220,7 +221,7 @@ export function Header() {
 
       try {
         const res = await fetch(
-          `/api/products?q=${encodeURIComponent(q)}&limit=6`,
+          `/api/products?q=${encodeURIComponent(q)}&limit=6&lang=${locale}`,
           { signal: ctrl.signal },
         );
         const json = await res.json();
@@ -236,7 +237,7 @@ export function Header() {
     }, SUGGESTION_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, locale]);
 
   // Close suggestions on outside click
   useEffect(() => {
