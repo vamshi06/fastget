@@ -16,7 +16,28 @@ type CartAction =
   | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number } }
   | { type: 'REPLACE_CART'; payload: CartState }
   | { type: 'MERGE_SERVER_CART'; payload: { items: CartItem[] } }
+  | { type: 'REFRESH_PRICES'; payload: { prices: Record<string, LivePrice> } }
   | { type: 'CLEAR_CART' };
+
+/**
+ * How a cart line is charged: `saleQty` units at the flash price, the rest at
+ * the regular price. saleQty is 0 unless a flash sale is unlocked.
+ */
+export interface LineBreakdown {
+  saleQty: number;
+  saleUnit: number;
+  regularQty: number;
+  regularUnit: number;
+  total: number;
+}
+
+/** Current catalog pricing for a product, as returned by GET /api/cart/prices. */
+interface LivePrice {
+  price: number;
+  isFlashSale: boolean;
+  saleOriginalPriceRupees?: number;
+  saleMinOrderRupees?: number;
+}
 
 const CartContext = createContext<
   | {
@@ -33,6 +54,8 @@ const CartContext = createContext<
       getPreDiscountSubtotal: (excludeProductId?: string) => number;
       isFlashSaleEligible: (product: Product) => boolean;
       getEffectiveUnitPrice: (product: Product) => number;
+      getLineTotal: (item: CartItem) => number;
+      getLineBreakdown: (item: CartItem) => LineBreakdown;
       coinBalance: number;
       redeemCoins: boolean;
       setRedeemCoins: (value: boolean) => void;
@@ -48,11 +71,17 @@ const CartContext = createContext<
  * for the minimum-order check below — must stay in sync with the server's
  * originalPaise handling in order-pricing.priceOrderFromCatalog.
  */
-function getOriginalUnitPrice(product: Product): number {
+export function getOriginalUnitPrice(product: Product): number {
   return product.isFlashSale && typeof product.saleOriginalPriceRupees === 'number'
     ? product.saleOriginalPriceRupees
     : product.price;
 }
+
+// Only this many units of a flash-sale item get the sale price per order —
+// without a cap, a customer who unlocks the ₹1 price could buy 100 units at
+// ₹1 each. Extra units can still be bought, at the regular price.
+// Must stay in sync with order-pricing.FLASH_SALE_QTY_PER_ORDER (server pricing).
+export const FLASH_SALE_QTY_PER_ORDER = 1;
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -60,7 +89,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const existingIndex = state.items.findIndex(
         item => item.product.id === action.payload.product.id
       );
-      
+
       if (existingIndex >= 0) {
         const newItems = [...state.items];
         newItems[existingIndex] = {
@@ -69,7 +98,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         };
         return { ...state, items: newItems };
       }
-      
+
       return {
         ...state,
         items: [
@@ -100,7 +129,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             : item
         ),
       };
-    
+
     case 'REPLACE_CART':
       return action.payload;
 
@@ -121,6 +150,38 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         }
       }
       return { ...state, items: merged };
+    }
+
+    // Overwrites each item's stored price fields with the catalog's current
+    // ones (see the refresh effect in CartProvider). Returns the same state
+    // when nothing changed, so it doesn't trigger a re-save/re-render loop.
+    case 'REFRESH_PRICES': {
+      let changed = false;
+      const items = state.items.map(item => {
+        const live = action.payload.prices[item.product.id];
+        if (!live) return item;
+        const p = item.product;
+        if (
+          p.price === live.price &&
+          Boolean(p.isFlashSale) === live.isFlashSale &&
+          p.saleOriginalPriceRupees === live.saleOriginalPriceRupees &&
+          p.saleMinOrderRupees === live.saleMinOrderRupees
+        ) {
+          return item;
+        }
+        changed = true;
+        return {
+          ...item,
+          product: {
+            ...p,
+            price: live.price,
+            isFlashSale: live.isFlashSale || undefined,
+            saleOriginalPriceRupees: live.saleOriginalPriceRupees,
+            saleMinOrderRupees: live.saleMinOrderRupees,
+          },
+        };
+      });
+      return changed ? { ...state, items } : state;
     }
 
     case 'CLEAR_CART':
@@ -245,6 +306,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timeout);
   }, [isLoaded, currentUser, state]);
 
+  // Refresh stored prices from the catalog whenever the set of products in
+  // the cart changes (initial load, login merge, a new product added). Without
+  // this, a cart keeps the price from when an item was added — so it can show
+  // a price the checkout no longer charges.
+  const cartIdsKey = state.items.map(item => item.product.id).sort().join(',');
+  useEffect(() => {
+    if (!isLoaded || !cartIdsKey) return;
+
+    let cancelled = false;
+    fetch(`/api/cart/prices?ids=${encodeURIComponent(cartIdsKey)}`, { cache: 'no-store' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data?.prices) return;
+        dispatch({ type: 'REFRESH_PRICES', payload: { prices: data.prices } });
+      })
+      .catch(error => {
+        console.warn('Failed to refresh cart prices:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, cartIdsKey]);
+
   const addItem = useCallback((product: Product, quantity: number) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
   }, []);
@@ -293,12 +378,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return product.price;
   }, [isFlashSaleEligible]);
 
+  // What a cart line actually charges: an unlocked flash sale prices only the
+  // first FLASH_SALE_QTY_PER_ORDER units at the sale price, the rest at the
+  // original price. Must stay in sync with order-pricing.priceOrderFromCatalog.
+  const getLineBreakdown = useCallback((item: CartItem): LineBreakdown => {
+    const unit = getEffectiveUnitPrice(item.product);
+    const original = getOriginalUnitPrice(item.product);
+    const saleQty = unit === original ? 0 : Math.min(item.quantity, FLASH_SALE_QTY_PER_ORDER);
+    const regularQty = item.quantity - saleQty;
+    return {
+      saleQty,
+      saleUnit: unit,
+      regularQty,
+      regularUnit: original,
+      total: unit * saleQty + original * regularQty,
+    };
+  }, [getEffectiveUnitPrice]);
+
+  const getLineTotal = useCallback((item: CartItem) => getLineBreakdown(item).total, [getLineBreakdown]);
+
   const getSubtotal = useCallback(() => {
-    return state.items.reduce(
-      (sum, item) => sum + getEffectiveUnitPrice(item.product) * item.quantity,
-      0
-    );
-  }, [state.items, getEffectiveUnitPrice]);
+    return state.items.reduce((sum, item) => sum + getLineTotal(item), 0);
+  }, [state.items, getLineTotal]);
 
   const getConvenienceFee = useCallback(() => {
     const subtotal = getSubtotal();
@@ -325,6 +426,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         getPreDiscountSubtotal,
         isFlashSaleEligible,
         getEffectiveUnitPrice,
+        getLineTotal,
+        getLineBreakdown,
         coinBalance,
         redeemCoins,
         setRedeemCoins,
@@ -351,6 +454,14 @@ const EMPTY_CART = {
   getPreDiscountSubtotal: () => 0,
   isFlashSaleEligible: () => true,
   getEffectiveUnitPrice: (product: Product) => product.price,
+  getLineTotal: (item: CartItem) => item.product.price * item.quantity,
+  getLineBreakdown: (item: CartItem): LineBreakdown => ({
+    saleQty: 0,
+    saleUnit: item.product.price,
+    regularQty: item.quantity,
+    regularUnit: item.product.price,
+    total: item.product.price * item.quantity,
+  }),
   coinBalance: 0,
   redeemCoins: false,
   setRedeemCoins: () => {},

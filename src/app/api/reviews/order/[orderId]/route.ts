@@ -33,11 +33,16 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
     ]);
 
     const reviewsBySku = new Map(reviews.map((r) => [r.productCode, r]));
-    const items = order.items.map((item) => ({
-      sku: item.sku,
-      name: item.name,
-      review: reviewsBySku.get(item.sku) ?? null,
-    }));
+    // A product can span two order lines (flash-sale units + regular-price
+    // units share a SKU), but it's reviewed once — so list each SKU once.
+    const seenSkus = new Set<string>();
+    const items = order.items
+      .filter((item) => !seenSkus.has(item.sku) && seenSkus.add(item.sku))
+      .map((item) => ({
+        sku: item.sku,
+        name: item.name,
+        review: reviewsBySku.get(item.sku) ?? null,
+      }));
 
     logger.api('GET', '/api/reviews/order/[orderId]', 200, Date.now() - start);
     return NextResponse.json(

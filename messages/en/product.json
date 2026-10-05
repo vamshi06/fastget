@@ -8,6 +8,8 @@
   "sku": "SKU: {sku}",
   "percentOff": "{discount}% off",
   "flashPriceNote": "⚡ Flash price applies once you have {amount}+ of other products in your cart",
+  "flashSaleLimit": "⚡ Flash price on {max} per order — extra units at {original} each",
+  "flashBreakdown": "{saleQty} × {saleUnit} (flash) + {regularQty} × {regularUnit}",
   "selectSizeType": "Select Size / Type",
   "description": "Description",
   "specifications": "Specifications",

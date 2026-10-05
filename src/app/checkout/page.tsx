@@ -35,7 +35,7 @@ function CheckoutPageContent() {
     getTotal,
     clearCart,
     isLoaded,
-    getEffectiveUnitPrice,
+    getLineBreakdown,
     coinBalance,
     redeemCoins,
     setRedeemCoins,
@@ -820,14 +820,23 @@ function CheckoutPageContent() {
               <h2 className="text-lg font-bold text-brand-charcoal mb-4">{t('orderSummary')}</h2>
 
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto scrollbar-thin">
-                {state.items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between text-sm">
-                    <span className="text-brand-slate">
-                      {item.product.name} × {item.quantity}
-                    </span>
-                    <span className="font-medium text-brand-charcoal">{formatCurrency(getEffectiveUnitPrice(item.product) * item.quantity)}</span>
-                  </div>
-                ))}
+                {state.items.map((item) => {
+                  const b = getLineBreakdown(item);
+                  return (
+                    <div key={item.product.id} className="flex justify-between gap-3 text-sm">
+                      <span className="text-brand-slate">
+                        {item.product.name} × {item.quantity}
+                        {/* Flash + regular-price units on one line — show the split */}
+                        {b.saleQty > 0 && b.regularQty > 0 && (
+                          <span className="block text-[11px] text-amber-700">
+                            {b.saleQty} × {formatCurrency(b.saleUnit)} + {b.regularQty} × {formatCurrency(b.regularUnit)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-medium text-brand-charcoal">{formatCurrency(b.total)}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="border-t border-neutral-100 pt-4 space-y-3">

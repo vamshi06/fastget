@@ -20,6 +20,12 @@ export const CONVENIENCE_FEE_PERCENTAGE = 0;
 
 const MAX_QTY_PER_ITEM = 1000;
 
+// Only this many units of a flash-sale item get the sale price per order —
+// without a cap, a customer who unlocks the ₹1 price could buy 100 units at
+// ₹1 each. Extra units are still sold, at the regular price.
+// Must stay in sync with CartContext.FLASH_SALE_QTY_PER_ORDER (client cart).
+export const FLASH_SALE_QTY_PER_ORDER = 1;
+
 // First-order coupon: ₹200 off a logged-in customer's very first order, once
 // it's worth at least ₹449 (pre-discount, i.e. subtotal + convenience fee).
 export const FIRST_ORDER_DISCOUNT_RUPEES = 200;
@@ -98,9 +104,12 @@ export async function priceOrderFromCatalog(
     originalLineTotals.set(i.code, (originalLineTotals.get(i.code) ?? 0) + lineTotal);
   }
 
-  // Pass 2: price each line, applying the sale price only where it's earned.
+  // Pass 2: price each line, applying the sale price only where it's earned,
+  // and to at most FLASH_SALE_QTY_PER_ORDER units per product. Tracked per
+  // product (not per line) so duplicate cart lines can't each claim the deal.
   const items: OrderItem[] = [];
   let subtotal = 0;
+  const saleUnitsUsed = new Map<string, number>(); // code -> units already sold at sale price
   for (const i of normalised) {
     const info = pricing.get(i.code)!;
     const originalUnit = Math.round(info.originalPaise / 100);
@@ -109,11 +118,24 @@ export async function priceOrderFromCatalog(
     const otherItemsSubtotal = originalSubtotal - (originalLineTotals.get(i.code) ?? 0);
     const saleEligible =
       info.saleActive && saleUnit != null && (minOrder == null || otherItemsSubtotal >= minOrder);
-    const unit = saleEligible ? saleUnit! : originalUnit;
-    subtotal += unit * i.quantity;
+    const saleQty = saleEligible
+      ? Math.min(i.quantity, FLASH_SALE_QTY_PER_ORDER - (saleUnitsUsed.get(i.code) ?? 0))
+      : 0;
+    const regularQty = i.quantity - saleQty;
     // Record the catalog's English name — the client's name may be a
     // translation (Hindi UI), and order records / invoices / admin stay English.
-    items.push({ sku: i.code, name: info.name || i.name, quantity: i.quantity, price: unit });
+    const name = info.name || i.name;
+    // Sale and regular units go on separate lines (same SKU) since an order
+    // line carries a single unit price — invoices/emails then show the split.
+    if (saleQty > 0) {
+      saleUnitsUsed.set(i.code, (saleUnitsUsed.get(i.code) ?? 0) + saleQty);
+      subtotal += saleUnit! * saleQty;
+      items.push({ sku: i.code, name, quantity: saleQty, price: saleUnit! });
+    }
+    if (regularQty > 0) {
+      subtotal += originalUnit * regularQty;
+      items.push({ sku: i.code, name, quantity: regularQty, price: originalUnit });
+    }
   }
 
   const convenienceFee = Math.round(subtotal * (CONVENIENCE_FEE_PERCENTAGE / 100));

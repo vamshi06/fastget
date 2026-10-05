@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useCart } from '@/components/CartContext';
+import { useCart, getOriginalUnitPrice, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { CartItem } from '@/types';
@@ -22,6 +22,8 @@ export default function CartPage() {
     isLoaded,
     isFlashSaleEligible,
     getEffectiveUnitPrice,
+    getLineTotal,
+    getLineBreakdown,
     getPreDiscountSubtotal,
     coinBalance,
     redeemCoins,
@@ -157,6 +159,29 @@ export default function CartPage() {
                       })}
                     </p>
                   )}
+                  {item.product.isFlashSale && (() => {
+                    const b = getLineBreakdown(item);
+                    // Mixed line (flash + regular units): spell out the split
+                    // so the line total isn't a surprise.
+                    return b.saleQty > 0 && b.regularQty > 0 ? (
+                      <p className="text-[11px] text-amber-700 font-medium mt-1">
+                        {t('flashBreakdown', {
+                          saleQty: b.saleQty,
+                          saleUnit: formatCurrency(b.saleUnit),
+                          regularQty: b.regularQty,
+                          regularUnit: formatCurrency(b.regularUnit),
+                          total: formatCurrency(b.total),
+                        })}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-amber-600 font-medium mt-1">
+                        {t('flashSaleLimit', {
+                          max: FLASH_SALE_QTY_PER_ORDER,
+                          original: formatCurrency(getOriginalUnitPrice(item.product)),
+                        })}
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex flex-col items-end justify-between flex-shrink-0">
@@ -193,6 +218,9 @@ export default function CartPage() {
                       <Plus className="w-3 h-3 text-white" />
                     </button>
                   </div>
+                  <p className="text-sm font-bold text-brand-charcoal mt-1">
+                    {formatCurrency(getLineTotal(item))}
+                  </p>
                 </div>
               </div>
             ))}

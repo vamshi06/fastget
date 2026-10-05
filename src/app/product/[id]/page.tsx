@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCart } from '@/components/CartContext';
+import { useCart, getOriginalUnitPrice, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
@@ -93,6 +93,11 @@ export default function ProductDetailPage() {
   const mrpPrice       = selectedVariant?.mrpRupees   ?? product?.mrpPrice;
   const hasMrp         = mrpPrice && mrpPrice > effectivePrice;
   const discount       = hasMrp ? Math.round(((mrpPrice - effectivePrice) / mrpPrice) * 100) : 0;
+  // Flash price covers only the first FLASH_SALE_QTY_PER_ORDER units; the rest
+  // are charged at the original price (mirrors CartContext.getLineTotal).
+  const saleQty        = product?.isFlashSale ? Math.min(quantity, FLASH_SALE_QTY_PER_ORDER) : quantity;
+  const lineTotal      = effectivePrice * saleQty
+    + (product ? getOriginalUnitPrice(product) : effectivePrice) * (quantity - saleQty);
 
   const handleCartAction = () => {
     if (!product) return;
@@ -251,6 +256,14 @@ export default function ProductDetailPage() {
                 {t('flashPriceNote', { amount: formatCurrency(product.saleMinOrderRupees) })}
               </p>
             )}
+            {product.isFlashSale && (
+              <p className="text-xs text-amber-600 font-medium -mt-2">
+                {t('flashSaleLimit', {
+                  max: FLASH_SALE_QTY_PER_ORDER,
+                  original: formatCurrency(getOriginalUnitPrice(product)),
+                })}
+              </p>
+            )}
 
             {/* Variant selector */}
             {variants.length > 1 && (
@@ -358,8 +371,18 @@ export default function ProductDetailPage() {
                   <div className="text-right">
                     <p className="text-xs text-brand-steel uppercase tracking-wide">{t('total')}</p>
                     <p className="text-xl font-black text-brand-charcoal">
-                      {formatCurrency(effectivePrice * quantity)}
+                      {formatCurrency(lineTotal)}
                     </p>
+                    {product.isFlashSale && quantity > saleQty && (
+                      <p className="text-[11px] text-amber-700 font-medium">
+                        {t('flashBreakdown', {
+                          saleQty,
+                          saleUnit: formatCurrency(effectivePrice),
+                          regularQty: quantity - saleQty,
+                          regularUnit: formatCurrency(getOriginalUnitPrice(product)),
+                        })}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

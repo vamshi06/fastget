@@ -10,6 +10,8 @@
   "clearFailed": "कार्ट खाली नहीं किया जा सका। दोबारा कोशिश करें।",
   "clearCart": "कार्ट खाली करें",
   "flashSaleUnlockHint": "इस {price} वाली फ्लैश कीमत को पाने के लिए अन्य उत्पादों के {amount} और जोड़ें",
+  "flashSaleLimit": "फ्लैश कीमत प्रति ऑर्डर {max} पर — अतिरिक्त यूनिट {original} प्रति यूनिट",
+  "flashBreakdown": "{saleQty} × {saleUnit} (फ्लैश कीमत) + {regularQty} × {regularUnit} = {total}",
   "orderSummary": "ऑर्डर सारांश",
   "subtotal": "सबटोटल",
   "firstOrderCouponApplied": "पहले ऑर्डर का कूपन लागू हो गया!",
