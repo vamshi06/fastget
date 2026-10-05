@@ -17,6 +17,9 @@ interface FormData {
   mrpPrice: string;
   moq: string;
   uom: string;
+  size: string;
+  colour: string;
+  remarks: string;
   imageUrl: string;
   status: 'active' | 'inactive' | 'discontinued';
   stockQuantity: string;
@@ -51,7 +54,7 @@ export default function EditProductPage() {
 
   const [formData, setFormData]   = useState<FormData>({
     name: '', brand: '', description: '', price: '', mrpPrice: '',
-    moq: '1', uom: '', imageUrl: '', status: 'active', stockQuantity: '0',
+    moq: '1', uom: '', size: '', colour: '', remarks: '', imageUrl: '', status: 'active', stockQuantity: '0',
     salePrice: '', saleStartsAt: '', saleEndsAt: '', saleMinOrder: '',
     nameHi: '', descriptionHi: '', hiReviewed: false,
   });
@@ -79,7 +82,10 @@ export default function EditProductPage() {
           mrpPrice:    d.mrpPrice !== '' && d.mrpPrice != null ? String(d.mrpPrice) : '',
           moq:         String(d.moq ?? 1),
           uom:         d.uom         ?? '',
-          imageUrl:    d.imageUrl    ?? '',
+          size:        d.size        ?? '',
+          colour:      d.colour      ?? '',
+          remarks:     d.remarks     ?? '',
+          imageUrl:   d.imageUrl    ?? '',
           status:        (d.status     ?? 'active') as FormData['status'],
           stockQuantity: String(d.stockQuantity ?? 0),
           salePrice:     d.salePrice !== '' && d.salePrice != null ? String(d.salePrice) : '',
@@ -152,7 +158,10 @@ export default function EditProductPage() {
         mrpPrice:      formData.mrpPrice ? parseFloat(formData.mrpPrice) : null,
         moq:           parseInt(formData.moq) || 1,
         uom:           formData.uom.trim()         || null,
-        imageUrl:      formData.imageUrl.trim()     || null,
+        size:          formData.size.trim()        || null,
+        colour:        formData.colour.trim()      || null,
+        remarks:       formData.remarks.trim()     || null,
+        imageUrl:     formData.imageUrl.trim()     || null,
         status:        formData.status,
         stockQuantity: Math.max(0, parseInt(formData.stockQuantity) || 0),
         salePrice:     formData.salePrice ? parseFloat(formData.salePrice) : null,
@@ -451,6 +460,34 @@ export default function EditProductPage() {
             <input type="url" name="imageUrl" value={formData.imageUrl} onChange={handleChange}
               placeholder="https://…" className={inputCls} disabled={saving} />
           </div>
+        </fieldset>
+
+        {/* ── Specifications ──────────────────────────── */}
+        <fieldset className="space-y-4">
+          <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full">
+            Specifications
+          </legend>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Size</label>
+              <input type="text" name="size" value={formData.size} onChange={handleChange}
+                placeholder="e.g. 1 Kg, 18mm, 8x4 ft" className={inputCls} disabled={saving} />
+            </div>
+            <div>
+              <label className={labelCls}>Colour / Finish</label>
+              <input type="text" name="colour" value={formData.colour} onChange={handleChange}
+                placeholder="e.g. White, Natural" className={inputCls} disabled={saving} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Remarks</label>
+            <input type="text" name="remarks" value={formData.remarks} onChange={handleChange}
+              placeholder="Optional" className={inputCls} disabled={saving} />
+          </div>
+          <p className="text-xs text-brand-steel">
+            These appear in the Specifications box on the product page, together with Unit of Measure.
+            Leave a field blank to hide it.
+          </p>
         </fieldset>
 
         {/* ── Status ──────────────────────────────────── */}

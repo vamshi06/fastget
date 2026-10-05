@@ -1163,6 +1163,8 @@ export async function updateVariantFields(
     priceOverride?: number | null; // paise
     mrpPrice?:      number | null; // paise
     moq?:           number;
+    /** Merged into the attributes JSONB; a null value removes that key. */
+    attributes?:    Record<string, string | null>;
   },
 ): Promise<boolean> {
   const sql = getClient();
@@ -1175,6 +1177,21 @@ export async function updateVariantFields(
     if ('priceOverride' in updates) push('price_override', updates.priceOverride ?? null);
     if ('mrpPrice'      in updates) push('mrp_price',      updates.mrpPrice      ?? null);
     if (updates.moq     !== undefined) push('moq',         updates.moq);
+
+    if (updates.attributes && Object.keys(updates.attributes).length > 0) {
+      const toSet:    Record<string, string> = {};
+      const toRemove: string[] = [];
+      for (const [k, v] of Object.entries(updates.attributes)) {
+        if (v === null) toRemove.push(k); else toSet[k] = v;
+      }
+      vals.push(JSON.stringify(toSet));
+      const setIdx = vals.length;
+      vals.push(toRemove);
+      const removeIdx = vals.length;
+      sets.push(
+        `attributes = (COALESCE(attributes, '{}'::jsonb) || $${setIdx}::jsonb) - $${removeIdx}::text[]`,
+      );
+    }
 
     if (sets.length === 0) return true;
 
@@ -1326,6 +1343,9 @@ export async function updateProductInCategoryTable(
     mrpPrice?: number | null; // paise
     moq?: number;
     uom?: string | null;
+    size?: string | null;
+    colour?: string | null;
+    remarks?: string | null;
     imageUrl?: string | null;
     status?: string;
     salePrice?: number | null;     // paise
@@ -1352,9 +1372,12 @@ export async function updateProductInCategoryTable(
     if ('mrpPrice'    in updates)          push('mrp_price',  updates.mrpPrice);
     if (updates.moq         !== undefined) push('moq',        updates.moq);
     if ('uom'         in updates)          push('uom',        updates.uom);
+    if ('size'        in updates)          push('size',       updates.size);
+    if ('colour'      in updates)          push('colour',     updates.colour);
+    if ('remarks'     in updates)          push('remarks',    updates.remarks);
     if ('imageUrl'    in updates)          push('image_url',  updates.imageUrl);
     if (updates.status      !== undefined) push('status',     updates.status);
-    if ('salePrice'    in updates)         push('sale_price',      updates.salePrice);
+    if ('salePrice'   in updates)         push('sale_price',      updates.salePrice);
     if ('saleStartsAt' in updates)         push('sale_starts_at',  updates.saleStartsAt);
     if ('saleEndsAt'   in updates)         push('sale_ends_at',    updates.saleEndsAt);
     if ('saleMinOrderPaise' in updates)    push('sale_min_order_paise', updates.saleMinOrderPaise);

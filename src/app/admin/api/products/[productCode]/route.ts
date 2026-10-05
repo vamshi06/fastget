@@ -56,16 +56,21 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     }
     // Fetch current stock from inventory (product_variants.stock_quantity doesn't exist in prod)
     let stockQuantity = 0;
+    // Specifications shown on the product page come from product_variants.attributes
+    let attributes: Record<string, string> = {};
     if (row.variant_id) {
       const sql = getUnpooledConnection();
       const invRows = await sql`
-        SELECT COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
+        SELECT COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity,
+               COALESCE(pv.attributes, '{}') AS attributes
         FROM product_variants pv
         LEFT JOIN inventory inv ON inv.variant_id = pv.id
         WHERE pv.id = ${row.variant_id}
         LIMIT 1
       `;
-      stockQuantity = Number((invRows[0] as any)?.stock_quantity ?? 0);
+      const invRow = invRows[0] as any;
+      stockQuantity = Number(invRow?.stock_quantity ?? 0);
+      if (invRow && typeof invRow.attributes === 'object') attributes = invRow.attributes;
     }
     const hindi = await getProductTranslation(productCode, 'hi');
 
@@ -80,8 +85,11 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         price:         Math.round(row.price / 100),
         mrpPrice:      row.mrp_price ? Math.round(row.mrp_price / 100) : '',
         moq:           row.moq ?? 1,
-        uom:           row.uom          ?? '',
-        imageUrl:      row.image_url    ?? '',
+        uom:           attributes.uom     ?? row.uom    ?? '',
+        size:          attributes.size    ?? row.size   ?? '',
+        colour:        attributes.colour  ?? row.colour ?? '',
+        remarks:       attributes.remarks ?? '',
+        imageUrl:     row.image_url    ?? '',
         status:        row.status       ?? 'active',
         categorySlug:  row.category_slug ?? '',
         sourceTable:   row.source_table,
@@ -129,6 +137,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const description = descProvided ? (isBlank(body.description) ? null : requireString(body.description, 'description', { max: 2000 })) : undefined;
     const uomProvided = 'uom' in body;
     const uom = uomProvided ? (isBlank(body.uom) ? null : requireString(body.uom, 'unit of measure', { max: 32 })) : undefined;
+    const sizeProvided = 'size' in body;
+    const size = sizeProvided ? (isBlank(body.size) ? null : requireString(body.size, 'size', { max: 64 })) : undefined;
+    const colourProvided = 'colour' in body;
+    const colour = colourProvided ? (isBlank(body.colour) ? null : requireString(body.colour, 'colour', { max: 64 })) : undefined;
+    const remarksProvided = 'remarks' in body;
+    const remarks = remarksProvided ? (isBlank(body.remarks) ? null : requireString(body.remarks, 'remarks', { max: 500 })) : undefined;
     const imageUrlProvided = 'imageUrl' in body;
     const imageUrl = imageUrlProvided ? (isBlank(body.imageUrl) ? null : httpUrl(body.imageUrl, 'image URL')) : undefined;
     const mrpProvided = 'mrpPrice' in body;
@@ -215,6 +229,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (mrpProvided) catUpdates.mrpPrice = mrpInPaise;
     if (moq !== undefined) catUpdates.moq = moq;
     if (uomProvided) catUpdates.uom = uom;
+    if (sizeProvided) catUpdates.size = size;
+    if (colourProvided) catUpdates.colour = colour;
+    if (remarksProvided) catUpdates.remarks = remarks;
     if (imageUrlProvided) catUpdates.imageUrl = imageUrl;
     if (status !== undefined) catUpdates.status = status;
     if (salePriceProvided) catUpdates.salePrice = salePriceInPaise;
@@ -242,11 +259,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     // Update product_variants so the customer-facing product detail page reflects
     // the new price/mrp/moq immediately (it reads from price_override, not products.price).
+    // Its Specifications section reads product_variants.attributes, so sync those too.
     if (row.variant_id) {
       const varUpdates: Parameters<typeof updateVariantFields>[1] = {};
       if (priceInPaise !== undefined) varUpdates.priceOverride = priceInPaise;
       if (mrpProvided) varUpdates.mrpPrice = mrpInPaise;
       if (moq !== undefined) varUpdates.moq = moq;
+      const attrUpdates: Record<string, string | null> = {};
+      if (uomProvided) attrUpdates.uom = uom ?? null;
+      if (sizeProvided) attrUpdates.size = size ?? null;
+      if (colourProvided) attrUpdates.colour = colour ?? null;
+      if (remarksProvided) attrUpdates.remarks = remarks ?? null;
+      if (Object.keys(attrUpdates).length > 0) varUpdates.attributes = attrUpdates;
       if (Object.keys(varUpdates).length > 0) {
         await updateVariantFields(row.variant_id, varUpdates);
       }
