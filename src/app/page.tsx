@@ -2,13 +2,13 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { HeroSection } from '@/components/home/HeroSection';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
-import { FlashSaleBanner } from '@/components/home/FlashSaleBanner';
-import { getActiveFlashSale } from '@/lib/products';
+import { FlashSaleCarousel } from '@/components/home/FlashSaleCarousel';
+import { getActiveFlashSales } from '@/lib/products';
 import { isLocale } from '@/i18n/config';
 
 export default async function Home() {
   const locale = await getLocale();
-  const flashSale = await getActiveFlashSale(isLocale(locale) ? locale : undefined);
+  const flashSales = await getActiveFlashSales(isLocale(locale) ? locale : undefined);
   const t = await getTranslations('home');
 
   return (
@@ -20,8 +20,8 @@ export default async function Home() {
       {/* 4. Product-heavy feed */}
       <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
 
-        {/* Flash sale — only rendered while a sale is actually running */}
-        {flashSale && <FlashSaleBanner sale={flashSale} />}
+        {/* Flash sales — only rendered while at least one sale is running */}
+        {flashSales.length > 0 && <FlashSaleCarousel sales={flashSales} />}
 
         {/* Category grid — right after hero */}
         <CategoryStrip />

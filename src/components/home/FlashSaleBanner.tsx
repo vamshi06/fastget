@@ -9,6 +9,7 @@ import type { ActiveFlashSale } from '@/lib/products';
 
 interface FlashSaleBannerProps {
   sale: ActiveFlashSale;
+  onExpire?: (productCode: string) => void;
 }
 
 function getTimeLeft(endsAt: string) {
@@ -28,7 +29,7 @@ function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
-export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
+export function FlashSaleBanner({ sale, onExpire }: FlashSaleBannerProps) {
   const t = useTranslations('home');
   const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(sale.saleEndsAt));
 
@@ -37,15 +38,20 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
     return () => clearInterval(interval);
   }, [sale.saleEndsAt]);
 
+  useEffect(() => {
+    if (timeLeft.expired) onExpire?.(sale.productCode);
+  }, [timeLeft.expired, onExpire, sale.productCode]);
+
   // Sale window has lapsed client-side — hide rather than show a stale ₹1 offer.
   if (timeLeft.expired) return null;
 
-  const discountPct = Math.round((1 - sale.salePriceRupees / sale.originalPriceRupees) * 100);
+  // Floor, not round — ₹1 off ₹239 must read 99% OFF, never "100% OFF".
+  const discountPct = Math.floor((1 - sale.salePriceRupees / sale.originalPriceRupees) * 100);
 
   return (
     <Link
       href={`/product/${sale.productCode}`}
-      className="relative block overflow-hidden rounded-2xl text-white p-4 active:scale-[0.99] transition-transform duration-150"
+      className="relative block h-full overflow-hidden rounded-2xl text-white p-4 active:scale-[0.99] transition-transform duration-150"
       style={{
         background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 60%, #7F1D1D 100%)',
       }}
@@ -58,10 +64,10 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
         }}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-full">
         {/* Eyebrow */}
         <span
-          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-3"
+          className="self-start inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-3"
           style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.35)' }}
         >
           <Zap className="w-3 h-3 fill-current" />
@@ -111,7 +117,7 @@ export function FlashSaleBanner({ sale }: FlashSaleBannerProps) {
         )}
 
         {/* Countdown + CTA */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="mt-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
             {[
               [timeLeft.days, 'd'],

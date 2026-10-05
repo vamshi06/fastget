@@ -430,10 +430,10 @@ export interface ActiveFlashSale {
 }
 
 /**
- * Fetch the flash sale ending soonest that is currently active (used to
- * drive the homepage promo banner). Returns null when nothing is running.
+ * Fetch all currently active flash sales, ending soonest first (used to drive
+ * the homepage promo carousel). Returns [] when nothing is running.
  */
-export async function getActiveFlashSale(locale?: Locale): Promise<ActiveFlashSale | null> {
+export async function getActiveFlashSales(locale?: Locale): Promise<ActiveFlashSale[]> {
   const sql = getUnpooledClient();
   const translate = wantsTranslation(locale);
   try {
@@ -446,32 +446,32 @@ export async function getActiveFlashSale(locale?: Locale): Promise<ActiveFlashSa
         WHERE cv.sale_price IS NOT NULL
           AND NOW() BETWEEN cv.sale_starts_at AND cv.sale_ends_at
         ORDER BY cv.sale_ends_at ASC
-        LIMIT 1`,
+        LIMIT 10`,
       translate ? [locale] : [],
     ) as any[];
-    if (rows.length === 0) return null;
-    const r = rows[0] as any;
-    const brand = (r.brand as string) || '';
-    const rawName = (r.name_i18n as string) || (r.name as string) || '';
-    const displayName = brand && rawName.startsWith(brand + ' ')
-      ? rawName.slice(brand.length + 1)
-      : rawName;
-    return {
-      productCode:          r.product_code,
-      name:                 displayName,
-      brand:                brand || undefined,
-      imageUrl:             r.image_url || undefined,
-      salePriceRupees:      Math.round(Number(r.sale_price) / 100),
-      originalPriceRupees:  Math.round(Number(r.price) / 100),
-      saleEndsAt:           new Date(r.sale_ends_at).toISOString(),
-      minOrderRupees:       r.sale_min_order_paise != null ? Math.round(Number(r.sale_min_order_paise) / 100) : undefined,
-    };
+    return rows.map((r: any) => {
+      const brand = (r.brand as string) || '';
+      const rawName = (r.name_i18n as string) || (r.name as string) || '';
+      const displayName = brand && rawName.startsWith(brand + ' ')
+        ? rawName.slice(brand.length + 1)
+        : rawName;
+      return {
+        productCode:          r.product_code,
+        name:                 displayName,
+        brand:                brand || undefined,
+        imageUrl:             r.image_url || undefined,
+        salePriceRupees:      Math.round(Number(r.sale_price) / 100),
+        originalPriceRupees:  Math.round(Number(r.price) / 100),
+        saleEndsAt:           new Date(r.sale_ends_at).toISOString(),
+        minOrderRupees:       r.sale_min_order_paise != null ? Math.round(Number(r.sale_min_order_paise) / 100) : undefined,
+      };
+    });
   } catch (error) {
-    if (translate && isMissingTranslationsTable(error)) return getActiveFlashSale();
-    logger.error('Products', 'getActiveFlashSale failed', {
+    if (translate && isMissingTranslationsTable(error)) return getActiveFlashSales();
+    logger.error('Products', 'getActiveFlashSales failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return null;
+    return [];
   }
 }
 
