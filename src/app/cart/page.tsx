@@ -44,7 +44,7 @@ export default function CartPage() {
   const [firstOrderMinOrder, setFirstOrderMinOrder] = useState(449);
 
   // Fetch whether the user still qualifies for the first-order coupon (for
-  // preview only — the checkout/order APIs always re-validate this server-side).
+  // preview only - the checkout/order APIs always re-validate this server-side).
   useEffect(() => {
     if (!currentUser) return;
     fetch('/api/orders/first-order-eligibility', { cache: 'no-store' })

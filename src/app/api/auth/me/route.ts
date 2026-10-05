@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
  *    silently logged out mid-checkout (admin sessions keep their hard 8h expiry),
  *  - drop the cookie if it points to a user that no longer exists.
  *
- * Identity comes only from the signed cookie — never from the request.
+ * Identity comes only from the signed cookie - never from the request.
  */
 const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 
@@ -37,7 +37,7 @@ export async function GET() {
   if (!user) {
     // Valid signature but the user is gone (deleted / DB reseeded). Clear the
     // stale cookie so the client stops presenting a logged-in state.
-    logger.warn('Auth', 'me — session user no longer exists, clearing cookie', {
+    logger.warn('Auth', 'me - session user no longer exists, clearing cookie', {
       userId: session.userId,
     });
     const res = NextResponse.json(

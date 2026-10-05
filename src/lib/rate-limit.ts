@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 /**
  * Postgres-backed fixed-window rate limiter (H3).
  *
- * Works on serverless (Vercel) where in-memory counters are useless — state
+ * Works on serverless (Vercel) where in-memory counters are useless - state
  * lives in Neon. One row per bucket, reset when its window elapses, so the
  * table stays bounded by the number of active keys.
  *
@@ -97,7 +97,7 @@ export async function rateLimit(
     const allowed = res.count <= limit;
     return { allowed, retryAfterSec: allowed ? 0 : Math.max(1, res.resetIn) };
   } catch (error) {
-    logger.error('RateLimit', 'limiter error — failing open', {
+    logger.error('RateLimit', 'limiter error - failing open', {
       key,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -156,7 +156,7 @@ export async function peekLimit(rules: RateRule[]): Promise<NextResponse | null>
       const { count, resetIn } = await peek(r.key, r.windowSec);
       if (count >= r.limit) worst = Math.max(worst, Math.max(1, resetIn));
     } catch (error) {
-      logger.error('RateLimit', 'peek error — failing open', {
+      logger.error('RateLimit', 'peek error - failing open', {
         key: r.key,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -185,7 +185,7 @@ export async function clearBuckets(keys: string[]): Promise<void> {
     const sql = getClient();
     await sql`DELETE FROM auth_rate_limits WHERE bucket = ANY(${keys})`;
   } catch (error) {
-    logger.error('RateLimit', 'clearBuckets error — ignoring', {
+    logger.error('RateLimit', 'clearBuckets error - ignoring', {
       error: error instanceof Error ? error.message : String(error),
     });
   }

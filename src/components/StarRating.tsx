@@ -11,7 +11,7 @@ interface StarRatingProps {
   readOnly?: boolean;
 }
 
-/** Star rating — read-only display when `onChange` is omitted, interactive otherwise. */
+/** Star rating - read-only display when `onChange` is omitted, interactive otherwise. */
 export function StarRating({ value, onChange, size = 20, readOnly = false }: StarRatingProps) {
   const t = useTranslations('product');
   const [hovered, setHovered] = useState<number | null>(null);

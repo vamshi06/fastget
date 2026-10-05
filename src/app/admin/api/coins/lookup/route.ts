@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
     });
   } catch (error) {
-    logger.error('API', 'GET /admin/api/coins/lookup — unhandled error', {
+    logger.error('API', 'GET /admin/api/coins/lookup - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/admin/api/coins/lookup', 500, Date.now() - start);

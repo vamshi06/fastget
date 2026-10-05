@@ -25,14 +25,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Enter the 6-digit code from your email' }, { status: 400 });
     }
 
-    // Cap OTP guesses per IP and per account (H3) — 6-digit OTP brute-force guard.
+    // Cap OTP guesses per IP and per account (H3) - 6-digit OTP brute-force guard.
     const email = body.email.toLowerCase().trim();
     const limited = await limitOrResponse([
       { key: `verifyemail:ip:${getClientIp(request)}`, limit: 12, windowSec: 900 },
       { key: `verifyemail:acct:${email}`, limit: 8, windowSec: 900 },
     ]);
     if (limited) {
-      logger.warn('Auth', 'verify-email — rate limited', { email });
+      logger.warn('Auth', 'verify-email - rate limited', { email });
       logger.api('POST', '/api/auth/verify-email', 429, Date.now() - start);
       return limited;
     }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const user = await verifyUserEmailByOtp(body.email.trim(), body.otp.trim());
 
     if (!user) {
-      logger.warn('Auth', 'verify-email — invalid or expired OTP');
+      logger.warn('Auth', 'verify-email - invalid or expired OTP');
       logger.api('POST', '/api/auth/verify-email', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Incorrect code or code has expired. Request a new one.' },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Email verified successfully.' });
   } catch (error) {
-    logger.error('Auth', 'verify-email — unhandled error', {
+    logger.error('Auth', 'verify-email - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/verify-email', 500, Date.now() - start);

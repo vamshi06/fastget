@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 // ── DB category definitions ────────────────────────────────────────────────────
 
-// One entry per category table — no sub-categories.
+// One entry per category table - no sub-categories.
 const DB_CATEGORIES = [
   { slug: 'tools-machines',    name: 'Tools & Machines'    },
   { slug: 'carpentry',         name: 'Carpentry'           },
@@ -99,7 +99,7 @@ function CatalogPageContent() {
   const [currentPage,    setCurrentPage]    = useState(initialPage);
 
   // Price display state (updates on every slider drag) vs active filter state
-  // (updates on mouseup — triggers API refetch)
+  // (updates on mouseup - triggers API refetch)
   const [dispMin,   setDispMin]   = useState(initialMinPrice);
   const [dispMax,   setDispMax]   = useState(initialMaxPrice);
   const [activeMin, setActiveMin] = useState(initialMinPrice);
@@ -200,7 +200,7 @@ function CatalogPageContent() {
     router.replace(buildUrl(activeCategory, searchQuery, page, activeMin, activeMax), { scroll: false });
   };
 
-  // Called on slider mouseup/touchend — commits display state to active filter
+  // Called on slider mouseup/touchend - commits display state to active filter
   const applyPriceFilter = () => {
     setActiveMin(dispMin);
     setActiveMax(dispMax);

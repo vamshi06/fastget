@@ -19,7 +19,7 @@ export async function GET(
     logger.info('API', `GET /api/orders/${normalizedToken}`);
 
     if (!normalizedToken) {
-      logger.warn('API', 'GET /api/orders/[token] — missing token');
+      logger.warn('API', 'GET /api/orders/[token] - missing token');
       logger.api('GET', '/api/orders/[token]', 400, Date.now() - start);
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
@@ -27,12 +27,12 @@ export async function GET(
     const order = await getOrderByStatusToken(normalizedToken);
 
     if (!order) {
-      logger.warn('API', 'GET /api/orders/[token] — order not found', { token: normalizedToken });
+      logger.warn('API', 'GET /api/orders/[token] - order not found', { token: normalizedToken });
       logger.api('GET', '/api/orders/[token]', 404, Date.now() - start);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    logger.debug('API', 'GET /api/orders/[token] — order found', { orderId: order.id, status: order.status });
+    logger.debug('API', 'GET /api/orders/[token] - order found', { orderId: order.id, status: order.status });
     logger.api('GET', '/api/orders/[token]', 200, Date.now() - start);
 
     // Return order without sensitive updateToken
@@ -67,7 +67,7 @@ export async function GET(
       }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/orders/[token] — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'GET /api/orders/[token] - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('GET', '/api/orders/[token]', 500, Date.now() - start);
     return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }

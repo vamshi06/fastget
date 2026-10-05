@@ -29,7 +29,7 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
     logger.api('DELETE', '/admin/api/orders/[id]', 200, Date.now() - start);
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('API', 'DELETE /admin/api/orders/[id] — unhandled error', {
+    logger.error('API', 'DELETE /admin/api/orders/[id] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('DELETE', '/admin/api/orders/[id]', 500, Date.now() - start);

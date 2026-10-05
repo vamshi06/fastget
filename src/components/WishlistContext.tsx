@@ -34,7 +34,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         .catch(() => setWishlistItems([]))
         .finally(() => setIsLoaded(true));
     } else {
-      // Guest — read from localStorage
+      // Guest - read from localStorage
       try {
         const saved = localStorage.getItem(WISHLIST_STORAGE_KEY);
         setWishlistItems(saved ? JSON.parse(saved) : []);
@@ -51,7 +51,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(wishlistItems));
     } catch {
-      // storage full or unavailable — ignore
+      // storage full or unavailable - ignore
     }
   }, [wishlistItems, isLoaded, currentUser]);
 

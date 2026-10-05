@@ -2,7 +2,7 @@
 --
 -- When sale_min_order_paise is set on a row, the sale_price only applies once
 -- the OTHER items in the shopper's cart (computed at ORIGINAL, pre-discount
--- prices, excluding this row's own price — see priceOrderFromCatalog in
+-- prices, excluding this row's own price - see priceOrderFromCatalog in
 -- src/lib/order-pricing.ts) add up to that amount.
 -- NULL means "no minimum" (existing sales keep working unchanged).
 --

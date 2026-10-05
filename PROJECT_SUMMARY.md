@@ -1,4 +1,4 @@
-# FastGet — Comprehensive Project Summary
+# FastGet - Comprehensive Project Summary
 
 > Last audited: June 2026  
 > Audited from: full static analysis of source code  
@@ -26,7 +26,7 @@
 
 **FastGet** is a rapid-delivery e-commerce platform purpose-built for the construction materials industry in Mumbai. Its core promise is **30–60 minute delivery** of construction supplies directly to worksites.
 
-The platform is a full-stack web application built with Next.js 14, backed by a Neon (serverless PostgreSQL) database, and integrated with Razorpay for online payments. It covers the complete customer journey — from product discovery, to cart, to checkout with COD or online payment, to real-time order tracking — plus an operations layer for delivery agents and an admin dashboard for the business.
+The platform is a full-stack web application built with Next.js 14, backed by a Neon (serverless PostgreSQL) database, and integrated with Razorpay for online payments. It covers the complete customer journey - from product discovery, to cart, to checkout with COD or online payment, to real-time order tracking - plus an operations layer for delivery agents and an admin dashboard for the business.
 
 **Current Status:** Feature-complete MVP. The platform is architecturally sound, production-deployable, and handles the full order lifecycle. A few operational configurations (live payment keys, notification services) are the primary items outstanding before a full production launch.
 
@@ -45,8 +45,8 @@ After placing an order, the customer receives a tracking token. A delivery agent
 | Role | Description |
 |------|-------------|
 | **Customer** | Contractors, builders, site managers who need materials delivered to their worksite urgently |
-| **Delivery Agent** | The person/team who fulfills orders — updates status using a secure PIN-protected token |
-| **Admin** | The FastGet business team — manages products, monitors orders, and views revenue dashboards |
+| **Delivery Agent** | The person/team who fulfills orders - updates status using a secure PIN-protected token |
+| **Admin** | The FastGet business team - manages products, monitors orders, and views revenue dashboards |
 
 ### Problem It Solves
 
@@ -63,12 +63,12 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 2. Browses catalog by category or searches by product name/brand
 3. Views product detail (price, MRP, discount %, quantity/unit, stock status)
 4. Adds item to cart (persists in browser storage)
-5. Proceeds to checkout — fills delivery address, picks delivery type (urgent/scheduled), picks payment method
+5. Proceeds to checkout - fills delivery address, picks delivery type (urgent/scheduled), picks payment method
 6. Places order → receives a tracking token
 7. Tracks order status in real time
 
 **Agent Journey:**
-1. Receives an updateToken (sent via internal channel — WhatsApp, phone, etc.)
+1. Receives an updateToken (sent via internal channel - WhatsApp, phone, etc.)
 2. Opens `/agent/{token}` page
 3. Enters 4-digit PIN to authenticate
 4. Assigns ETA, then marks order as Out for Delivery, then Delivered
@@ -85,10 +85,10 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 ## 3. Feature Inventory
 
 ### Feature Status Legend
-- ✅ **Complete** — Fully implemented and working
-- 🟡 **Partial** — Core functionality works, some gaps
-- 🔶 **Planned / Stub** — Schema/structure exists, UI/logic incomplete
-- ❌ **Not Built** — Explicitly missing
+- ✅ **Complete** - Fully implemented and working
+- 🟡 **Partial** - Core functionality works, some gaps
+- 🔶 **Planned / Stub** - Schema/structure exists, UI/logic incomplete
+- ❌ **Not Built** - Explicitly missing
 
 ---
 
@@ -104,7 +104,7 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 | Search | ✅ Complete | `src/app/api/products/route.ts` | Full-text ILIKE on name, brand, description |
 | Category images | ✅ Complete | `src/app/page.tsx` | Visual category cards on homepage |
 | Dual catalog source | ✅ Complete | `src/lib/products.ts` | Category-specific tables (primary) + normalized products table (fallback) |
-| Product import from Google Sheets | 🟡 Partial | `scripts/import-sheet.ts` | Script exists; requires `GOOGLE_SHEETS_API_KEY` — operational tool, not runtime |
+| Product import from Google Sheets | 🟡 Partial | `scripts/import-sheet.ts` | Script exists; requires `GOOGLE_SHEETS_API_KEY` - operational tool, not runtime |
 | Wishlist UI | ❌ Not Built | `wishlists` table exists in DB | DB schema complete, no frontend |
 
 ---
@@ -150,8 +150,8 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 | Valid status transitions | ✅ Complete | `src/types/index.ts` | received→eta_assigned→out_for_delivery→delivered; cancellation at any point |
 | Admin order list | ✅ Complete | `src/app/admin/orders/page.tsx` | All orders with filters |
 | Order export | 🟡 Partial | `src/app/admin/api/orders/export/route.ts` | API stub exists; UI may be incomplete |
-| Customer order cancellation | ❌ Not Built | — | Only agents can cancel |
-| Email/SMS notifications | ❌ Not Built | — | No notification service integrated |
+| Customer order cancellation | ❌ Not Built | - | Only agents can cancel |
+| Email/SMS notifications | ❌ Not Built | - | No notification service integrated |
 
 ---
 
@@ -183,9 +183,9 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 | Delete account | ✅ Complete | `src/app/api/auth/delete/route.ts` | Cascades to addresses |
 | Saved addresses | ✅ Complete | `src/lib/users.ts`, `user_addresses` table | Home / Work / Other types |
 | Role-based access (admin/agent/customer) | 🟡 Partial | `src/lib/users.ts` | Roles in DB; middleware enforcement not fully confirmed |
-| OTP / phone verification | ❌ Not Built | — | No SMS integration |
-| OAuth / social login | ❌ Not Built | — | Not planned |
-| HTTP-only cookie sessions | ❌ Not Built | — | Uses localStorage (XSS risk, see Risks section) |
+| OTP / phone verification | ❌ Not Built | - | No SMS integration |
+| OAuth / social login | ❌ Not Built | - | Not planned |
+| HTTP-only cookie sessions | ❌ Not Built | - | Uses localStorage (XSS risk, see Risks section) |
 
 ---
 
@@ -199,7 +199,7 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 | Edit product | ✅ Complete | `src/app/admin/products/[productCode]/edit/page.tsx` | Edit all catalog fields |
 | Create product | 🟡 Partial | Admin products page | May be limited vs. full form |
 | Order export | 🟡 Partial | `src/app/admin/api/orders/export/` | API exists, UI completeness unverified |
-| Agent management | ❌ Not Built | — | No UI to create/manage agent tokens |
+| Agent management | ❌ Not Built | - | No UI to create/manage agent tokens |
 | Analytics charts | 🟡 Partial | `src/app/admin/page.tsx` | Basic aggregation; no charting library confirmed |
 
 ---
@@ -221,7 +221,7 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 |---------|--------|----------------|-------|
 | Location splash screen (first visit) | ✅ Complete | `src/components/LocationSplashContext.tsx` | Shown to new visitors |
 | Service area check | 🟡 Partial | LocationSplashContext | Metadata gates Mumbai areas; no map pin / GPS |
-| Delivery zone restriction | 🔶 Planned | — | No hard enforcement of zone at checkout |
+| Delivery zone restriction | 🔶 Planned | - | No hard enforcement of zone at checkout |
 
 ---
 
@@ -231,7 +231,7 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 
 | Aspect | Detail |
 |--------|--------|
-| **Framework** | Next.js 14 — App Router (server components + client components) |
+| **Framework** | Next.js 14 - App Router (server components + client components) |
 | **Language** | TypeScript (strict mode) |
 | **Styling** | Tailwind CSS with custom brand color palette |
 | **State Management** | React Context + useReducer (Cart, User, Toast, Location) |
@@ -276,8 +276,8 @@ POST /api/auth/login          → { success, id, name, email, phone }
 **Engine:** PostgreSQL 17.8 on Neon (AWS ap-southeast-1, serverless)
 
 **Connection Strategy:**
-- **Pooled** (`@neondatabase/serverless` PgBouncer endpoint) — Used for most read queries
-- **Unpooled** (direct primary) — Used for all writes and reads that must reflect recent writes; prevents stale replica reads
+- **Pooled** (`@neondatabase/serverless` PgBouncer endpoint) - Used for most read queries
+- **Unpooled** (direct primary) - Used for all writes and reads that must reflect recent writes; prevents stale replica reads
 
 #### Schema
 
@@ -320,12 +320,12 @@ inventory
 [category tables: carpentry, plumbing, electrical, civil_materials,
                    paints_and_polish, flooring_and_ceilings,
                    glass_and_aluminium, tools_and_machines]
- — Each has same flat structure: product_code, name, brand, price, mrp_price,
+ - Each has same flat structure: product_code, name, brand, price, mrp_price,
    moq, uom, size, colour, image_url, status, category_slug, variant_id,
    products_id, created_at, updated_at
 
 products_catalog_view
- — UNION of all 8 category tables for cross-category queries
+ - UNION of all 8 category tables for cross-category queries
 
 orders
  ├── id (UUID PK), created_at
@@ -348,9 +348,9 @@ wishlists
 ```
 
 **Important Design Decisions:**
-- Order items stored as **JSONB** (snapshot at time of order) — protects against price changes post-order
-- Two-token system: `status_token` (customer-facing) and `update_token` (agent-facing) — different access scopes
-- Category-specific flat tables exist alongside normalized `products` table — category tables are the primary source; normalized table is legacy/fallback
+- Order items stored as **JSONB** (snapshot at time of order) - protects against price changes post-order
+- Two-token system: `status_token` (customer-facing) and `update_token` (agent-facing) - different access scopes
+- Category-specific flat tables exist alongside normalized `products` table - category tables are the primary source; normalized table is legacy/fallback
 
 ### 4.4 Infrastructure & Deployment
 
@@ -394,7 +394,7 @@ wishlists
 
 **Typography:** System font stack (no custom webfont dependency)
 
-**Animations:** Custom Tailwind keyframes — `fade-in`, `slide-up`, `shimmer` (loading skeleton), `pulse-glow`, `ticker` (announcement banner)
+**Animations:** Custom Tailwind keyframes - `fade-in`, `slide-up`, `shimmer` (loading skeleton), `pulse-glow`, `ticker` (announcement banner)
 
 **Shadows:** Custom `shadow-card` and `shadow-brand` utilities
 
@@ -442,7 +442,7 @@ Built mobile-first with Tailwind's `sm:` / `md:` / `lg:` breakpoints. The bottom
 
 ### 5.5 Branding
 
-The orange `#F5A623` theme runs throughout: primary buttons, icons, the logo, and category highlights. This gives the product a distinct, energetic identity that communicates urgency and speed — fitting the "fast delivery" promise. The design is intentionally product-heavy (large cards, prominent images) inspired by quick-commerce apps like Blinkit/Zepto.
+The orange `#F5A623` theme runs throughout: primary buttons, icons, the logo, and category highlights. This gives the product a distinct, energetic identity that communicates urgency and speed - fitting the "fast delivery" promise. The design is intentionally product-heavy (large cards, prominent images) inspired by quick-commerce apps like Blinkit/Zepto.
 
 ---
 
@@ -459,13 +459,13 @@ The orange `#F5A623` theme runs throughout: primary buttons, icons, the logo, an
 | **Order Flow** | Create DB order → Create Razorpay order → Open modal → Callback/Verify → Confirm DB |
 | **Verification** | HMAC-SHA256 signature + live payment status fetch from Razorpay API |
 | **Webhook/Callback** | `/api/payment/callback` handles server-side redirect (supports WebView/mobile) |
-| **Current Key Mode** | Test keys — must switch to live keys before production |
+| **Current Key Mode** | Test keys - must switch to live keys before production |
 
 **Files:**
-- [src/lib/razorpay.ts](src/lib/razorpay.ts) — SDK wrapper
-- [src/lib/payment-db.ts](src/lib/payment-db.ts) — DB operations for payment state
-- [src/hooks/useRazorpay.ts](src/hooks/useRazorpay.ts) — Frontend hook for checkout modal
-- [src/app/api/payment/](src/app/api/payment/) — API routes
+- [src/lib/razorpay.ts](src/lib/razorpay.ts) - SDK wrapper
+- [src/lib/payment-db.ts](src/lib/payment-db.ts) - DB operations for payment state
+- [src/hooks/useRazorpay.ts](src/hooks/useRazorpay.ts) - Frontend hook for checkout modal
+- [src/app/api/payment/](src/app/api/payment/) - API routes
 
 ### 6.2 Neon Postgres (Database)
 
@@ -503,13 +503,13 @@ Based on git commit history and code inspection:
 **Impact:** Higher click-through rate to category browse pages.
 
 ### UI Layout Corrections
-**What:** Several UI layout issues were corrected — alignment, spacing, component placement.  
+**What:** Several UI layout issues were corrected - alignment, spacing, component placement.  
 **Why:** Feedback during internal testing revealed visual inconsistencies on mobile and desktop.  
 **Impact:** More consistent, professional presentation.
 
 ### Navbar Improvements
 **What:** Conditional header/footer logic, active navigation highlighting, cart badge notification.  
-**Why:** Standard e-commerce UX patterns — users expect to see their cart count and know where they are.  
+**Why:** Standard e-commerce UX patterns - users expect to see their cart count and know where they are.  
 **Impact:** Reduces confusion; standard navigation behavior users expect from shopping apps.
 
 ### Pay Online First (Checkout UX)
@@ -519,11 +519,11 @@ Based on git commit history and code inspection:
 
 ### Checkbox for Name and Phone at Checkout
 **What:** Added checkbox option to use account name/phone pre-filled at checkout.  
-**Why:** Reduces friction — returning users should not re-type known information.  
+**Why:** Reduces friction - returning users should not re-type known information.  
 **Impact:** Faster checkout flow, fewer form abandonment cases.
 
 ### Razorpay Integration
-**What:** Full Razorpay payment flow added — create order, checkout modal, callback, verification, DB confirmation.  
+**What:** Full Razorpay payment flow added - create order, checkout modal, callback, verification, DB confirmation.  
 **Why:** Cash-on-delivery alone is insufficient for scaling; online payments reduce collection risk and improve cash flow.  
 **Impact:** Business can now accept UPI, cards, net banking. Critical for growth and B2C trust.
 
@@ -546,33 +546,33 @@ Based on git commit history and code inspection:
 | Risk | Detail | Mitigation |
 |------|--------|-----------|
 | **Test Razorpay Keys in Production** | If live keys are not swapped in, all payments fail silently or go to test mode | Replace `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` with live credentials before launch |
-| **Auth Session in localStorage** | User session stored in localStorage is vulnerable to XSS — a malicious script can steal user identity | Migrate to HTTP-only cookies / server-side sessions; or add CSP headers as interim protection |
-| **No Admin Route Protection Confirmed** | Admin pages at `/admin/*` — route-level middleware enforcement of `role === 'admin'` was not confirmed in code | Audit `src/middleware.ts` (if present) and ensure all `/admin/*` routes verify role server-side |
-| **No Real-time Order Updates** | Order tracking page requires manual refresh — customers don't know status changed until they reload | Add polling (`setInterval`) or Server-Sent Events on the order tracking page |
-| **Agent Token Distribution** | updateToken is sent to agents through informal channels (WhatsApp, etc.) — no formal agent assignment system | Build an agent management interface; tokens should be distributed through a controlled system |
+| **Auth Session in localStorage** | User session stored in localStorage is vulnerable to XSS - a malicious script can steal user identity | Migrate to HTTP-only cookies / server-side sessions; or add CSP headers as interim protection |
+| **No Admin Route Protection Confirmed** | Admin pages at `/admin/*` - route-level middleware enforcement of `role === 'admin'` was not confirmed in code | Audit `src/middleware.ts` (if present) and ensure all `/admin/*` routes verify role server-side |
+| **No Real-time Order Updates** | Order tracking page requires manual refresh - customers don't know status changed until they reload | Add polling (`setInterval`) or Server-Sent Events on the order tracking page |
+| **Agent Token Distribution** | updateToken is sent to agents through informal channels (WhatsApp, etc.) - no formal agent assignment system | Build an agent management interface; tokens should be distributed through a controlled system |
 
 ### MEDIUM Priority
 
 | Risk | Detail | Mitigation |
 |------|--------|-----------|
 | **No Email / SMS Notifications** | Orders placed, status updates, and ETAs are not communicated proactively to customers | Integrate Twilio (SMS) or SendGrid (email); at minimum send SMS on order placed and out-for-delivery |
-| **Single AGENT_PIN** | One global PIN for all agents — if leaked, any order can be updated by anyone | Implement per-agent credentials or rotate PIN regularly |
+| **Single AGENT_PIN** | One global PIN for all agents - if leaked, any order can be updated by anyone | Implement per-agent credentials or rotate PIN regularly |
 | **No Inventory Sync** | Inventory table tracks stock but no automated decrement on order placement | Add inventory reservation on order create and rollback on cancel |
-| **Hardcoded 10% Convenience Fee** | Fee is hardcoded in `CartContext` — changing it requires a code deploy | Move to environment variable or DB config |
-| **No Rate Limiting on APIs** | Auth and order APIs have no rate limiting — vulnerable to brute-force and spam | Add rate limiting via Vercel Edge Config or middleware |
-| **Product Catalog Dual-Source Complexity** | Category-specific tables + normalized products table — two sources of truth can diverge | Document which source is authoritative per category; add admin tools to sync them |
+| **Hardcoded 10% Convenience Fee** | Fee is hardcoded in `CartContext` - changing it requires a code deploy | Move to environment variable or DB config |
+| **No Rate Limiting on APIs** | Auth and order APIs have no rate limiting - vulnerable to brute-force and spam | Add rate limiting via Vercel Edge Config or middleware |
+| **Product Catalog Dual-Source Complexity** | Category-specific tables + normalized products table - two sources of truth can diverge | Document which source is authoritative per category; add admin tools to sync them |
 | **No Order Cancellation by Customer** | Customers cannot cancel their own orders | Add a cancellation window (e.g., 5 minutes post-order) with automatic status check |
 
 ### LOW Priority
 
 | Risk | Detail | Mitigation |
 |------|--------|-----------|
-| **No Product Reviews** | Users cannot rate or review products — limits trust signals | Planned for future phase |
+| **No Product Reviews** | Users cannot rate or review products - limits trust signals | Planned for future phase |
 | **No SEO Metadata** | Product and category pages may lack meta tags, OG tags | Add `generateMetadata()` to product/category pages |
-| **No Analytics** | No Google Analytics, Mixpanel, or similar — no funnel visibility | Add analytics before launch to understand user behavior |
+| **No Analytics** | No Google Analytics, Mixpanel, or similar - no funnel visibility | Add analytics before launch to understand user behavior |
 | **No Multi-currency / Multi-language** | INR only, English only | Acceptable for MVP; document for future |
 | **localStorage Cart Limit** | Very large carts could theoretically approach localStorage limits | Not a near-term concern for construction materials (low item count per order) |
-| **Image Hosting** | Product image URLs are stored as strings — no image CDN or fallback | Host images on Vercel or Cloudinary; add fallback image on broken URLs |
+| **Image Hosting** | Product image URLs are stored as strings - no image CDN or fallback | Host images on Vercel or Cloudinary; add fallback image on broken URLs |
 
 ---
 
@@ -626,8 +626,8 @@ Based on git commit history and code inspection:
 #### 1. The Two-Source Product Catalog
 
 There are **two ways products are stored**:
-- **Category-specific flat tables** (`carpentry`, `plumbing`, etc.) — the **primary source** used in production
-- **Normalized `products` + `product_variants` tables** — legacy/fallback, enabled by `LEGACY_PRODUCTS_TABLE=1`
+- **Category-specific flat tables** (`carpentry`, `plumbing`, etc.) - the **primary source** used in production
+- **Normalized `products` + `product_variants` tables** - legacy/fallback, enabled by `LEGACY_PRODUCTS_TABLE=1`
 
 The `getProductsFromCategoryTables()` function in [src/lib/products.ts](src/lib/products.ts) is the primary product fetch path. The `getProductCatalog()` function is the fallback. Do not confuse the two. The `products_catalog_view` is a UNION of all category tables and is used for cross-category queries.
 
@@ -636,10 +636,10 @@ When importing new products, they go into the appropriate category table. The `n
 #### 2. The Two-Token Order System
 
 Every order has two tokens:
-- **`statusToken`** — given to the customer for order tracking. Never grants write access.
-- **`updateToken`** — given to agents. Never sent to the browser in any API response.
+- **`statusToken`** - given to the customer for order tracking. Never grants write access.
+- **`updateToken`** - given to agents. Never sent to the browser in any API response.
 
-This separation is critical for security. The API at `POST /api/orders` returns only `statusToken`. The `updateToken` is distributed to agents through internal operations channels. Do not change this — sending `updateToken` to customers would allow them to forge status updates.
+This separation is critical for security. The API at `POST /api/orders` returns only `statusToken`. The `updateToken` is distributed to agents through internal operations channels. Do not change this - sending `updateToken` to customers would allow them to forge status updates.
 
 #### 3. Paise vs. Rupees
 
@@ -650,8 +650,8 @@ When writing any DB query or comparing prices, always work in paise. When displa
 #### 4. Unpooled vs. Pooled DB Connection
 
 In [src/lib/db.ts](src/lib/db.ts), there are two database clients:
-- `pool` — PgBouncer pooled endpoint (for reads)
-- `unpooled` — Direct primary connection (for all writes and reads after writes)
+- `pool` - PgBouncer pooled endpoint (for reads)
+- `unpooled` - Direct primary connection (for all writes and reads after writes)
 
 Always use `unpooled` when: (a) writing data, or (b) reading data that must immediately reflect a write. Using the pooled connection for a read after a write can return stale data from a replica.
 
@@ -670,11 +670,11 @@ This is enforced at two levels: the `VALID_STATUS_TRANSITIONS` constant in [src/
 
 #### 6. Payment Amount is Locked Server-Side
 
-The Razorpay order amount is set from the **DB order's total** — not from anything the client sends. The flow is:
+The Razorpay order amount is set from the **DB order's total** - not from anything the client sends. The flow is:
 1. Client sends cart + form → server validates and calculates total → stores in DB → creates Razorpay order with that amount
 2. Client never specifies the payment amount
 
-If you ever need to change how the total is calculated, change it in [src/app/api/payment/create-order/route.ts](src/app/api/payment/create-order/route.ts) — not on the frontend.
+If you ever need to change how the total is calculated, change it in [src/app/api/payment/create-order/route.ts](src/app/api/payment/create-order/route.ts) - not on the frontend.
 
 #### 7. Cart Persistence Key
 
@@ -686,7 +686,7 @@ The 10% convenience fee is hardcoded in [src/components/CartContext.tsx](src/com
 
 #### 9. Admin Routes Are Not Protected by Middleware (Verify This)
 
-Admin pages at `/admin/*` display sensitive business data. Ensure that `src/middleware.ts` (or equivalent route-level checks) properly verifies `user.role === 'admin'` before rendering admin pages. This must be server-side — client-side guards alone are insufficient.
+Admin pages at `/admin/*` display sensitive business data. Ensure that `src/middleware.ts` (or equivalent route-level checks) properly verifies `user.role === 'admin'` before rendering admin pages. This must be server-side - client-side guards alone are insufficient.
 
 #### 10. bcrypt Rounds
 
@@ -694,7 +694,7 @@ User passwords are hashed with **12 bcrypt rounds** (constant `BCRYPT_ROUNDS` in
 
 #### 11. Database Initialization
 
-The `initializeAllTables()` function creates all schema tables. It is idempotent (uses `CREATE TABLE IF NOT EXISTS`) and safe to run multiple times. The `/api/init-db` endpoint calls it. This is a one-time setup — only needed on a fresh database.
+The `initializeAllTables()` function creates all schema tables. It is idempotent (uses `CREATE TABLE IF NOT EXISTS`) and safe to run multiple times. The `/api/init-db` endpoint calls it. This is a one-time setup - only needed on a fresh database.
 
 To add a new column to an existing table, write a migration function in [src/lib/db.ts](src/lib/db.ts) similar to `addUserIdToOrders()`.
 
@@ -718,7 +718,7 @@ The client-side `verify-payment` route also exists for cases where you want JS-b
 
 ### What Has Been Built
 
-FastGet is a complete online ordering platform for construction materials. Think of it like Zomato or Blinkit, but for building supplies — customers can browse products, add them to a cart, and place an order for delivery to their worksite within 30–60 minutes.
+FastGet is a complete online ordering platform for construction materials. Think of it like Zomato or Blinkit, but for building supplies - customers can browse products, add them to a cart, and place an order for delivery to their worksite within 30–60 minutes.
 
 The platform includes everything needed to run the business:
 - A **customer-facing website** where people browse and buy products
@@ -751,7 +751,7 @@ All of this is built on modern, cloud-based infrastructure that can handle growt
 1. Customers can browse 8 categories of construction materials, search by product name or brand, and see prices, discounts, and stock availability
 2. A fully working cart with real-time totals, convenience fee calculation, and saved state between sessions
 3. Checkout with delivery address, urgent or scheduled delivery selection, and choice of cash or online payment
-4. Razorpay integration supporting UPI, cards, and net banking — with proper security measures to prevent payment fraud
+4. Razorpay integration supporting UPI, cards, and net banking - with proper security measures to prevent payment fraud
 5. Order status tracking for customers via a unique link
 6. Delivery agent status updates via a secure PIN-protected interface
 7. Admin visibility into all orders and revenue

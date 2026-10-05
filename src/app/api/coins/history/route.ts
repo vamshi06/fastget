@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/coins/history
  *
  * Returns the logged-in user's own coin balance and transaction history (for
- * the "My Coins" account page). Always the session's own user — no userId param.
+ * the "My Coins" account page). Always the session's own user - no userId param.
  */
 export async function GET() {
   const auth = await requireSession();
@@ -22,7 +22,7 @@ export async function GET() {
     ]);
     return NextResponse.json({ balance, transactions });
   } catch (error) {
-    logger.error('API', 'GET /api/coins/history — unhandled error', {
+    logger.error('API', 'GET /api/coins/history - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });

@@ -28,7 +28,7 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
     logger.api('DELETE', '/admin/api/reviews/feedback/[id]', 200, Date.now() - start);
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('API', 'DELETE /admin/api/reviews/feedback/[id] — unhandled error', {
+    logger.error('API', 'DELETE /admin/api/reviews/feedback/[id] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('DELETE', '/admin/api/reviews/feedback/[id]', 500, Date.now() - start);

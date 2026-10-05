@@ -227,7 +227,7 @@ export default function NewProductPage() {
                 placeholder="0.00" step="0.01" min="0"
                 className={inputCls} disabled={loading}
               />
-              <p className="mt-1 text-xs text-brand-steel">Optional — shown as strikethrough price</p>
+              <p className="mt-1 text-xs text-brand-steel">Optional - shown as strikethrough price</p>
             </div>
           </div>
         </section>

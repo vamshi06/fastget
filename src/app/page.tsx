@@ -20,13 +20,13 @@ export default async function Home() {
       {/* 4. Product-heavy feed */}
       <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
 
-        {/* Flash sales — only rendered while at least one sale is running */}
+        {/* Flash sales - only rendered while at least one sale is running */}
         {flashSales.length > 0 && <FlashSaleCarousel sales={flashSales} />}
 
-        {/* Category grid — right after hero */}
+        {/* Category grid - right after hero */}
         <CategoryStrip />
 
-        {/* Best Deals — all categories, show highest discount first */}
+        {/* Best Deals - all categories, show highest discount first */}
         <ProductSection
           title={t('bestDealsTitle')}
           subtitle={t('bestDealsSubtitle')}

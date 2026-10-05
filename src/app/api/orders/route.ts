@@ -18,19 +18,19 @@ import { logger } from '@/lib/logger';
  * Create a new order with customer details and cart items.
  * Generates unique status and update tokens for order tracking/management.
  *
- * SECURITY: updateToken is NOT returned to the client — it is only for
+ * SECURITY: updateToken is NOT returned to the client - it is only for
  * agents who access orders through the agent dashboard directly.
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
-  logger.info('API', 'POST /api/orders — incoming order request');
+  logger.info('API', 'POST /api/orders - incoming order request');
   try {
     const body = await request.json();
 
     // Validate order form data
     const validationError = validateOrderForm(body);
     if (validationError) {
-      logger.warn('API', 'POST /api/orders — validation failed', { reason: validationError });
+      logger.warn('API', 'POST /api/orders - validation failed', { reason: validationError });
       logger.api('POST', '/api/orders', 400, Date.now() - start);
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { items, total, coinsToRedeem } = body;
 
     // Attribute the order to the logged-in user via the verified session cookie
-    // (never the request body — IDOR fix, consistent with C3). Guests get an
+    // (never the request body - IDOR fix, consistent with C3). Guests get an
     // unattributed order (user_id NULL) and can't redeem coins.
     const session = await getSession();
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       typeof coinsToRedeem === 'number' ? coinsToRedeem : undefined,
     );
     if (!pricing.ok) {
-      logger.warn('API', 'POST /api/orders — pricing rejected', { reason: pricing.error });
+      logger.warn('API', 'POST /api/orders - pricing rejected', { reason: pricing.error });
       logger.api('POST', '/api/orders', pricing.status, Date.now() - start);
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const success = await createOrder(order);
 
     if (!success) {
-      logger.error('API', 'POST /api/orders — DB write failed', { orderId });
+      logger.error('API', 'POST /api/orders - DB write failed', { orderId });
       logger.api('POST', '/api/orders', 502, Date.now() - start);
       return NextResponse.json(
         { error: 'We could not place the order right now. Please try again.' },
@@ -105,16 +105,16 @@ export async function POST(request: NextRequest) {
     if (session?.userId && coinsRedeemed > 0) {
       const debited = await debitCoins(session.userId, coinsRedeemed, orderId);
       if (!debited) {
-        logger.error('API', 'POST /api/orders — coin debit failed after order creation', { orderId, userId: session.userId, coinsRedeemed });
+        logger.error('API', 'POST /api/orders - coin debit failed after order creation', { orderId, userId: session.userId, coinsRedeemed });
       }
     }
 
-    // Best-effort staff alert (Telegram + email) — never blocks/fails the order response.
+    // Best-effort staff alert (Telegram + email) - never blocks/fails the order response.
     await notifyStaffOfNewOrder(order);
 
     logger.api('POST', '/api/orders', 201, Date.now() - start);
 
-    // SECURITY: Return only statusToken — updateToken is intentionally omitted
+    // SECURITY: Return only statusToken - updateToken is intentionally omitted
     // so the customer's browser never holds agent-level access.
     return NextResponse.json(
       {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    logger.error('API', 'POST /api/orders — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'POST /api/orders - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('POST', '/api/orders', 500, Date.now() - start);
     return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }

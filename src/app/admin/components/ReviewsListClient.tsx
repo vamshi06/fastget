@@ -40,7 +40,7 @@ export function ReviewsListClient({ reviews: initialReviews, feedback: initialFe
       }
       setPendingDelete(null);
     } catch {
-      // best-effort admin action — row simply stays if the delete failed
+      // best-effort admin action - row simply stays if the delete failed
     } finally {
       setDeleting(false);
     }
@@ -84,7 +84,7 @@ export function ReviewsListClient({ reviews: initialReviews, feedback: initialFe
                     <td className="px-6 py-4 text-sm font-medium text-brand-charcoal">{r.productName}</td>
                     <td className="px-6 py-4 text-sm text-brand-slate">{r.userName}</td>
                     <td className="px-6 py-4"><StarRating value={r.rating} readOnly size={14} /></td>
-                    <td className="px-6 py-4 text-sm text-brand-slate max-w-sm">{r.comment || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-brand-slate max-w-sm">{r.comment || '-'}</td>
                     <td className="px-6 py-4 text-sm text-brand-slate">{formatDate(r.createdAt)}</td>
                     <td className="px-6 py-4">
                       <button
@@ -126,7 +126,7 @@ export function ReviewsListClient({ reviews: initialReviews, feedback: initialFe
                     <td className="px-6 py-4 text-sm font-semibold text-brand-charcoal">{f.orderId.slice(0, 8).toUpperCase()}</td>
                     <td className="px-6 py-4 text-sm text-brand-slate">{f.userName}</td>
                     <td className="px-6 py-4"><StarRating value={f.rating} readOnly size={14} /></td>
-                    <td className="px-6 py-4 text-sm text-brand-slate max-w-sm">{f.comment || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-brand-slate max-w-sm">{f.comment || '-'}</td>
                     <td className="px-6 py-4 text-sm text-brand-slate">{formatDate(f.createdAt)}</td>
                     <td className="px-6 py-4">
                       <button

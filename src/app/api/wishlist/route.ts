@@ -15,7 +15,7 @@ export async function GET(_request: NextRequest) {
     logger.api('GET', '/api/wishlist', 200, Date.now() - start);
     return NextResponse.json({ items });
   } catch (error) {
-    logger.error('API', 'GET /api/wishlist — unhandled error', {
+    logger.error('API', 'GET /api/wishlist - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/wishlist', 500, Date.now() - start);
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       logger.api('POST', '/api/wishlist', 400, Date.now() - start);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    logger.error('API', 'POST /api/wishlist — unhandled error', {
+    logger.error('API', 'POST /api/wishlist - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/wishlist', 500, Date.now() - start);

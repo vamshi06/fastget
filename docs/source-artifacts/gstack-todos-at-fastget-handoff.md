@@ -13,7 +13,7 @@ Standalone order fulfillment system. See `/Users/vamshi.chirumavilla/fastget/TOD
 
 ### v1.1: PTY session survives sidebar reload
 
-**What:** Today the Terminal tab's PTY dies with the WebSocket — sidebar
+**What:** Today the Terminal tab's PTY dies with the WebSocket - sidebar
 reload, side-panel close, even a quick navigate-away in another tab close
 the session. v1.1 should key the PTY on a tab/session id so a reload
 reattaches to the existing claude process and you keep `/resume` history.
@@ -39,7 +39,7 @@ plus a TTL so abandoned PTYs eventually exit.
 
 **What:** Codex's outside-voice review on cc-pty-import flagged that
 `/health` already surfaces `AUTH_TOKEN` to any localhost caller in headed
-mode (`server.ts:1657`). That's a pre-existing soft leak — anything
+mode (`server.ts:1657`). That's a pre-existing soft leak - anything
 running on localhost gets the root token by hitting `/health`.
 
 **Why:** cc-pty-import sidesteps it by NOT putting the PTY token there
@@ -65,10 +65,10 @@ scope of that PR; deliberately deferred to keep PTY-import small.
 
 ### Pre-existing test failures surfaced during v1.12.0.0 ship
 
-**What:** Two remaining test failures on bare main that have been shipping as-is for multiple versions. (The bearer-json secret-scan regression flagged here originally was a real leak path and has been fixed in this PR — see Completed section below.)
+**What:** Two remaining test failures on bare main that have been shipping as-is for multiple versions. (The bearer-json secret-scan regression flagged here originally was a real leak path and has been fixed in this PR - see Completed section below.)
 
-1. `gstack-config gbrain keys > GSTACK_HOME overrides real config dir` (`test/brain-sync.test.ts:104`) — the GSTACK_HOME env override leaks into the real `~/.gstack/config.yaml`. Test asserts real config does NOT contain `gbrain_sync_mode: full` but it does. Either the test environment isn't isolated correctly or `bin/gstack-config` is writing to both locations.
-2. `Opus 4.7 overlay — pacing directive > keeps Fan out / Effort-match / Literal interpretation nudges` (`test/model-overlay-opus-4-7.test.ts:87`) — v1.10.1.0 (#1166) removed the "Fan out explicitly" nudge from the overlay but the assertion was never updated. Either the nudge should come back (intentional removal reverted) or the test should be updated to match the new expected content.
+1. `gstack-config gbrain keys > GSTACK_HOME overrides real config dir` (`test/brain-sync.test.ts:104`) - the GSTACK_HOME env override leaks into the real `~/.gstack/config.yaml`. Test asserts real config does NOT contain `gbrain_sync_mode: full` but it does. Either the test environment isn't isolated correctly or `bin/gstack-config` is writing to both locations.
+2. `Opus 4.7 overlay - pacing directive > keeps Fan out / Effort-match / Literal interpretation nudges` (`test/model-overlay-opus-4-7.test.ts:87`) - v1.10.1.0 (#1166) removed the "Fan out explicitly" nudge from the overlay but the assertion was never updated. Either the nudge should come back (intentional removal reverted) or the test should be updated to match the new expected content.
 
 **Why:** Both have been green-washing through recent `/ship` runs via "pre-existing test failures skipped: <name>." #1 signals a real config isolation bug; #2 is a stale assertion since the overlay intentionally removed that nudge.
 
@@ -104,13 +104,13 @@ scope of that PR; deliberately deferred to keep PTY-import small.
 
 **Pros:** Catches a class-of-bug, not an instance. Applies to every skill that declares STOP gates. Builds on `canUseTool` primitive in `test/helpers/agent-sdk-runner.ts`.
 
-**Cons:** Real design work. How does a skill declare expected question count — static value in frontmatter, or dynamic based on number of review sections that surface findings? Is the audit inline (blocking, same-turn) or post-hoc (after skill completion)? Calibration of expected-vs-actual thresholds depends on real V0 question-log data across skills.
+**Cons:** Real design work. How does a skill declare expected question count - static value in frontmatter, or dynamic based on number of review sections that surface findings? Is the audit inline (blocking, same-turn) or post-hoc (after skill completion)? Calibration of expected-vs-actual thresholds depends on real V0 question-log data across skills.
 
-**Context:** Relevant files — `scripts/question-registry.ts` (typed question catalog), `scripts/resolvers/question-tuning.ts` (preference classification), `bin/gstack-question-log` (event log), `bin/gstack-question-preference` (read/write preferences), `test/helpers/agent-sdk-runner.ts` (canUseTool harness). Existing question-log already captures fire events; the gap is declaring expected counts and auditing against them.
+**Context:** Relevant files - `scripts/question-registry.ts` (typed question catalog), `scripts/resolvers/question-tuning.ts` (preference classification), `bin/gstack-question-log` (event log), `bin/gstack-question-preference` (read/write preferences), `test/helpers/agent-sdk-runner.ts` (canUseTool harness). Existing question-log already captures fire events; the gap is declaring expected counts and auditing against them.
 
 **Effort:** L (human: ~1-2 weeks / CC+gstack: ~2-3 hours for design doc + first-pass implementation).
 **Priority:** P1 if interactive-skill volume is growing; P2 otherwise.
-**Depends on / blocked by:** design doc — likely its own `docs/designs/STOP_ASK_ENFORCEMENT_V0.md`.
+**Depends on / blocked by:** design doc - likely its own `docs/designs/STOP_ASK_ENFORCEMENT_V0.md`.
 
 ## Context skills
 
@@ -130,7 +130,7 @@ scope of that PR; deliberately deferred to keep PTY-import small.
 **Priority:** P3 (nice-to-have, not blocking anyone yet)
 **Depends on:** `/context-save` + `/context-restore` rename stable in production (v1.0.1.0+). Research: does Conductor expose a spawn-workspace CLI?
 
-## P0: PACING_UPDATES_V0 — Louise's fatigue root cause (V1.1)
+## P0: PACING_UPDATES_V0 - Louise's fatigue root cause (V1.1)
 
 **What:** Implement the pacing overhaul extracted from PLAN_TUNING_V1. Full design in `docs/designs/PACING_UPDATES_V0.md`. Requires: session-state model, `phase` field in question-log schema, registry extension for dynamic findings, pacing as skill-template control flow (not preamble prose), `bin/gstack-flip-decision` command, migration-prompt budget rule, first-run preamble audit, ranking threshold calibration from real V0 data, one-way-door uncapped rule, concrete verification values.
 
@@ -151,7 +151,7 @@ All six items are gated on v1 dogfood results and the acceptance criteria in
 outside-voice review drove a scope rollback from the CEO EXPANSION plan. v1
 ships the observational substrate only; v2 adds behavior adaptation.
 
-### E1 — Substrate wiring (5 skills consume profile)
+### E1 - Substrate wiring (5 skills consume profile)
 
 **What:** Add `{{PROFILE_ADAPTATION:<skill>}}` placeholder to ship, review,
 office-hours, plan-ceo-review, plan-eng-review SKILL.md.tmpl files. Implement
@@ -178,7 +178,7 @@ reads it yet.
 **Priority:** P0
 **Depends on:** 2+ weeks of v1 dogfood, profile diversity check passing.
 
-### E3 — `/plan-tune narrative` + `/plan-tune vibe`
+### E3 - `/plan-tune narrative` + `/plan-tune vibe`
 
 **What:** Event-anchored narrative ("You accepted 7 scope expansions, overrode
 test_failure_triage 4 times, called every PR 'boil the lake'") + one-word vibe
@@ -191,7 +191,7 @@ fallback). v2 work is the narrative generator + /plan-tune skill wiring.
 **Pros:** Killer delight feature. Social surface for gstack. Concrete, specific
 output anchored in real events (not generic AI slop).
 
-**Cons:** Requires stable inferred profile — without calibration it produces
+**Cons:** Requires stable inferred profile - without calibration it produces
 generic paragraphs. Gen-tests need to validate no-slop.
 
 **Context:** Archetypes already defined. Just need the /plan-tune narrative
@@ -201,7 +201,7 @@ subcommand + slop-check test.
 **Priority:** P0
 **Depends on:** Calibrated profile (>= 20 events, 3+ skills, 7+ days span).
 
-### E4 — Blind-spot coach
+### E4 - Blind-spot coach
 
 **What:** Preamble injection that surfaces the OPPOSITE of the user's profile
 once per session per tier >= 2 skill. Boil-the-ocean user gets challenged on
@@ -227,7 +227,7 @@ caught. Dogfood required to calibrate frequency.
 **Priority:** P0
 **Depends on:** E1 shipped + interaction-budget design spec.
 
-### E5 — LANDED celebration HTML page
+### E5 - LANDED celebration HTML page
 
 **What:** When a PR authored by the user is newly merged to the base branch,
 open an animated HTML celebration page in the browser. Confetti + typewriter
@@ -239,7 +239,7 @@ only, no JS deps).
 
 **CRITICAL REVISION from v0 plan:** Passive detection must NOT live in the
 preamble (Codex #9). When promoted, moves to explicit `/plan-tune show-landed`
-OR post-ship hook — not passive detection in the hot path.
+OR post-ship hook - not passive detection in the hot path.
 
 **Why:** Biggest personality moment in gstack. The "one-word thing that makes
 you remember why you built this."
@@ -260,12 +260,12 @@ E2E tests for squash/merge-commit/rebase/co-author/fresh-clone/dedup variants.
 **Depends on:** E3 narrative/vibe shipped. /design-shotgun run on real PR data
 to pick a visual direction, then /design-html to finalize.
 
-### E6 — Auto-adjustment based on declared ↔ inferred mismatch
+### E6 - Auto-adjustment based on declared ↔ inferred mismatch
 
 **What:** Currently `/plan-tune` shows the gap between declared and inferred
 (v1 observational). v2 auto-suggests declaration updates when the gap exceeds
 a threshold ("Your profile says hands-off but you've overridden 40% of
-recommendations — you're actually taste-driven. Update declared autonomy from
+recommendations - you're actually taste-driven. Update declared autonomy from
 0.8 to 0.5?"). Requires explicit user confirmation before any mutation (Codex
 trust-boundary #15 already baked into v1).
 
@@ -286,7 +286,7 @@ real data.
 **Priority:** P0
 **Depends on:** Calibrated profile + real mismatch data from v1 dogfood.
 
-### E7 — Psychographic auto-decide
+### E7 - Psychographic auto-decide
 
 **What:** When inferred profile is calibrated AND a question is two-way AND
 the user's dimensions strongly favor one option, auto-choose without asking
@@ -328,17 +328,17 @@ calibration gate is trustworthy.
 
 ## Sidebar Security
 
-### ML Prompt Injection Classifier — v1 SHIPPED (branch garrytan/prompt-injection-guard)
+### ML Prompt Injection Classifier - v1 SHIPPED (branch garrytan/prompt-injection-guard)
 
 **Status:** IN PROGRESS on branch `garrytan/prompt-injection-guard`. Classifier swap:
-**TestSavantAI** replaces DeBERTa (better on developer content — HN/Reddit/Wikipedia/tech blogs all
+**TestSavantAI** replaces DeBERTa (better on developer content - HN/Reddit/Wikipedia/tech blogs all
 score SAFE 0.98+, attacks score INJECTION 0.99+). Pre-impl gate 3 (benign corpus dry-run)
-forced this pivot — see `~/.gstack/projects/garrytan-gstack/ceo-plans/2026-04-19-prompt-injection-guard.md`.
+forced this pivot - see `~/.gstack/projects/garrytan-gstack/ceo-plans/2026-04-19-prompt-injection-guard.md`.
 
 **What shipped in v1:**
-- `browse/src/security.ts` — canary injection + check, verdict combiner (ensemble rule),
+- `browse/src/security.ts` - canary injection + check, verdict combiner (ensemble rule),
   attack log with rotation, cross-process session state, status reporting
-- `browse/src/security-classifier.ts` — TestSavantAI ONNX classifier + Haiku transcript
+- `browse/src/security-classifier.ts` - TestSavantAI ONNX classifier + Haiku transcript
   classifier (reasoning-blind), both with graceful degradation
 - Canary flows end-to-end: server.ts injects, sidebar-agent.ts checks every outbound
   channel (text, tool args, URLs, file writes) and kills session on leak
@@ -351,9 +351,9 @@ The ML classifier ONLY runs in `sidebar-agent.ts` (non-compiled bun script). The
 browse binary cannot link onnxruntime-node. Architectural controls (XML framing + allowlist)
 defend the compiled-side ingress.
 
-### ML Prompt Injection Classifier — v2 Follow-ups
+### ML Prompt Injection Classifier - v2 Follow-ups
 
-#### ~~Cut Haiku false-positive rate from 44% toward ~15% (P0)~~ — SHIPPED in v1.5.2.0
+#### ~~Cut Haiku false-positive rate from 44% toward ~15% (P0)~~ - SHIPPED in v1.5.2.0
 
 Measured result (500-case BrowseSafe-Bench smoke): detection 67.3% → **56.2%**, FP 44.1% → **22.9%**. Gate passes (detection ≥ 55%, FP ≤ 25%). Knobs that landed: label-first ensemble voting (verdict label trumps numeric confidence for transcript layer), hallucination guard (`verdict=block` at conf < 0.40 → warn-vote), new `THRESHOLDS.SOLO_CONTENT_BLOCK = 0.92` for label-less content classifiers, label-first extension to toolOutput path, tighter Haiku prompt + 8 few-shot exemplars, pinned Haiku model, `claude -p` spawn from `os.tmpdir()` so CLAUDE.md can't poison the classifier, timeout bumped 15s → 45s. CI gate: `browse/test/security-bench-ensemble.test.ts` replays fixture, fail-closed on missing fixture + security-layer diff. The original plan's stop-loss revert order didn't move the FP needle (FPs came from single-layer-BLOCK paths, not ensemble); the real levers turned out to be architectural (label-first) plus a new decoupled threshold.
 
@@ -361,7 +361,7 @@ See CHANGELOG.md [1.5.2.0] for the full shipped summary.
 
 #### Original spec (pre-ship, retained for archive)
 
-**What:** v1 ships the Haiku transcript classifier on every tool output (Read/Grep/Bash/Glob/WebFetch). BrowseSafe-Bench smoke measured detection 67.3% + FP 44.1% — a 4.4x detection lift from L4-only, but FP tripled because Haiku is more aggressive than L4 on edge cases (phishing-style benign content, borderline social engineering). The review banner makes FPs recoverable but 44% is too high for a delightful default.
+**What:** v1 ships the Haiku transcript classifier on every tool output (Read/Grep/Bash/Glob/WebFetch). BrowseSafe-Bench smoke measured detection 67.3% + FP 44.1% - a 4.4x detection lift from L4-only, but FP tripled because Haiku is more aggressive than L4 on edge cases (phishing-style benign content, borderline social engineering). The review banner makes FPs recoverable but 44% is too high for a delightful default.
 
 **Why:** User clicks review banner roughly every-other tool output = real UX friction. Tuning these four knobs together should cut FP to ~15-20% while keeping detection in the 60-70% range:
 
@@ -378,7 +378,7 @@ Ship all four together, re-run BrowseSafe-Bench smoke, record before/after. Targ
 
 #### Cache review decisions per (domain, payload-hash-prefix) (P1)
 
-**What:** If Haiku fires on a page twice in the same session (e.g., user does Bash then Grep on the same suspicious file), the second fire shouldn't re-prompt. Cache the user's decision keyed by a per-session (domain, payloadHash-prefix) pair. Small LRU, ~100 entries, session-scoped (not persistent across sidebar restarts — we want fresh decisions on new sessions).
+**What:** If Haiku fires on a page twice in the same session (e.g., user does Bash then Grep on the same suspicious file), the second fire shouldn't re-prompt. Cache the user's decision keyed by a per-session (domain, payloadHash-prefix) pair. Small LRU, ~100 entries, session-scoped (not persistent across sidebar restarts - we want fresh decisions on new sessions).
 
 **Why:** Reduces review-banner fatigue when the same bit of sketchy content gets scanned multiple times via different tools. At 44% FP on v1, this matters most.
 
@@ -392,7 +392,7 @@ Ship all four together, re-run BrowseSafe-Bench smoke, record before/after. Targ
 **Why:** Expected 15% → 70%+ recall on the actual threat distribution without needing Haiku. Would also cut latency (no CLI subprocess) and drop Haiku cost.
 
 **Effort:** XL (human: ~3-5 days + ~$50 GPU / CC: ~4-6 hours setup + ~$50 GPU)
-**Priority:** P2 research — validate the lift on a held-out test set before committing to replace TestSavant
+**Priority:** P2 research - validate the lift on a held-out test set before committing to replace TestSavant
 
 #### DeBERTa-v3 ensemble as default (P2)
 
@@ -405,7 +405,7 @@ Ship all four together, re-run BrowseSafe-Bench smoke, record before/after. Targ
 **Effort:** M (human: ~2 days / CC: ~1 hour + UX)
 **Priority:** P2 (after #1 tuning to see how much room is left)
 
-#### User-feedback flywheel — decisions become training data (P3)
+#### User-feedback flywheel - decisions become training data (P3)
 
 **What:** Every Allow/Block click is labeled data. Log (suspected_text hash, layer scores, user decision, ts) to ~/.gstack/security/feedback.jsonl. Aggregate via community-pulse when `telemetry: community`. Periodically retrain the classifier on aggregate feedback.
 
@@ -414,9 +414,9 @@ Ship all four together, re-run BrowseSafe-Bench smoke, record before/after. Targ
 **Cons:** Feedback loop can be poisoned if attacker controls enough devices. Need guardrails (stratified sampling, reviewer validation, k-anon minimums on training batch).
 
 **Effort:** L (human: ~1 week for local logging + aggregation pipe, another week for retrain cron / CC: ~2-4 hours per sub-part)
-**Priority:** P3 — only worth building after v2 tuning proves the architecture is the right shape
+**Priority:** P3 - only worth building after v2 tuning proves the architecture is the right shape
 
-#### ~~Shield icon + canary leak banner UI (P0)~~ — SHIPPED
+#### ~~Shield icon + canary leak banner UI (P0)~~ - SHIPPED
 
 Banner landed in commits a9f702a7 (HTML+CSS, variant A mockup) + ffb064af
 (JS wiring + security_event routing + a11y + Escape-to-dismiss). Shield
@@ -424,17 +424,17 @@ icon landed in 59e0635e with 3 states (protected/degraded/inactive),
 custom SVG + mono SEC label per design review Pass 7, hover tooltip with
 per-layer detail.
 
-Known v1 limitation logged as follow-up: shield only updates at connect —
+Known v1 limitation logged as follow-up: shield only updates at connect -
 see "Shield icon continuous polling" above.
 
-#### ~~Shield icon continuous polling (P2)~~ — SHIPPED
+#### ~~Shield icon continuous polling (P2)~~ - SHIPPED
 
 Commit 06002a82: `/sidebar-chat` response now includes `security:
 getSecurityStatus()`, and sidepanel.js calls `updateSecurityShield(data.security)`
 on every poll tick. Shield flips to 'protected' as soon as classifier warmup
 completes (typically ~30s after initial connect on first run), no reload needed.
 
-#### ~~Attack telemetry via gstack-telemetry-log (P1)~~ — SHIPPED
+#### ~~Attack telemetry via gstack-telemetry-log (P1)~~ - SHIPPED
 
 Landed in commits 28ce883c (binary) + f68fa4a9 (security.ts wiring). The
 telemetry binary now accepts `--event-type attack_attempt --url-domain
@@ -458,29 +458,29 @@ Smoke-200 is a sample; full coverage catches the long tail. Run time ~5min herme
 **Priority:** P2
 **Depends on:** v1 shipped + ~2 weeks real data
 
-#### ~~Cross-user aggregate attack dashboard (P2)~~ — CLI SHIPPED, web UI remains
+#### ~~Cross-user aggregate attack dashboard (P2)~~ - CLI SHIPPED, web UI remains
 
 CLI dashboard shipped in commits a5588ec0 (schema migration) + 2d107978
 (community-pulse edge function security aggregation) + 756875a7 (bin/gstack-
 security-dashboard). Users can now run `gstack-security-dashboard` to see
 attacks last 7 days, top attacked domains, detection-layer distribution,
-and verdict counts — all aggregated from the Supabase community-pulse pipe.
+and verdict counts - all aggregated from the Supabase community-pulse pipe.
 
-Web UI at gstack.gg/dashboard/security is still open — that's a separate
+Web UI at gstack.gg/dashboard/security is still open - that's a separate
 webapp project outside this repo's scope.
 
-#### TestSavantAI ensemble → DeBERTa-v3 ensemble (P2) — SHIPPED (opt-in)
+#### TestSavantAI ensemble → DeBERTa-v3 ensemble (P2) - SHIPPED (opt-in)
 
 Commits b4e49d08 + 8e9ec52d + 4e051603 + 7a815fa7: DeBERTa-v3-base-injection-onnx
 is now wired as an opt-in L4c ensemble classifier. Enable via
-`GSTACK_SECURITY_ENSEMBLE=deberta` — sidebar-agent warmup downloads the 721MB
+`GSTACK_SECURITY_ENSEMBLE=deberta` - sidebar-agent warmup downloads the 721MB
 model to ~/.gstack/models/deberta-v3-injection/ on first run. combineVerdict
 becomes a 2-of-3 agreement rule (testsavant + deberta + transcript) when
 enabled. Default behavior unchanged (2-of-2 testsavant + transcript).
 
-#### ~~TestSavantAI + DeBERTa-v3 ensemble~~ — SHIPPED opt-in (see entry above)
+#### ~~TestSavantAI + DeBERTa-v3 ensemble~~ - SHIPPED opt-in (see entry above)
 
-#### ~~Read/Glob/Grep tool-output injection coverage (P2)~~ — SHIPPED
+#### ~~Read/Glob/Grep tool-output injection coverage (P2)~~ - SHIPPED
 
 Commits f2e80dd7 + 0098d574: sidebar-agent.ts now scans tool outputs from
 Read, Glob, Grep, WebFetch, and Bash via `SCANNED_TOOLS` set. Content >= 32
@@ -495,34 +495,34 @@ tool output text (was empty before), and combineVerdict accepts a
 `toolOutput: true` opt that blocks on a single ML classifier at BLOCK
 threshold (user-input default unchanged for SO-FP mitigation).
 
-#### ~~Adversarial + integration + smoke-bench test suites (P1)~~ — SHIPPED
+#### ~~Adversarial + integration + smoke-bench test suites (P1)~~ - SHIPPED
 
 Four test files shipped this round:
-  * `browse/test/security-adversarial.test.ts` (94a83c50) — 23 canary-channel
+  * `browse/test/security-adversarial.test.ts` (94a83c50) - 23 canary-channel
     + verdict-combiner attack-shape tests
-  * `browse/test/security-integration.test.ts` (07745e04) — 10 layer-coexistence
+  * `browse/test/security-integration.test.ts` (07745e04) - 10 layer-coexistence
     + defense-in-depth regression guards
-  * `browse/test/security-live-playwright.test.ts` (b9677519) — 7 live-Chromium
+  * `browse/test/security-live-playwright.test.ts` (b9677519) - 7 live-Chromium
     fixture tests (5 deterministic + 2 ML, skipped if model cache absent)
-  * `browse/test/security-bench.test.ts` (afc6661f) — BrowseSafe-Bench 200-case
+  * `browse/test/security-bench.test.ts` (afc6661f) - BrowseSafe-Bench 200-case
     smoke harness with hermetic dataset cache + v1 baseline metrics
 
-#### Bun-native 5ms inference (P3 research) — SKELETON SHIPPED, forward pass open
+#### Bun-native 5ms inference (P3 research) - SKELETON SHIPPED, forward pass open
 
 Research skeleton landed this round (browse/src/security-bunnative.ts,
 docs/designs/BUN_NATIVE_INFERENCE.md, browse/test/security-bunnative.test.ts):
 
-  * Pure-TS WordPiece tokenizer — reads HF tokenizer.json directly, matches
+  * Pure-TS WordPiece tokenizer - reads HF tokenizer.json directly, matches
     transformers.js output on fixture strings (correctness-tested in CI)
   * Stable `classify()` API that current callers can wire against today
-  * Benchmark harness with p50/p95/p99 reporting — anchors v1 WASM baseline
+  * Benchmark harness with p50/p95/p99 reporting - anchors v1 WASM baseline
     for future regressions
 
 Design doc captures the roadmap:
-  * Approach A: pure-TS + Float32Array SIMD — ruled out (can't beat WASM)
-  * Approach B: Bun FFI + Apple Accelerate cblas_sgemm — target ~3-6ms p50,
+  * Approach A: pure-TS + Float32Array SIMD - ruled out (can't beat WASM)
+  * Approach B: Bun FFI + Apple Accelerate cblas_sgemm - target ~3-6ms p50,
     macOS-only, ~1000 LOC
-  * Approach C: Bun WebGPU — unexplored, worth a spike
+  * Approach C: Bun WebGPU - unexplored, worth a spike
 
 Remaining work (XL, multi-week):
   * FFI proof-of-concept for cblas_sgemm
@@ -568,7 +568,7 @@ May replace `/setup-browser-cookies` for most use cases since the user's real co
 
 ### Bundle server.ts into compiled binary
 
-**What:** Eliminate `resolveServerScript()` fallback chain entirely — bundle server.ts into the compiled browse binary.
+**What:** Eliminate `resolveServerScript()` fallback chain entirely - bundle server.ts into the compiled browse binary.
 
 **Why:** The current fallback chain (check adjacent to cli.ts, check global install) is fragile and caused bugs in v0.3.2. A single compiled binary is simpler and more reliable.
 
@@ -610,7 +610,7 @@ May replace `/setup-browser-cookies` for most use cases since the user's real co
 **Effort:** S
 **Priority:** P3
 
-### State persistence — SHIPPED
+### State persistence - SHIPPED
 
 ~~**What:** Save/load cookies + localStorage to JSON files for reproducible test sessions.~~
 
@@ -623,13 +623,13 @@ May replace `/setup-browser-cookies` for most use cases since the user's real co
 
 **What:** Encrypted credential storage, referenced by name. LLM never sees passwords.
 
-**Why:** Security — currently auth credentials flow through the LLM context. Vault keeps secrets out of the AI's view.
+**Why:** Security - currently auth credentials flow through the LLM context. Vault keeps secrets out of the AI's view.
 
 **Effort:** L
 **Priority:** P3
 **Depends on:** Sessions, state persistence
 
-### Iframe support — SHIPPED
+### Iframe support - SHIPPED
 
 ~~**What:** `frame <sel>` and `frame main` commands for cross-frame interaction.~~
 
@@ -686,20 +686,20 @@ May replace `/setup-browser-cookies` for most use cases since the user's real co
 
 **What:** WebSocket-based live preview for pair browsing sessions.
 
-**Why:** Enables real-time collaboration — human watches AI browse.
+**Why:** Enables real-time collaboration - human watches AI browse.
 
 **Effort:** L
 **Priority:** P4
 
-### Headed mode with Chrome extension — SHIPPED
+### Headed mode with Chrome extension - SHIPPED
 
 `$B connect` launches Playwright's bundled Chromium in headed mode with the gstack Chrome extension auto-loaded. `$B handoff` now produces the same result (extension + side panel). Sidebar chat gated behind `--chat` flag.
 
-### `$B watch` — SHIPPED
+### `$B watch` - SHIPPED
 
 Claude observes user browsing in passive read-only mode with periodic snapshots. `$B watch stop` exits with summary. Mutation commands blocked during watch.
 
-### Sidebar scout / file drop relay — SHIPPED
+### Sidebar scout / file drop relay - SHIPPED
 
 Sidebar agent writes structured messages to `.context/sidebar-inbox/`. Workspace agent reads via `$B inbox`. Message format: `{type, timestamp, page, userMessage, sidebarSessionId}`.
 
@@ -715,7 +715,7 @@ Sidebar agent writes structured messages to `.context/sidebar-inbox/`. Workspace
 **Priority:** P3
 **Depends on:** Headed mode (shipped)
 
-### Sidebar agent needs Write tool + better error visibility — SHIPPED
+### Sidebar agent needs Write tool + better error visibility - SHIPPED
 
 **What:** Two issues with the sidebar agent (`sidebar-agent.ts`): (1) `--allowedTools` is hardcoded to `Bash,Read,Glob,Grep`, missing `Write`. Claude can't create files (like CSVs) when asked. (2) When Claude errors or returns empty, the sidebar UI shows nothing, just a green dot. No error message, no "I tried but failed", nothing.
 
@@ -743,13 +743,13 @@ Sidebar agent writes structured messages to `.context/sidebar-inbox/`. Workspace
 **Priority:** P4
 **Depends on:** Chrome extension proving value via sideloading
 
-### Linux cookie decryption — PARTIALLY SHIPPED
+### Linux cookie decryption - PARTIALLY SHIPPED
 
 ~~**What:** GNOME Keyring / kwallet / DPAPI support for non-macOS cookie import.~~
 
 Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, Brave, Edge on Linux with GNOME Keyring (libsecret) and "peanuts" fallback. Windows DPAPI support remains deferred.
 
-**Remaining:** Windows cookie decryption (DPAPI). Needs complete rewrite — PR #64 was 1346 lines and stale.
+**Remaining:** Windows cookie decryption (DPAPI). Needs complete rewrite - PR #64 was 1346 lines and stale.
 
 **Effort:** L (Windows only)
 **Priority:** P4
@@ -759,7 +759,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ### /ship Step 12 test harness should exec the actual template bash, not a reimplementation
 
-**What:** `test/ship-version-sync.test.ts` currently reimplements the bash from `ship/SKILL.md.tmpl` Step 12 inside template literals. When the template changes, both sides must be updated — exactly the drift-risk pattern the Step 12 fix is meant to prevent, applied to our own testing strategy. Replace with a helper that extracts the fenced bash blocks from the template at test time and runs them verbatim (similar to the `skill-parser.ts` pattern).
+**What:** `test/ship-version-sync.test.ts` currently reimplements the bash from `ship/SKILL.md.tmpl` Step 12 inside template literals. When the template changes, both sides must be updated - exactly the drift-risk pattern the Step 12 fix is meant to prevent, applied to our own testing strategy. Replace with a helper that extracts the fenced bash blocks from the template at test time and runs them verbatim (similar to the `skill-parser.ts` pattern).
 
 **Why:** Surfaced by the Claude adversarial subagent during the v1.0.1.0 ship. Today the tests would stay green while the template regresses, because the error-message strings already differ between test and template. It's a silent-drift bug waiting to happen.
 
@@ -771,9 +771,9 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ### /ship Step 12 BASE_VERSION silent fallback to 0.0.0.0 when git show fails
 
-**What:** `BASE_VERSION=$(git show origin/<base>:VERSION 2>/dev/null || echo "0.0.0.0")` silently defaults to `0.0.0.0` in any failure mode — detached HEAD, no origin, offline, base branch renamed. In such states, a real drift could be misclassified or silently repaired with the wrong value. Distinguish "origin/<base> unreachable" from "origin/<base>:VERSION absent" and fail loudly on the former.
+**What:** `BASE_VERSION=$(git show origin/<base>:VERSION 2>/dev/null || echo "0.0.0.0")` silently defaults to `0.0.0.0` in any failure mode - detached HEAD, no origin, offline, base branch renamed. In such states, a real drift could be misclassified or silently repaired with the wrong value. Distinguish "origin/<base> unreachable" from "origin/<base>:VERSION absent" and fail loudly on the former.
 
-**Why:** Flagged as CRITICAL (confidence 8/10) by the Claude adversarial subagent during the v1.0.1.0 ship. Low practical risk because `/ship` Step 3 already fetches origin before Step 12 runs — any reachability failure would abort Step 3 long before this code runs. Still, defense in depth: if someone invokes Step 12 bash outside the full /ship pipeline (e.g., via a standalone helper), the fallback masks a real problem.
+**Why:** Flagged as CRITICAL (confidence 8/10) by the Claude adversarial subagent during the v1.0.1.0 ship. Low practical risk because `/ship` Step 3 already fetches origin before Step 12 runs - any reachability failure would abort Step 3 long before this code runs. Still, defense in depth: if someone invokes Step 12 bash outside the full /ship pipeline (e.g., via a standalone helper), the fallback masks a real problem.
 
 **Context:** Fix: wrap with `git rev-parse --verify origin/<base>` probe; if that fails, error out rather than defaulting. Touches `ship/SKILL.md.tmpl` Step 12 idempotency block (around line 409). Tests need a case where `git show` fails.
 
@@ -783,7 +783,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ### GitLab support for /land-and-deploy
 
-**What:** Add GitLab MR merge + CI polling support to `/land-and-deploy` skill. Currently uses `gh pr view`, `gh pr checks`, `gh pr merge`, and `gh run list/view` in 15+ places — each needs a GitLab conditional path using `glab ci status`, `glab mr merge`, etc.
+**What:** Add GitLab MR merge + CI polling support to `/land-and-deploy` skill. Currently uses `gh pr view`, `gh pr checks`, `gh pr merge`, and `gh run list/view` in 15+ places - each needs a GitLab conditional path using `glab ci status`, `glab mr merge`, etc.
 
 **Why:** Without this, GitLab users can `/ship` (create MR) but can't `/land-and-deploy` (merge + verify). Completes the GitLab story end-to-end.
 
@@ -805,13 +805,13 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 **Priority:** P3
 **Depends on:** None
 
-### Ship log — persistent record of /ship runs
+### Ship log - persistent record of /ship runs
 
 **What:** Append structured JSON entry to `.gstack/ship-log.json` at end of every /ship run (version, date, branch, PR URL, review findings, Greptile stats, todos completed, test results).
 
 **Why:** /retro has no structured data about shipping velocity. Ship log enables: PRs-per-week trending, review finding rates, Greptile signal over time, test suite growth.
 
-**Context:** /retro already reads greptile-history.md — same pattern. Eval persistence (eval-store.ts) shows the JSON append pattern exists in the codebase. ~15 lines in ship template.
+**Context:** /retro already reads greptile-history.md - same pattern. Eval persistence (eval-store.ts) shows the JSON append pattern exists in the codebase. ~15 lines in ship template.
 
 **Effort:** S
 **Priority:** P2
@@ -848,7 +848,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **What:** Aggregate greptile-history.md into machine-readable JSON summary of false positive patterns, exportable to the Greptile team for model improvement.
 
-**Why:** Closes the feedback loop — Greptile can use FP data to stop making the same mistakes on your codebase.
+**Why:** Closes the feedback loop - Greptile can use FP data to stop making the same mistakes on your codebase.
 
 **Context:** Was a P3 Future Idea. Upgraded to P2 now that greptile-history.md data infrastructure exists. The signal data is already being collected; this just makes it exportable. ~40 lines.
 
@@ -874,7 +874,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **What:** Compare baseline.json over time, detect regressions across QA runs.
 
-**Why:** Spot quality trends — is the app getting better or worse?
+**Why:** Spot quality trends - is the app getting better or worse?
 
 **Context:** QA already writes structured reports. This adds cross-run comparison.
 
@@ -924,9 +924,9 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **What:** When Step 7 coverage audit identifies existing ★-rated tests (smoke/trivial assertions), generate improved versions testing edge cases and error paths.
 
-**Why:** Many codebases have tests that technically exist but don't catch real bugs — `expect(component).toBeDefined()` isn't testing behavior. Upgrading these closes the gap between "has tests" and "has good tests."
+**Why:** Many codebases have tests that technically exist but don't catch real bugs - `expect(component).toBeDefined()` isn't testing behavior. Upgrading these closes the gap between "has tests" and "has good tests."
 
-**Context:** Requires the quality scoring rubric from the test coverage audit. Modifying existing test files is riskier than creating new ones — needs careful diffing to ensure the upgraded test still passes. Consider creating a companion test file rather than modifying the original.
+**Context:** Requires the quality scoring rubric from the test coverage audit. Modifying existing test files is riskier than creating new ones - needs careful diffing to ensure the upgraded test still passes. Consider creating a companion test file rather than modifying the original.
 
 **Effort:** M
 **Priority:** P3
@@ -959,7 +959,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ### gstack-upload helper
 
-**What:** `browse/bin/gstack-upload` — upload file to S3, return public URL.
+**What:** `browse/bin/gstack-upload` - upload file to S3, return public URL.
 
 **Why:** Shared utility for all skills that need to embed images in PRs.
 
@@ -983,7 +983,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **What:** Add `useWorktree?: boolean` option to `runSkillTest()` so any Claude E2E test can opt into worktree mode for full repo context instead of tmpdir fixtures.
 
-**Why:** Some Claude E2E tests (CSO audit, review-sql-injection) create minimal fake repos but would produce more realistic results with full repo context. The infrastructure exists (`describeWithWorktree()` in e2e-helpers.ts) — this extends it to the session-runner level.
+**Why:** Some Claude E2E tests (CSO audit, review-sql-injection) create minimal fake repos but would produce more realistic results with full repo context. The infrastructure exists (`describeWithWorktree()` in e2e-helpers.ts) - this extends it to the session-runner level.
 
 **Context:** WorktreeManager shipped in v0.11.12.0. Currently only Gemini/Codex tests use worktrees. Claude tests use planted-bug fixture repos which are correct for their purpose, but new tests that want real repo context can use `describeWithWorktree()` today. This TODO is about making it even easier via a flag on `runSkillTest()`.
 
@@ -991,7 +991,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 **Priority:** P3
 **Depends on:** Worktree isolation (shipped v0.11.12.0)
 
-### E2E model pinning — SHIPPED
+### E2E model pinning - SHIPPED
 
 ~~**What:** Pin E2E tests to claude-sonnet-4-6 for cost efficiency, add retry:2 for flaky LLM responses.~~
 
@@ -1013,9 +1013,9 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 **What:** Run `/qa` as a GitHub Action step, fail PR if health score drops below threshold.
 
-**Why:** Automated quality gate catches regressions before merge. Currently QA is manual — CI integration makes it part of the standard workflow.
+**Why:** Automated quality gate catches regressions before merge. Currently QA is manual - CI integration makes it part of the standard workflow.
 
-**Context:** Requires headless browse binary available in CI. The `/qa` skill already produces `baseline.json` with health scores — CI step would compare against the main branch baseline and fail if score drops. Would need `ANTHROPIC_API_KEY` in CI secrets since `/qa` uses Claude.
+**Context:** Requires headless browse binary available in CI. The `/qa` skill already produces `baseline.json` with health scores - CI step would compare against the main branch baseline and fail if score drops. Would need `ANTHROPIC_API_KEY` in CI secrets since `/qa` uses Claude.
 
 **Effort:** M
 **Priority:** P2
@@ -1023,7 +1023,7 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 ### Cross-platform URL open helper
 
-**What:** `gstack-open-url` helper script — detect platform, use `open` (macOS) or `xdg-open` (Linux).
+**What:** `gstack-open-url` helper script - detect platform, use `open` (macOS) or `xdg-open` (Linux).
 
 **Why:** The first-time Completeness Principle intro uses macOS `open` to launch the essay. If gstack ever supports Linux, this silently fails.
 
@@ -1037,7 +1037,7 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 **Why:** Current ref staleness detection (async count() check) only catches stale refs at action time. CDP mutation detection would proactively warn when refs become stale, preventing the 5-second timeout entirely for SPA re-renders.
 
-**Context:** Parts 1+2 of ref staleness fix (RefEntry metadata + eager validation via count()) are shipped. This is Part 3 — the most ambitious piece. Requires CDP session alongside Playwright, MutationObserver bridge, and careful performance tuning to avoid overhead on every DOM change.
+**Context:** Parts 1+2 of ref staleness fix (RefEntry metadata + eager validation via count()) are shipped. This is Part 3 - the most ambitious piece. Requires CDP session alongside Playwright, MutationObserver bridge, and careful performance tuning to avoid overhead on every DOM change.
 
 **Effort:** L
 **Priority:** P3
@@ -1051,7 +1051,7 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 **Why:** Cross-team design discovery at scale. Local `~/.gstack/projects/$SLUG/` keyword-grep discovery works for same-machine users now, but Supabase sync makes it work across the whole team. Duplicate ideas surface, everyone sees what's been explored.
 
-**Context:** /office-hours writes design docs to `~/.gstack/projects/$SLUG/`. The team store already syncs test plans, retro snapshots, QA reports. Design docs follow the same pattern — just add a sync adapter.
+**Context:** /office-hours writes design docs to `~/.gstack/projects/$SLUG/`. The team store already syncs test plans, retro snapshots, QA reports. Design docs follow the same pattern - just add a sync adapter.
 
 **Effort:** S
 **Priority:** P2
@@ -1069,7 +1069,7 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 ## Design Review
 
-### /plan-design-review + /qa-design-review + /design-consultation — SHIPPED
+### /plan-design-review + /qa-design-review + /design-consultation - SHIPPED
 
 Shipped as v0.5.0 on main. Includes `/plan-design-review` (report-only design audit), `/qa-design-review` (audit + fix loop), and `/design-consultation` (interactive DESIGN.md creation). `{{DESIGN_METHODOLOGY}}` resolver provides shared 80-item design audit checklist.
 
@@ -1099,17 +1099,17 @@ Shipped as v0.5.0 on main. Includes `/plan-design-review` (report-only design au
 
 ## Document-Release
 
-### Auto-invoke /document-release from /ship — SHIPPED
+### Auto-invoke /document-release from /ship - SHIPPED
 
-Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` automatically reads `document-release/SKILL.md` and executes the doc update workflow. Zero-friction doc updates.
+Shipped in v0.8.3. Step 8.5 added to `/ship` - after creating the PR, `/ship` automatically reads `document-release/SKILL.md` and executes the doc update workflow. Zero-friction doc updates.
 
 ### `{{DOC_VOICE}}` shared resolver
 
 **What:** Create a placeholder resolver in gen-skill-docs.ts encoding the gstack voice guide (friendly, user-forward, lead with benefits). Inject into /ship Step 5, /document-release Step 5, and reference from CLAUDE.md.
 
-**Why:** DRY — voice rules currently live inline in 3 places (CLAUDE.md CHANGELOG style section, /ship Step 5, /document-release Step 5). When the voice evolves, all three drift.
+**Why:** DRY - voice rules currently live inline in 3 places (CLAUDE.md CHANGELOG style section, /ship Step 5, /document-release Step 5). When the voice evolves, all three drift.
 
-**Context:** Same pattern as `{{QA_METHODOLOGY}}` — shared block injected into multiple templates to prevent drift. ~20 lines in gen-skill-docs.ts.
+**Context:** Same pattern as `{{QA_METHODOLOGY}}` - shared block injected into multiple templates to prevent drift. ~20 lines in gen-skill-docs.ts.
 
 **Effort:** S
 **Priority:** P2
@@ -1117,11 +1117,11 @@ Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` 
 
 ## Ship Confidence Dashboard
 
-### Smart review relevance detection — PARTIALLY SHIPPED
+### Smart review relevance detection - PARTIALLY SHIPPED
 
 ~~**What:** Auto-detect which of the 4 reviews are relevant based on branch changes (skip Design Review if no CSS/view changes, skip Code Review if plan-only).~~
 
-`bin/gstack-diff-scope` shipped — categorizes diff into SCOPE_FRONTEND, SCOPE_BACKEND, SCOPE_PROMPTS, SCOPE_TESTS, SCOPE_DOCS, SCOPE_CONFIG. Used by design-review-lite to skip when no frontend files changed. Dashboard integration for conditional row display is a follow-up.
+`bin/gstack-diff-scope` shipped - categorizes diff into SCOPE_FRONTEND, SCOPE_BACKEND, SCOPE_PROMPTS, SCOPE_TESTS, SCOPE_DOCS, SCOPE_CONFIG. Used by design-review-lite to skip when no frontend files changed. Dashboard integration for conditional row display is a follow-up.
 
 **Remaining:** Dashboard conditional row display (hide "Design Review: NOT YET RUN" when SCOPE_FRONTEND=false). Extend to Eng Review (skip for docs-only) and CEO Review (skip for config-only).
 
@@ -1134,11 +1134,11 @@ Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` 
 
 ### Codex→Claude reverse buddy check skill
 
-**What:** A Codex-native skill (`.agents/skills/gstack-claude/SKILL.md`) that runs `claude -p` to get an independent second opinion from Claude — the reverse of what `/codex` does today from Claude Code.
+**What:** A Codex-native skill (`.agents/skills/gstack-claude/SKILL.md`) that runs `claude -p` to get an independent second opinion from Claude - the reverse of what `/codex` does today from Claude Code.
 
 **Why:** Codex users deserve the same cross-model challenge that Claude users get via `/codex`. Currently the flow is one-way (Claude→Codex). Codex users have no way to get a Claude second opinion.
 
-**Context:** The `/codex` skill template (`codex/SKILL.md.tmpl`) shows the pattern — it wraps `codex exec` with JSONL parsing, timeout handling, and structured output. The reverse skill would wrap `claude -p` with similar infrastructure. Would be generated into `.agents/skills/gstack-claude/` by `gen-skill-docs --host codex`.
+**Context:** The `/codex` skill template (`codex/SKILL.md.tmpl`) shows the pattern - it wraps `codex exec` with JSONL parsing, timeout handling, and structured output. The reverse skill would wrap `claude -p` with similar infrastructure. Would be generated into `.agents/skills/gstack-claude/` by `gen-skill-docs --host codex`.
 
 **Effort:** M (human: ~2 weeks / CC: ~30 min)
 **Priority:** P1
@@ -1160,13 +1160,13 @@ Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` 
 
 ## Safety & Observability
 
-### On-demand hook skills (/careful, /freeze, /guard) — SHIPPED
+### On-demand hook skills (/careful, /freeze, /guard) - SHIPPED
 
 ~~**What:** Three new skills that use Claude Code's session-scoped PreToolUse hooks to add safety guardrails on demand.~~
 
 Shipped as `/careful`, `/freeze`, `/guard`, and `/unfreeze` in v0.6.5. Includes hook fire-rate telemetry (pattern name only, no command content) and inline skill activation telemetry.
 
-### Skill usage telemetry — SHIPPED
+### Skill usage telemetry - SHIPPED
 
 ~~**What:** Track which skills get invoked, how often, from which repo.~~
 
@@ -1185,7 +1185,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 2. Freeze boundary widening (ask to widen instead of hard-block when hitting boundary)
 3. Post-fix auto-unfreeze + full test suite run
 4. Debug instrumentation cleanup (tag with DEBUG-TEMP, remove before commit)
-5. Debug session persistence (~/.gstack/investigate-sessions/ — save investigation for reuse)
+5. Debug session persistence (~/.gstack/investigate-sessions/ - save investigation for reuse)
 6. Investigation timeline in debug report (hypothesis log with timing)
 
 **Effort:** M (all 6 combined)
@@ -1251,7 +1251,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 ## Health
 
-### /health — Project Health Dashboard
+### /health - Project Health Dashboard
 
 **What:** Skill that runs type-check, lint, test suite, and dead code scan, then reports a composite 0-10 health score with breakdown by category. Tracks over time in `~/.gstack/health/<project-slug>/` for trend detection. Optionally integrates CodeScene MCP for deeper complexity/cohesion/coupling analysis.
 
@@ -1266,7 +1266,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 ### /health as /ship gate
 
-**What:** If health score exists and drops below a configurable threshold, `/ship` warns before creating the PR: "Health dropped from 8/10 to 5/10 this branch — 3 new lint warnings, 1 test failure. Ship anyway?"
+**What:** If health score exists and drops below a configurable threshold, `/ship` warns before creating the PR: "Health dropped from 8/10 to 5/10 this branch - 3 new lint warnings, 1 test failure. Ship anyway?"
 
 **Why:** Quality gate that prevents shipping degraded code. Configurable threshold so it's not blocking for teams that don't use `/health`.
 
@@ -1276,7 +1276,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 ## Swarm
 
-### Swarm primitive — reusable multi-agent dispatch
+### Swarm primitive - reusable multi-agent dispatch
 
 **What:** Extract Review Army's dispatch pattern into a reusable resolver (`scripts/resolvers/swarm.ts`). Wire into `/ship` for parallel pre-ship checks (type-check + lint + test in parallel sub-agents). Make available to `/qa`, `/investigate`, `/health`.
 
@@ -1291,7 +1291,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 ## Refactoring
 
-### /refactor-prep — Pre-Refactor Token Hygiene
+### /refactor-prep - Pre-Refactor Token Hygiene
 
 **What:** Skill that detects project language/framework, runs appropriate dead code detection (knip/ts-prune for TS/JS, vulture/autoflake for Python, staticcheck/deadcode for Go, cargo udeps for Rust), strips dead imports/exports/props/console.logs, and commits cleanup separately.
 
@@ -1366,9 +1366,9 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 ### Bearer-token secret-scan regression fixed + E2E coverage added for privacy gate + gh auto-create (v1.12.0.0)
 
-- **Fixed the `bearer-token-json` regression in `bin/gstack-brain-sync`** — the value charset `[A-Za-z0-9_./+=-]{16,}` didn't permit spaces, so auth headers with the standard `Bearer <token>` form (literal space after the scheme name) slipped past the scanner. Added an optional `(Bearer |Basic |Token )?` prefix to the pattern. Validated against 5 positive cases (including the regression fixture) + 3 negative cases (short tokens, non-secret keys, random JSON). The 7-pattern secret scanner now passes all fixtures including bearer-json.
-- **Added `test/gstack-brain-init-gh-mock.test.ts`** — 8 tests exercising the `gh` CLI auto-create path that previously had zero coverage. Stubs `gh` on PATH to record every call, asserts `gh repo create --private --description "..." --source <GSTACK_HOME>` fires with the computed `gstack-brain-<user>` default name. Covers: happy path, fall-through-to-`gh repo view` when create hits already-exists, user-provided-URL-bypasses-gh, gh-not-on-path prompts for URL, gh-not-authed prompts for URL, idempotent `--remote` re-runs, conflicting-remote rejection.
-- **Added `test/skill-e2e-brain-privacy-gate.test.ts`** — periodic-tier E2E (~$0.30-$0.50/run). Stages a fake `gbrain` on PATH + `gbrain_sync_mode_prompted=false` in config, runs a real skill via `runAgentSdkTest`, intercepts tool-use via `canUseTool`, and asserts the preamble fires the 3-option privacy AskUserQuestion with canonical prose ("publish session memory" / "artifact" / "decline"). Second test asserts the gate is silent when `prompted=true` (idempotency-within-session).
+- **Fixed the `bearer-token-json` regression in `bin/gstack-brain-sync`** - the value charset `[A-Za-z0-9_./+=-]{16,}` didn't permit spaces, so auth headers with the standard `Bearer <token>` form (literal space after the scheme name) slipped past the scanner. Added an optional `(Bearer |Basic |Token )?` prefix to the pattern. Validated against 5 positive cases (including the regression fixture) + 3 negative cases (short tokens, non-secret keys, random JSON). The 7-pattern secret scanner now passes all fixtures including bearer-json.
+- **Added `test/gstack-brain-init-gh-mock.test.ts`** - 8 tests exercising the `gh` CLI auto-create path that previously had zero coverage. Stubs `gh` on PATH to record every call, asserts `gh repo create --private --description "..." --source <GSTACK_HOME>` fires with the computed `gstack-brain-<user>` default name. Covers: happy path, fall-through-to-`gh repo view` when create hits already-exists, user-provided-URL-bypasses-gh, gh-not-on-path prompts for URL, gh-not-authed prompts for URL, idempotent `--remote` re-runs, conflicting-remote rejection.
+- **Added `test/skill-e2e-brain-privacy-gate.test.ts`** - periodic-tier E2E (~$0.30-$0.50/run). Stages a fake `gbrain` on PATH + `gbrain_sync_mode_prompted=false` in config, runs a real skill via `runAgentSdkTest`, intercepts tool-use via `canUseTool`, and asserts the preamble fires the 3-option privacy AskUserQuestion with canonical prose ("publish session memory" / "artifact" / "decline"). Second test asserts the gate is silent when `prompted=true` (idempotency-within-session).
 - **Registered `brain-privacy-gate` in `test/helpers/touchfiles.ts`** (periodic tier) with dependency tracking on `scripts/resolvers/preamble/generate-brain-sync-block.ts`, `bin/gstack-brain-sync`, `bin/gstack-brain-init`, `bin/gstack-config`, and the Agent SDK runner. Diff-based selection will re-run the E2E whenever any of those change.
 
 **Completed:** v1.12.0.0 (2026-04-24)
@@ -1393,10 +1393,10 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 **Completed:** v0.9.9.0
 
 ### Deploy pipeline (v0.9.8.0)
-- /land-and-deploy — merge PR, wait for CI/deploy, canary verification
-- /canary — post-deploy monitoring loop with anomaly detection
-- /benchmark — performance regression detection with Core Web Vitals
-- /setup-deploy — one-time deploy platform configuration
+- /land-and-deploy - merge PR, wait for CI/deploy, canary verification
+- /canary - post-deploy monitoring loop with anomaly detection
+- /benchmark - performance regression detection with Core Web Vitals
+- /setup-deploy - one-time deploy platform configuration
 - /review Performance & Bundle Impact pass
 - E2E model pinning (Sonnet default, Opus for quality tests)
 - E2E timing telemetry (first_response_ms, max_inter_turn_ms, wall_clock_ms)

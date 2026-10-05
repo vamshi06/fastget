@@ -3,10 +3,10 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/session';
 
 // Single source of truth for route protection (runs in the Edge runtime).
 //
-// Back-office surfaces — the admin panel, the agent dashboard, the all-orders
-// APIs, and the DB-init route — all require an authenticated admin session.
+// Back-office surfaces - the admin panel, the agent dashboard, the all-orders
+// APIs, and the DB-init route - all require an authenticated admin session.
 //
-// The agent management screens are staff-only — orders are processed by
+// The agent management screens are staff-only - orders are processed by
 // logged-in admins, not via account-less capability links (C4).
 export const config = {
   matcher: [

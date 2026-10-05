@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getSession();
 
   // Not an authenticated admin (e.g. on /admin/login, or before a page-level
-  // redirect kicks in) — don't leak the sidebar nav to logged-out visitors.
+  // redirect kicks in) - don't leak the sidebar nav to logged-out visitors.
   if (!session || session.role !== 'admin') {
     return <>{children}</>;
   }

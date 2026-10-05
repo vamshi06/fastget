@@ -1,7 +1,7 @@
 // Server-side session guards. Single source of truth for "who is allowed here".
 //
 // Use these in Route Handlers and Server Components for defense-in-depth so that
-// authorization does NOT rely on middleware alone (middleware can be bypassed —
+// authorization does NOT rely on middleware alone (middleware can be bypassed -
 // see Next.js CVE-2025-29927). They read the same HMAC-signed `fastget_session`
 // cookie that middleware checks.
 
@@ -44,7 +44,7 @@ async function crossOriginResponse(): Promise<NextResponse | null> {
 
   // Fallback for clients that don't send Sec-Fetch-Site.
   const origin = h.get('origin');
-  if (!origin) return null; // no Origin (non-browser / same-origin nav) — SameSite cookie is the backstop
+  if (!origin) return null; // no Origin (non-browser / same-origin nav) - SameSite cookie is the backstop
   try {
     const host = h.get('host');
     if (host && new URL(origin).host === host) return null;

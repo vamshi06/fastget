@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
     logger.api('GET', '/admin/api/coins/[userId]', 200, Date.now() - start);
     return NextResponse.json({ success: true, balance, transactions });
   } catch (error) {
-    logger.error('API', 'GET /admin/api/coins/[userId] — unhandled error', {
+    logger.error('API', 'GET /admin/api/coins/[userId] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/admin/api/coins/[userId]', 500, Date.now() - start);
@@ -39,7 +39,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
  * POST /admin/api/coins/[userId]
  *
  * Admin-only: manually adjust a user's coin balance (dispute/correction).
- * Body: { delta: number } — positive to add, negative to subtract.
+ * Body: { delta: number } - positive to add, negative to subtract.
  */
 export async function POST(request: NextRequest, ctx: Ctx) {
   const auth = await requireRole('admin');
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     logger.api('POST', '/admin/api/coins/[userId]', 200, Date.now() - start);
     return NextResponse.json({ success: true, balance });
   } catch (error) {
-    logger.error('API', 'POST /admin/api/coins/[userId] — unhandled error', {
+    logger.error('API', 'POST /admin/api/coins/[userId] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/admin/api/coins/[userId]', 500, Date.now() - start);

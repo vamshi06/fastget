@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://fastget.in'),
   title: 'FastGet',
   description:
-    'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors in Andheri, Goregaon & Malad.',
-  keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Andheri, Goregaon, Malad',
+    'Urgent building materials delivered to your Mumbai site in 60 minutes. Carpentry, plumbing, hardware, electrical supplies for contractors across Mumbai.',
+  keywords: 'construction materials Mumbai, building materials delivery, carpentry plumbing hardware electrical, Mumbai',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 
 // viewportFit: 'cover' lets the page draw edge-to-edge (needed since the
 // mobile app's WebView renders behind the Android system nav bar) and makes
-// env(safe-area-inset-*) resolve to real values instead of 0 — without it,
+// env(safe-area-inset-*) resolve to real values instead of 0 - without it,
 // --bottom-nav-space's env(safe-area-inset-bottom) term is always 0 and
 // MobileBottomNav sits underneath the gesture/nav bar.
 export const viewport: Viewport = {

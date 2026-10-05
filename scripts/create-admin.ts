@@ -27,7 +27,7 @@ try {
     if (!(key in process.env)) process.env[key] = val;
   }
 } catch {
-  // .env.local not found — rely on env vars already being set
+  // .env.local not found - rely on env vars already being set
 }
 
 const [,, email, phone, password] = process.argv;

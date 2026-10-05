@@ -28,7 +28,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // On mount: paint instantly from localStorage, then reconcile against the
   // server session (the source of truth). localStorage has no expiry, so without
   // this step the UI can show a "logged-in" user whose session cookie has already
-  // expired — and their orders would silently be saved unattributed.
+  // expired - and their orders would silently be saved unattributed.
   useEffect(() => {
     let cancelled = false;
 
@@ -63,12 +63,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('fastget_currentUser', JSON.stringify(u));
           }
         } else if (res.status === 401) {
-          // Session is gone/expired — drop the stale logged-in state.
+          // Session is gone/expired - drop the stale logged-in state.
           setCurrentUser(null);
           localStorage.removeItem('fastget_currentUser');
         }
       } catch {
-        // Network/offline — keep the optimistic state rather than logging out.
+        // Network/offline - keep the optimistic state rather than logging out.
       }
     })();
 
@@ -89,7 +89,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('fastget_currentUser');
-    // Clear the server session cookie too — otherwise the next /api/auth/me
+    // Clear the server session cookie too - otherwise the next /api/auth/me
     // reconcile would re-hydrate the user from the still-valid cookie.
     void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);

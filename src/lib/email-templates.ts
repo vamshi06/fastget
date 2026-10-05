@@ -202,7 +202,7 @@ export function passwordResetOtpTemplate(
   return {
     subject: 'Your FastGet password reset code',
     html: wrap(body),
-    text: `Hi ${name},\n\nYour FastGet password reset code is:\n\n${otp}\n\nEnter this code in the app. It expires in 10 minutes.\n\nIf you didn't request a reset, ignore this email — your password won't change.`,
+    text: `Hi ${name},\n\nYour FastGet password reset code is:\n\n${otp}\n\nEnter this code in the app. It expires in 10 minutes.\n\nIf you didn't request a reset, ignore this email - your password won't change.`,
   };
 }
 
@@ -223,12 +223,12 @@ export function passwordResetTemplate(
       </p>
       ${ctaButton(resetUrl, 'Reset Password')}
       ${fallbackLink(resetUrl)}
-      <p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">This link expires in <strong>1 hour</strong>. If you didn't request a reset, your password is safe — just ignore this email.</p>
+      <p style="margin:20px 0 0;font-size:12px;color:#9A9A9A;">This link expires in <strong>1 hour</strong>. If you didn't request a reset, your password is safe - just ignore this email.</p>
     </div>`;
   return {
     subject: 'Reset your FastGet password',
     html: wrap(body),
-    text: `Hi ${name},\n\nReset your password by visiting:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore the email — your password won't change.`,
+    text: `Hi ${name},\n\nReset your password by visiting:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore the email - your password won't change.`,
   };
 }
 
@@ -255,7 +255,7 @@ export function passwordChangedTemplate(
 }
 
 // ── New Order Placed (staff alert) ─────────────────────────────────────────────
-// Sent to admin/agent users — see src/lib/order-notifications.ts. Durable
+// Sent to admin/agent users - see src/lib/order-notifications.ts. Durable
 // backup to the Telegram alert (which is the primary, instant channel).
 
 export function orderPlacedStaffEmailTemplate(
@@ -272,7 +272,7 @@ export function orderPlacedStaffEmailTemplate(
       </tr>`,
     )
     .join('');
-  const itemsText = order.items.map((i) => `  - ${i.name} x${i.quantity} — ₹${i.price * i.quantity}`).join('\n');
+  const itemsText = order.items.map((i) => `  - ${i.name} x${i.quantity} - ₹${i.price * i.quantity}`).join('\n');
 
   const body = `
     <div style="padding:36px 40px;">
@@ -299,7 +299,7 @@ export function orderPlacedStaffEmailTemplate(
     </div>`;
 
   return {
-    subject: `New order — ₹${order.total.toLocaleString('en-IN')} from ${order.customerName}`,
+    subject: `New order - ₹${order.total.toLocaleString('en-IN')} from ${order.customerName}`,
     html: wrap(body),
     text: `New order placed\n\nCustomer: ${order.customerName}\nPhone: ${order.customerPhone}\nAddress: ${order.siteAddress}\nTotal: ₹${order.total}\n\nItems:\n${itemsText}\n\nView: ${orderUrl}`,
   };

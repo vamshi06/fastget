@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 /**
  * Shared in-app account deletion control (Play Store requires this be
  * reachable from the app, not just the website in a browser). Uses a
- * password-confirm modal instead of window.prompt — the Android WebView
+ * password-confirm modal instead of window.prompt - the Android WebView
  * wrapper doesn't support window.prompt, only alert/confirm.
  */
 export function DeleteAccountButton({ variant = 'card' }: { variant?: 'card' | 'dropdown' }) {

@@ -29,7 +29,7 @@ function getInternalPath(rawUrl: string): string | null {
 }
 
 // Only these non-web schemes may be handed to the OS (M3). This is the UPI /
-// payment-app + Android intent set Razorpay uses — NOT a blanket "open anything
+// payment-app + Android intent set Razorpay uses - NOT a blanket "open anything
 // that isn't http", which would let a page launch tel:, sms:, file:, or arbitrary
 // custom-scheme apps.
 const ALLOWED_EXTERNAL_SCHEMES = [
@@ -44,7 +44,7 @@ const ALLOWED_EXTERNAL_SCHEMES = [
 ];
 
 // A page-supplied URL (e.g. the invoice PDF) may only be opened externally if it
-// belongs to our own origin — blocks file://, javascript:, data: and third-party
+// belongs to our own origin - blocks file://, javascript:, data: and third-party
 // links. Checking the APP_URL prefix + '/' avoids the fastget.in.evil.com bypass.
 function isOwnOriginUrl(url: unknown): url is string {
   return typeof url === 'string' && url.startsWith(`${APP_URL}/`);
@@ -75,7 +75,7 @@ export default function WebViewScreen() {
     const onBackPress = () => {
       if (canGoBack) {
         webViewRef.current?.goBack();
-        return true; // consumed — prevent app exit
+        return true; // consumed - prevent app exit
       }
       return false; // let the OS handle (exit app)
     };
@@ -202,7 +202,7 @@ export default function WebViewScreen() {
             // Allow cookies & session storage to persist across reloads
             sharedCookiesEnabled
           />
-          {/* Splash overlay only on first launch — dismissed once the initial page loads */}
+          {/* Splash overlay only on first launch - dismissed once the initial page loads */}
           {initialLoading && (
             <View style={StyleSheet.absoluteFill}>
               <LoadingScreen message="Loading FastGet..." />

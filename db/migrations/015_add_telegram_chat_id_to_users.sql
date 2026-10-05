@@ -2,7 +2,7 @@
 --
 -- Lets an admin/agent link their personal Telegram account (via my-profile)
 -- so the new-order notification (src/lib/order-notifications.ts) can DM them
--- directly. NULL means "not linked yet" — that user simply gets skipped for
+-- directly. NULL means "not linked yet" - that user simply gets skipped for
 -- the Telegram leg of the notification (email still goes out).
 --
 -- Safe to run multiple times (idempotent).

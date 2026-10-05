@@ -8,12 +8,12 @@ const MAX_IDS = 300; // matches /api/cart MAX_CART_ITEMS
  * Current pricing for the products in a cart.
  *
  * Cart items store a product snapshot taken when they were added, so its
- * prices go stale when the catalog (or a flash sale) changes — the cart then
+ * prices go stale when the catalog (or a flash sale) changes - the cart then
  * shows one price and checkout charges another. The cart calls this to
  * refresh those snapshots. Reads the same source as order-pricing
  * (getTrustedPricingInfo), so the cart always agrees with what checkout charges.
  *
- * Public (no session) — it only exposes catalog prices.
+ * Public (no session) - it only exposes catalog prices.
  */
 export async function GET(request: NextRequest) {
   const start = Date.now();
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     logger.api('GET', '/api/cart/prices', 200, Date.now() - start);
     return NextResponse.json({ prices }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    logger.error('API', 'GET /api/cart/prices — unhandled error', {
+    logger.error('API', 'GET /api/cart/prices - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/cart/prices', 500, Date.now() - start);

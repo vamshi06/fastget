@@ -156,7 +156,7 @@ export default function MyOrdersPage() {
     }
   };
 
-  // Not loaded yet — blank while hydrating
+  // Not loaded yet - blank while hydrating
   if (!isLoaded) return null;
 
   // Guest state

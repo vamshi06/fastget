@@ -30,15 +30,15 @@ export function generateUUID(): string {
 }
 
 const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'; // 36 chars (lookups are case-insensitive)
-// 32 chars of base36 ≈ 165 bits of entropy — an unguessable capability token
+// 32 chars of base36 ≈ 165 bits of entropy - an unguessable capability token
 // (M6). Stays lowercase so the case-insensitive status_token lookups keep working
 // and pre-existing 16-char tokens remain valid. Fits the VARCHAR(32) columns.
 const TOKEN_LENGTH = 32;
 
 export function generateToken(): string {
   // Cryptographically-secure, unbiased token. globalThis.crypto is available in
-  // Node 18+, the Edge runtime, and all modern browsers — the only runtimes this
-  // app targets — so there is no insecure Math.random fallback.
+  // Node 18+, the Edge runtime, and all modern browsers - the only runtimes this
+  // app targets - so there is no insecure Math.random fallback.
   const rng = globalThis.crypto;
   if (!rng || typeof rng.getRandomValues !== 'function') {
     throw new Error('Secure RNG (crypto.getRandomValues) is unavailable');

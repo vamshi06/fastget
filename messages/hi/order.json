@@ -31,7 +31,7 @@
   "paymentNotCompletedNoCharge": "भुगतान पूरा नहीं हुआ। कोई राशि नहीं काटी गई। आप कभी भी नया ऑर्डर प्लेस कर सकते हैं।",
   "estimatedDeliveryPrefix": "अनुमानित डिलीवरी: {eta}",
   "deliveryCompletedSuccessfully": "डिलीवरी सफलतापूर्वक पूरी हो गई",
-  "paymentNotCompletedOrderNotPlaced": "भुगतान पूरा नहीं हुआ — यह ऑर्डर प्लेस नहीं किया गया।",
+  "paymentNotCompletedOrderNotPlaced": "भुगतान पूरा नहीं हुआ - यह ऑर्डर प्लेस नहीं किया गया।",
   "orderTimeline": "ऑर्डर टाइमलाइन",
   "deliveryAddress": "डिलीवरी पता",
   "landmarkPrefix": "लैंडमार्क: {landmark}",
@@ -84,7 +84,7 @@
   "cancelling": "रद्द किया जा रहा है...",
   "orderCancelledToast": "आपका ऑर्डर सफलतापूर्वक रद्द कर दिया गया है।",
   "cancelOrderFailed": "ऑर्डर रद्द नहीं हो सका",
-  "networkError": "नेटवर्क में समस्या — कृपया दोबारा कोशिश करें",
+  "networkError": "नेटवर्क में समस्या - कृपया दोबारा कोशिश करें",
 
   "lockedAfterMin": "{min} मिनट बाद लॉक हो जाता है",
   "editReview": "रिव्यू एडिट करें",

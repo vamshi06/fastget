@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
     }
 
-    // ?lang= rather than the locale cookie — the response is publicly cached by URL
+    // ?lang= rather than the locale cookie - the response is publicly cached by URL
     const langRaw = request.nextUrl.searchParams.get('lang') ?? undefined;
     const product = await getProductWithVariants(id, isLocale(langRaw) ? langRaw : undefined);
 
@@ -40,7 +40,7 @@ export async function GET(
       { status: 200, headers: { 'Cache-Control': 'public, max-age=30' } },
     );
   } catch (error) {
-    logger.error('API', 'GET /api/products/[id] — unhandled error', {
+    logger.error('API', 'GET /api/products/[id] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/products/[id]', 500, Date.now() - start);

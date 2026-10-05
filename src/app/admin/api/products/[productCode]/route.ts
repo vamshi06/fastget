@@ -121,7 +121,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const body = await req.json();
 
-    // ── Validate provided fields (partial update — only what's present) ──
+    // ── Validate provided fields (partial update - only what's present) ──
     const name = body.name !== undefined ? requireString(body.name, 'name', { max: 200 }) : undefined;
     const price = body.price !== undefined ? requireNumber(body.price, 'price', { min: 0.01 }) : undefined;
     const moq = body.moq !== undefined ? requireInt(body.moq, 'minimum order quantity', { min: 1 }) : undefined;
@@ -154,7 +154,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const priceInPaise = price !== undefined ? Math.round(price * 100) : undefined;
     const mrpInPaise = mrpProvided ? (mrp !== undefined ? Math.round(mrp * 100) : null) : undefined;
 
-    // Flash sale fields — support clearing (blank -> null cancels the sale).
+    // Flash sale fields - support clearing (blank -> null cancels the sale).
     const salePriceProvided = 'salePrice' in body;
     const salePrice = salePriceProvided
       ? (isBlank(body.salePrice) ? null : requireNumber(body.salePrice, 'sale price', { min: 0.01 }))
@@ -178,7 +178,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ? (saleMinOrder != null ? Math.round(saleMinOrder * 100) : null)
       : undefined;
 
-    // Hindi translation — only sent when the admin touched it, so a price-only
+    // Hindi translation - only sent when the admin touched it, so a price-only
     // edit doesn't mark an unchecked machine translation as reviewed.
     // Blank name removes the translation (falls back to English).
     const hindiProvided = typeof body.hindi === 'object' && body.hindi !== null;
@@ -196,7 +196,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
 
-    // A flash sale needs price + start + end together — either newly submitted
+    // A flash sale needs price + start + end together - either newly submitted
     // or already stored on the row. Clearing all three cancels the sale.
     const finalSalePrice     = salePriceProvided     ? salePriceInPaise : row.sale_price;
     const finalSaleStartsAt  = saleStartsAtProvided  ? saleStartsAt     : row.sale_starts_at;
@@ -214,7 +214,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       throw new ValidationError('Sale price must be less than the regular selling price.');
     }
 
-    // Minimum order value only makes sense alongside an active/scheduled sale —
+    // Minimum order value only makes sense alongside an active/scheduled sale -
     // clear it automatically when the sale itself is being cancelled.
     const effectiveSaleMinOrderInPaise = !allSaleFields
       ? null
@@ -291,7 +291,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       }
     }
 
-    logger.info('API', `PATCH /admin/api/products/${productCode} — updated`);
+    logger.info('API', `PATCH /admin/api/products/${productCode} - updated`);
     return NextResponse.json({ success: true, productCode });
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -328,7 +328,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: 'Failed to delete product' }, { status: 500 });
     }
 
-    logger.info('API', `DELETE /admin/api/products/${productCode} — deleted`);
+    logger.info('API', `DELETE /admin/api/products/${productCode} - deleted`);
     return NextResponse.json({ success: true, productCode });
   } catch (error) {
     logger.error('API', `DELETE /admin/api/products/${productCode} failed`, {

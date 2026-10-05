@@ -1,4 +1,4 @@
-# Phase 5: Cleanup & Cutover — COMPLETE ✅
+# Phase 5: Cleanup & Cutover - COMPLETE ✅
 
 **Date:** May 11, 2026  
 **Status:** ✅ All tasks complete  
@@ -74,10 +74,10 @@ git commit -m "Remove deprecated Google Sheets integration"
   - 2 browser QA flows
 
 ### 6. Documentation ✅
-- ✅ Created `docs/NEON_OPS.md` — Complete operational guide
-- ✅ Updated `CLAUDE.md` — Database strategy reflected
-- ✅ Updated `NEON_ORDER_CRUD_PLAN.md` — All phases marked complete
-- ✅ Updated `TODOS.md` — Migration marked done
+- ✅ Created `docs/NEON_OPS.md` - Complete operational guide
+- ✅ Updated `CLAUDE.md` - Database strategy reflected
+- ✅ Updated `NEON_ORDER_CRUD_PLAN.md` - All phases marked complete
+- ✅ Updated `TODOS.md` - Migration marked done
 
 **NEON_OPS.md includes:**
 - Connection instructions (dev/prod)
@@ -113,8 +113,8 @@ git commit -m "Remove deprecated Google Sheets integration"
 
 ### Build & Type Safety ✅
 ```
-✅ npm run build — Production build successful
-✅ npm run typecheck — Zero TypeScript errors
+✅ npm run build - Production build successful
+✅ npm run typecheck - Zero TypeScript errors
 ✅ No ESLint warnings for order routes
 ✅ All API response types match schemas
 ```
@@ -175,7 +175,7 @@ This migration is **safe and reversible** up until the git commit. If issues ari
 
 1. Revert commit: `git revert HEAD`
 2. Redeploy: `vercel --prod`
-3. No data loss — all orders in Neon remain intact
+3. No data loss - all orders in Neon remain intact
 
 ---
 

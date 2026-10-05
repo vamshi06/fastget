@@ -29,12 +29,12 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Razorpay's fraud-detection iframe reads device motion sensors for risk
-  // scoring — allow self + Razorpay's own origins, deny everything else.
+  // scoring - allow self + Razorpay's own origins, deny everything else.
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), accelerometer=(self "https://api.razorpay.com" "https://checkout.razorpay.com"), gyroscope=(self "https://api.razorpay.com" "https://checkout.razorpay.com")' },
   { key: 'Content-Security-Policy-Report-Only', value: csp },
 ];
 
-// HSTS only in production — sending it on localhost would force the browser to
+// HSTS only in production - sending it on localhost would force the browser to
 // upgrade http://localhost to https and break local dev.
 if (isProd) {
   securityHeaders.push({

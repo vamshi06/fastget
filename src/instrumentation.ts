@@ -1,5 +1,5 @@
 /**
- * Next.js instrumentation hook — runs once when the server process starts.
+ * Next.js instrumentation hook - runs once when the server process starts.
  * We use it to validate required environment variables at boot so a
  * misconfigured deploy is obvious in the logs rather than a per-request 500.
  */

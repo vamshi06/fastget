@@ -8,7 +8,7 @@
  *     independent of whether the FastGet app is open. Requires the staff
  *     member to have linked their chat ID via My Profile.
  *   - Email (backup): durable record, reuses the existing Resend setup.
- *     Always sent — every staff user has an email by definition.
+ *     Always sent - every staff user has an email by definition.
  *
  * Best-effort: a failure here is logged but never thrown, so a notification
  * outage can never block an order from being placed.
@@ -25,7 +25,7 @@ function telegramText(order: Order, appUrl: string): string {
   const itemLines = order.items.map((i) => `• ${i.name} ×${i.quantity}`).join('\n');
   return (
     `🛒 <b>New order placed</b>\n\n` +
-    `<b>₹${order.total.toLocaleString('en-IN')}</b> — ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} — ${order.paymentMethod.toUpperCase()}\n\n` +
+    `<b>₹${order.total.toLocaleString('en-IN')}</b> - ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} - ${order.paymentMethod.toUpperCase()}\n\n` +
     `<b>${order.customerName}</b>\n${order.customerPhone}\n${order.siteAddress}\n\n` +
     `${itemLines}\n\n` +
     `${appUrl}/admin/orders/${order.id}`
@@ -34,7 +34,7 @@ function telegramText(order: Order, appUrl: string): string {
 
 /**
  * Notify all admin/agent staff of a newly placed order.
- * Never throws — call this after the order write has already succeeded.
+ * Never throws - call this after the order write has already succeeded.
  */
 export async function notifyStaffOfNewOrder(order: Order): Promise<void> {
   try {

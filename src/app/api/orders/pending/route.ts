@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Validate status is one of allowed values
     const validStatuses = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
     if (!validStatuses.includes(statusFilter)) {
-      logger.warn('API', 'GET /api/orders/pending — invalid status filter', { statusFilter });
+      logger.warn('API', 'GET /api/orders/pending - invalid status filter', { statusFilter });
       logger.api('GET', '/api/orders/pending', 400, Date.now() - start);
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       FROM orders
       WHERE status = ${statusFilter}
     `;
-    // Neon returns COUNT as bigint string — cast to number safely
+    // Neon returns COUNT as bigint string - cast to number safely
     const totalCount = Number(countResult[0]?.total ?? 0);
 
     // Fetch orders with the specified status.
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     const hasMore = offset + formattedOrders.length < totalCount;
 
-    logger.debug('API', 'GET /api/orders/pending — orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount, offset, hasMore });
+    logger.debug('API', 'GET /api/orders/pending - orders fetched', { statusFilter, count: formattedOrders.length, total: totalCount, offset, hasMore });
     logger.api('GET', '/api/orders/pending', 200, Date.now() - start);
 
     return NextResponse.json(
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/orders/pending — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'GET /api/orders/pending - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('GET', '/api/orders/pending', 500, Date.now() - start);
     return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
   }

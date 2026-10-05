@@ -16,7 +16,7 @@
 4. ✅ Kept response shapes stable for checkout and status pages
 5. ✅ Validated `AGENT_PIN` server-side for agent updates with 401 auth failure handling
 6. ✅ Verified all Google Sheets references removed (no imports of sheets.ts)
-7. ✅ Ran `npm run build` and `npm run typecheck` — all passing
+7. ✅ Ran `npm run build` and `npm run typecheck` - all passing
 8. ✅ Browser QA: checkout flow, customer tracking, agent updates all working
 9. ✅ Created comprehensive Neon ops guide at `docs/NEON_OPS.md`
 

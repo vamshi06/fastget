@@ -31,7 +31,7 @@
   "paymentNotCompletedNoCharge": "Payment was not completed. No charge was made. You can place a new order anytime.",
   "estimatedDeliveryPrefix": "Estimated delivery: {eta}",
   "deliveryCompletedSuccessfully": "Delivery completed successfully",
-  "paymentNotCompletedOrderNotPlaced": "Payment was not completed — this order was not placed.",
+  "paymentNotCompletedOrderNotPlaced": "Payment was not completed - this order was not placed.",
   "orderTimeline": "Order Timeline",
   "deliveryAddress": "Delivery Address",
   "landmarkPrefix": "Landmark: {landmark}",
@@ -84,7 +84,7 @@
   "cancelling": "Cancelling...",
   "orderCancelledToast": "Your order has been cancelled successfully.",
   "cancelOrderFailed": "Failed to cancel order",
-  "networkError": "Network error — please try again",
+  "networkError": "Network error - please try again",
 
   "lockedAfterMin": "Locked after {min} min",
   "editReview": "Edit Review",

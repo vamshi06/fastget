@@ -8,7 +8,7 @@
   "sku": "SKU: {sku}",
   "percentOff": "{discount}% छूट",
   "flashPriceNote": "⚡ फ्लैश कीमत तभी लागू होगी जब आपके कार्ट में {amount}+ के अन्य प्रोडक्ट हों",
-  "flashSaleLimit": "⚡ फ्लैश कीमत प्रति ऑर्डर {max} पर — अतिरिक्त यूनिट {original} प्रति यूनिट",
+  "flashSaleLimit": "⚡ फ्लैश कीमत प्रति ऑर्डर {max} पर - अतिरिक्त यूनिट {original} प्रति यूनिट",
   "flashBreakdown": "{saleQty} × {saleUnit} (फ्लैश) + {regularQty} × {regularUnit}",
   "selectSizeType": "साइज़ / टाइप चुनें",
   "description": "विवरण",

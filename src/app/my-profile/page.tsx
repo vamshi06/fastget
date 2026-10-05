@@ -228,7 +228,7 @@ export default function MyProfilePage() {
               <div className="ml-3 flex-1">
                 <p className="text-xs text-brand-slate">{t('profile.phone')}</p>
                 <p className="text-sm font-medium text-brand-charcoal">
-                  {currentUser.phone ? `+91 ${currentUser.phone.replace(/\D/g, '').slice(-10)}` : '—'}
+                  {currentUser.phone ? `+91 ${currentUser.phone.replace(/\D/g, '').slice(-10)}` : '-'}
                 </p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function MyProfilePage() {
           </div>
         )}
 
-        {/* Telegram order alerts — staff only (admin/agent) */}
+        {/* Telegram order alerts - staff only (admin/agent) */}
         {isStaff && (
           <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5 mt-4">
             <div className="flex items-center gap-3 mb-1">

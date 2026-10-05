@@ -1,7 +1,7 @@
 /**
  * FastGet Email Service
  *
- * Provider abstraction — configure via environment variables:
+ * Provider abstraction - configure via environment variables:
  *
  *   EMAIL_PROVIDER=mock        (default; logs to console, no real delivery)
  *   EMAIL_PROVIDER=resend      → requires RESEND_API_KEY
@@ -70,7 +70,7 @@ async function sendViaResend(msg: EmailMessage): Promise<boolean> {
   if (!apiKey) {
     logger.error(
       'Email',
-      'EMAIL_PROVIDER=resend but RESEND_API_KEY is not set — NO real email delivered (mock fallback). Set RESEND_API_KEY in the hosting env.',
+      'EMAIL_PROVIDER=resend but RESEND_API_KEY is not set - NO real email delivered (mock fallback). Set RESEND_API_KEY in the hosting env.',
       { to: msg.to },
     );
     return sendViaMock(msg);
@@ -108,7 +108,7 @@ async function sendViaResend(msg: EmailMessage): Promise<boolean> {
 async function sendViaSendGrid(msg: EmailMessage): Promise<boolean> {
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {
-    logger.warn('Email', 'SENDGRID_API_KEY not set — falling back to mock');
+    logger.warn('Email', 'SENDGRID_API_KEY not set - falling back to mock');
     return sendViaMock(msg);
   }
   const fromRaw = getFrom();
@@ -162,7 +162,7 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
   const from = getFrom();
 
   if (!host || !user || !pass) {
-    logger.error('Email', 'SMTP requires SMTP_HOST, SMTP_USER, SMTP_PASSWORD — falling back to mock');
+    logger.error('Email', 'SMTP requires SMTP_HOST, SMTP_USER, SMTP_PASSWORD - falling back to mock');
     return sendViaMock(msg);
   }
 
@@ -192,7 +192,7 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
     ) {
       logger.error(
         'Email',
-        'nodemailer not installed. Run: npm install nodemailer — falling back to mock',
+        'nodemailer not installed. Run: npm install nodemailer - falling back to mock',
       );
       return sendViaMock(msg);
     }
@@ -207,13 +207,13 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
 
 export async function sendEmail(msg: EmailMessage): Promise<boolean> {
   const provider = getProvider();
-  // INFO (not debug) so the active provider is visible in production logs —
+  // INFO (not debug) so the active provider is visible in production logs -
   // this is the first thing to check when "emails aren't arriving".
   logger.info('Email', `Dispatching via ${provider}`, { to: msg.to, subject: msg.subject });
   if (provider === 'mock' && process.env.NODE_ENV === 'production') {
     logger.error(
       'Email',
-      'EMAIL_PROVIDER is unset/"mock" in production — emails are logged, NOT delivered. Set EMAIL_PROVIDER=resend and RESEND_API_KEY.',
+      'EMAIL_PROVIDER is unset/"mock" in production - emails are logged, NOT delivered. Set EMAIL_PROVIDER=resend and RESEND_API_KEY.',
       { to: msg.to, subject: msg.subject },
     );
   }

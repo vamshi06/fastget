@@ -3,7 +3,7 @@
  *
  * Used for staff-facing alerts (new order placed) that need to reach an
  * admin/agent's phone as a native push notification regardless of whether
- * the FastGet app is open — see src/lib/order-notifications.ts.
+ * the FastGet app is open - see src/lib/order-notifications.ts.
  *
  * Setup:
  *   1. Message @BotFather on Telegram, run /newbot, follow the prompts.
@@ -11,10 +11,10 @@
  *   2. Set TELEGRAM_BOT_TOKEN to that value (.env.local / Vercel env).
  *   3. Each admin/agent messages @userinfobot to get their own numeric chat ID,
  *      then enters it under My Profile → Telegram Notifications in the app.
- *      (They must also open a chat with your bot at least once — e.g. by
- *      searching for it and pressing Start — or the bot cannot message them.)
+ *      (They must also open a chat with your bot at least once - e.g. by
+ *      searching for it and pressing Start - or the bot cannot message them.)
  *
- * Without TELEGRAM_BOT_TOKEN set, sends are logged and skipped (mock mode) —
+ * Without TELEGRAM_BOT_TOKEN set, sends are logged and skipped (mock mode) -
  * same fallback behavior as EMAIL_PROVIDER=mock in email.ts.
  */
 
@@ -43,7 +43,7 @@ async function sendViaMock(msg: TelegramMessage): Promise<boolean> {
 export async function sendTelegramMessage(msg: TelegramMessage): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
-    logger.warn('Telegram', 'TELEGRAM_BOT_TOKEN not set — falling back to mock (no real delivery)');
+    logger.warn('Telegram', 'TELEGRAM_BOT_TOKEN not set - falling back to mock (no real delivery)');
     return sendViaMock(msg);
   }
   try {

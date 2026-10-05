@@ -3,7 +3,7 @@ export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = 'en';
 
-// Language toggle doesn't change the URL — same routes render in either
+// Language toggle doesn't change the URL - same routes render in either
 // language based on this cookie, so it survives across navigations.
 export const LOCALE_COOKIE = 'fastget_locale';
 

@@ -42,10 +42,10 @@ export function FlashSaleBanner({ sale, onExpire }: FlashSaleBannerProps) {
     if (timeLeft.expired) onExpire?.(sale.productCode);
   }, [timeLeft.expired, onExpire, sale.productCode]);
 
-  // Sale window has lapsed client-side — hide rather than show a stale ₹1 offer.
+  // Sale window has lapsed client-side - hide rather than show a stale ₹1 offer.
   if (timeLeft.expired) return null;
 
-  // Floor, not round — ₹1 off ₹239 must read 99% OFF, never "100% OFF".
+  // Floor, not round - ₹1 off ₹239 must read 99% OFF, never "100% OFF".
   const discountPct = Math.floor((1 - sale.salePriceRupees / sale.originalPriceRupees) * 100);
 
   return (

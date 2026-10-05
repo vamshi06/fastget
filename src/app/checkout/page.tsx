@@ -56,14 +56,14 @@ function CheckoutPageContent() {
   const [firstOrderDiscountAmount, setFirstOrderDiscountAmount] = useState(200);
   const [firstOrderMinOrder, setFirstOrderMinOrder] = useState(449);
 
-  // Display-only preview of the first-order coupon — the server always
+  // Display-only preview of the first-order coupon - the server always
   // recomputes and re-validates this from scratch in priceOrderFromCatalog.
   const firstOrderDiscount =
     firstOrderEligible && getTotal() >= firstOrderMinOrder
       ? Math.min(firstOrderDiscountAmount, getTotal())
       : 0;
 
-  // How many coins can actually be applied — capped by both balance and the
+  // How many coins can actually be applied - capped by both balance and the
   // order's own value after the coupon (server re-validates both; this is
   // just for display).
   const maxRedeemable = Math.min(coinBalance, getTotal() - firstOrderDiscount);
@@ -76,10 +76,10 @@ function CheckoutPageContent() {
   }, [searchParams]);
 
   // The error banner renders above the form, but the user is often scrolled
-  // down (e.g. mid-form when the Razorpay modal is dismissed) — scroll it
+  // down (e.g. mid-form when the Razorpay modal is dismissed) - scroll it
   // into view so a new error is never silently off-screen. The site header
   // is `sticky top-0`, so a plain scrollIntoView lands the banner right
-  // under it, hidden — offset by the header's real height instead.
+  // under it, hidden - offset by the header's real height instead.
   useEffect(() => {
     if (!error || !errorRef.current) return;
     const headerHeight = document.querySelector('header')?.getBoundingClientRect().height ?? 0;
@@ -122,8 +122,8 @@ function CheckoutPageContent() {
     }));
   };
 
-  // Manual entry fields are shown whenever there's no selected saved address —
-  // not just when the user explicitly clicked "Enter a different address" —
+  // Manual entry fields are shown whenever there's no selected saved address -
+  // not just when the user explicitly clicked "Enter a different address" -
   // e.g. a brand-new user with zero saved addresses never sets manualEntry
   // but still types a fresh address into these fields.
   const isManualEntryActive = !selectedAddress || manualEntry;
@@ -164,10 +164,10 @@ function CheckoutPageContent() {
         setSavedAddresses(addrs);
         const primary = addrs.find(a => a.isPrimary) ?? addrs[0];
         if (primary) applyAddress(primary);
-        else setSaveAddress(true); // no saved addresses yet — default to saving this one
+        else setSaveAddress(true); // no saved addresses yet - default to saving this one
       })
       .catch(() => { });
-    // applyAddress is stable — no deps needed beyond currentUser
+    // applyAddress is stable - no deps needed beyond currentUser
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
@@ -256,7 +256,7 @@ function CheckoutPageContent() {
     );
   }
 
-  // Best-effort save of the address entered/edited during checkout — shared
+  // Best-effort save of the address entered/edited during checkout - shared
   // by both the COD and Razorpay success paths.
   const persistAddressIfRequested = async () => {
     if (!(isManualEntryActive && saveAddress)) return;
@@ -274,7 +274,7 @@ function CheckoutPageContent() {
         }),
       });
     } catch {
-      // Address save is best-effort — don't block order confirmation on it
+      // Address save is best-effort - don't block order confirmation on it
     }
   };
 
@@ -342,7 +342,7 @@ function CheckoutPageContent() {
     setPaymentState('processing');
 
     try {
-      // Step 1 — validate, reprice, and get a Razorpay order + signed orderToken
+      // Step 1 - validate, reprice, and get a Razorpay order + signed orderToken
       const createRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,7 +366,7 @@ function CheckoutPageContent() {
 
       const { razorpayOrderId, amount, currency, orderToken } = await createRes.json();
 
-      // Step 2 — open Razorpay checkout.
+      // Step 2 - open Razorpay checkout.
       await openCheckout({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount,
@@ -826,7 +826,7 @@ function CheckoutPageContent() {
                     <div key={item.product.id} className="flex justify-between gap-3 text-sm">
                       <span className="text-brand-slate">
                         {item.product.name} × {item.quantity}
-                        {/* Flash + regular-price units on one line — show the split */}
+                        {/* Flash + regular-price units on one line - show the split */}
                         {b.saleQty > 0 && b.regularQty > 0 && (
                           <span className="block text-[11px] text-amber-700">
                             {b.saleQty} × {formatCurrency(b.saleUnit)} + {b.regularQty} × {formatCurrency(b.regularUnit)}

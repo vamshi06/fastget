@@ -134,7 +134,7 @@ export function ProductFilterBar({
       <div className="px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
-          {/* Sort — desktop */}
+          {/* Sort - desktop */}
           <div className="relative hidden sm:block">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
@@ -163,7 +163,7 @@ export function ProductFilterBar({
             )}
           </div>
 
-          {/* Sort + Filter — mobile */}
+          {/* Sort + Filter - mobile */}
           <div className="flex sm:hidden gap-2">
             <div className="relative">
               <button

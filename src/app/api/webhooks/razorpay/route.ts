@@ -21,13 +21,13 @@ interface RazorpayWebhookPayload {
  *
  * Server-to-server event delivery configured in Razorpay Dashboard →
  * Settings → Webhooks. This is a reconciliation/observability signal, NOT
- * the primary payment-confirmation path — orders are created synchronously
+ * the primary payment-confirmation path - orders are created synchronously
  * in /api/payment/verify-payment when the customer's browser returns from
  * checkout. This endpoint catches what that path can miss (e.g. the customer
  * closes the tab right after paying, before the redirect completes) by
  * re-confirming payment_status on orders that already exist.
  *
- * Requires RAZORPAY_WEBHOOK_SECRET — a separate secret from
+ * Requires RAZORPAY_WEBHOOK_SECRET - a separate secret from
  * RAZORPAY_KEY_SECRET, generated when the webhook is created in the
  * Dashboard. Must read the RAW body for signature verification: do not call
  * request.json() before verifyWebhookSignature runs on the raw text.
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   if (!signature) {
-    logger.warn('Webhook', 'razorpay — missing signature header');
+    logger.warn('Webhook', 'razorpay - missing signature header');
     logger.api('POST', '/api/webhooks/razorpay', 400, Date.now() - start);
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
   try {
     isValid = verifyWebhookSignature(rawBody, signature);
   } catch (err) {
-    // RAZORPAY_WEBHOOK_SECRET not configured — our misconfiguration, not the caller's.
-    logger.error('Webhook', 'razorpay — verifyWebhookSignature threw', {
+    // RAZORPAY_WEBHOOK_SECRET not configured - our misconfiguration, not the caller's.
+    logger.error('Webhook', 'razorpay - verifyWebhookSignature threw', {
       error: err instanceof Error ? err.message : String(err),
     });
     logger.api('POST', '/api/webhooks/razorpay', 500, Date.now() - start);
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!isValid) {
-    logger.warn('Webhook', 'razorpay — signature mismatch');
+    logger.warn('Webhook', 'razorpay - signature mismatch');
     logger.api('POST', '/api/webhooks/razorpay', 400, Date.now() - start);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   try {
     event = JSON.parse(rawBody);
   } catch {
-    logger.warn('Webhook', 'razorpay — malformed JSON body');
+    logger.warn('Webhook', 'razorpay - malformed JSON body');
     logger.api('POST', '/api/webhooks/razorpay', 400, Date.now() - start);
     return NextResponse.json({ error: 'Malformed body' }, { status: 400 });
   }
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   const eventType = event.event ?? 'unknown';
   const payment = event.payload?.payment?.entity;
 
-  logger.info('Webhook', 'razorpay — event received', {
+  logger.info('Webhook', 'razorpay - event received', {
     eventType,
     razorpayPaymentId: payment?.id,
     razorpayOrderId: payment?.order_id,
@@ -83,31 +83,31 @@ export async function POST(request: NextRequest) {
     if (eventType === 'payment.captured' && payment?.id && payment?.order_id) {
       const reconciled = await reconcileCapturedPayment(payment.order_id, payment.id);
       if (!reconciled) {
-        // Either already captured (expected — verify-payment usually wins the
+        // Either already captured (expected - verify-payment usually wins the
         // race) or no matching order row exists at all, meaning the customer's
         // browser never completed /api/payment/verify-payment after paying.
-        // Logged as WARN so it's visible for manual reconciliation — we were
+        // Logged as WARN so it's visible for manual reconciliation - we were
         // paid but have no order to fulfil.
-        logger.warn('Webhook', 'razorpay — payment.captured with no row updated', {
+        logger.warn('Webhook', 'razorpay - payment.captured with no row updated', {
           razorpayOrderId: payment.order_id,
           razorpayPaymentId: payment.id,
         });
       }
     } else if (eventType === 'payment.failed') {
-      logger.info('Webhook', 'razorpay — payment.failed', {
+      logger.info('Webhook', 'razorpay - payment.failed', {
         razorpayOrderId: payment?.order_id,
         razorpayPaymentId: payment?.id,
       });
     }
     // Other event types (refund.*, order.paid, dispute.*, etc.) are accepted
-    // but not acted on yet — extend here if/when those flows are needed.
+    // but not acted on yet - extend here if/when those flows are needed.
   } catch (err) {
-    logger.error('Webhook', 'razorpay — handler error', {
+    logger.error('Webhook', 'razorpay - handler error', {
       eventType,
       error: err instanceof Error ? err.message : String(err),
     });
     logger.api('POST', '/api/webhooks/razorpay', 500, Date.now() - start);
-    // 500 so Razorpay retries — this was our failure, not a bad request.
+    // 500 so Razorpay retries - this was our failure, not a bad request.
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 

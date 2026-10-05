@@ -5,14 +5,14 @@ Repo: Fastget standalone app repo, to be created
 Source design doc: /Users/vamshi.chirumavilla/.gstack/projects/garrytan-gstack/vamshi.chirumavilla-main-design-20260426-230438.md
 
 ## Affected Pages/Routes
-- `/` — HomeRun-style catalog landing page with urgent categories, product cards, service corridor, pay-on-delivery promise, and checkout CTA.
-- `/cart` — cart review, quantity changes, price/convenience fee calculation, and pay-on-delivery messaging.
-- `/checkout` — customer details, site address, landmark, needed-now vs scheduled time, pay-on-delivery default, duplicate-submit protection, and backend submit.
-- `/order/[statusToken]` — customer order status page showing received, ETA assigned, out for delivery, delivered, cancelled, or error states.
-- `/agent/order/[updateToken]` — delivery-agent page protected by shared PIN, allowing legal status updates only.
-- `/api/orders` — creates order row through Apps Script adapter and returns customer status token plus approximate ETA.
-- `/api/orders/[statusToken]` — reads safe customer-facing order status by random token.
-- `/api/agent/orders/[updateToken]` — validates shared PIN, validates status transition, and updates the sheet row.
+- `/` - HomeRun-style catalog landing page with urgent categories, product cards, service corridor, pay-on-delivery promise, and checkout CTA.
+- `/cart` - cart review, quantity changes, price/convenience fee calculation, and pay-on-delivery messaging.
+- `/checkout` - customer details, site address, landmark, needed-now vs scheduled time, pay-on-delivery default, duplicate-submit protection, and backend submit.
+- `/order/[statusToken]` - customer order status page showing received, ETA assigned, out for delivery, delivered, cancelled, or error states.
+- `/agent/order/[updateToken]` - delivery-agent page protected by shared PIN, allowing legal status updates only.
+- `/api/orders` - creates order row through Apps Script adapter and returns customer status token plus approximate ETA.
+- `/api/orders/[statusToken]` - reads safe customer-facing order status by random token.
+- `/api/agent/orders/[updateToken]` - validates shared PIN, validates status transition, and updates the sheet row.
 
 ## Key Interactions to Verify
 - Customer browses urgent SKUs, adds items to cart, checks out with pay on delivery, receives approximate ETA, then lands on status page.

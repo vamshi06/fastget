@@ -22,7 +22,7 @@ const HIDDEN_ROUTES = ['/admin', '/agent-dashboard', '/agent/'];
 // instead of off-screen). Rather than inferring "keyboard open" from focus
 // (a field can stay focused after the keyboard is dismissed via the back
 // button/gesture, leaving the nav stuck hidden), measure the actual visual
-// viewport — it reliably reports back to full height once the keyboard closes.
+// viewport - it reliably reports back to full height once the keyboard closes.
 function useKeyboardOpen() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -122,7 +122,7 @@ export function MobileBottomNav() {
           );
         })}
 
-        {/* Centre cart button — elevated above the nav bar */}
+        {/* Centre cart button - elevated above the nav bar */}
         <div className="flex-1 flex flex-col items-center justify-end pb-2 relative">
           <Link
             href={'/cart' as any}

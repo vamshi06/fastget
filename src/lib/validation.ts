@@ -11,7 +11,7 @@
  *
  * This keeps each route's shape intact while replacing ad-hoc inline checks.
  * SQL is already parameterized everywhere, so these guard against malformed /
- * oversized / out-of-range input that would otherwise 500 or write bad data —
+ * oversized / out-of-range input that would otherwise 500 or write bad data -
  * NOT against injection.
  */
 
@@ -164,7 +164,7 @@ const PASSWORD_MSG =
 
 /**
  * Enforce password complexity for SET/CHANGE flows only (signup, reset).
- * NEVER call this on login — existing users must keep signing in with their
+ * NEVER call this on login - existing users must keep signing in with their
  * current passwords.
  */
 export function requirePassword(value: unknown): string {

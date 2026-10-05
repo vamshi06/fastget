@@ -6,19 +6,10 @@ import { MapPin, X, ArrowRight, Loader2, CheckCircle2, AlertCircle, ChevronDown 
 import { cn } from '@/lib/utils';
 import { SERVICE_AREAS, type AreaId } from './LocationSplashContext';
 
-// Mumbai pincode → area mapping
-const PINCODE_MAP: Record<string, AreaId> = {
-  '400053': 'andheri',
-  '400058': 'andheri',
-  '400059': 'andheri',
-  '400061': 'andheri',
-  '400069': 'andheri',
-  '400062': 'goregaon',
-  '400063': 'goregaon',
-  '400065': 'goregaon',
-  '400064': 'malad',
-  '400095': 'malad',
-  '400097': 'malad',
+// Mumbai city + suburbs pincodes: 400001–400104
+const getAreaForPincode = (pincode: string): AreaId | null => {
+  const n = Number(pincode);
+  return n >= 400001 && n <= 400104 ? 'mumbai' : null;
 };
 
 type PincodeStatus = 'idle' | 'checking' | 'valid' | 'invalid';
@@ -122,7 +113,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
     if (pincode.length !== 6) return;
     setPincodeStatus('checking');
     setTimeout(() => {
-      const area = PINCODE_MAP[pincode] ?? null;
+      const area = getAreaForPincode(pincode);
       if (area) {
         setPincodeStatus('valid');
         setPincodeArea(area);
@@ -234,7 +225,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
           <div
             role="radiogroup"
             aria-label={t('selectDeliveryArea')}
-            className="grid grid-cols-3 gap-3 mb-6"
+            className="grid grid-cols-1 gap-3 mb-6"
           >
             {SERVICE_AREAS.map((area) => {
               const active = selectedArea === area.id;

@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Mail, Phone, FileText, Truck, RefreshCw, Lock } from "lucide-react";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
-export const metadata = { title: "Support — FastGet" };
+export const metadata = { title: "Support - FastGet" };
 
 export default async function SupportPage() {
   const t = await getTranslations("support");

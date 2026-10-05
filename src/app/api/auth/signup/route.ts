@@ -22,14 +22,14 @@ import {
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
-  logger.info('Auth', '[AUTH] Signup — POST /api/auth/signup');
+  logger.info('Auth', '[AUTH] Signup - POST /api/auth/signup');
   try {
     // Throttle account creation per IP (H3).
     const limited = await limitOrResponse([
       { key: `signup:ip:${getClientIp(request)}`, limit: 6, windowSec: 3600 },
     ]);
     if (limited) {
-      logger.warn('Auth', 'signup — rate limited');
+      logger.warn('Auth', 'signup - rate limited');
       logger.api('POST', '/api/auth/signup', 429, Date.now() - start);
       return limited;
     }
@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
       'customer',
       password,
       name,
-      false, // emailVerified = false — must verify before logging in
+      false, // emailVerified = false - must verify before logging in
     );
 
     if (!user) {
-      logger.warn('Auth', 'signup — user creation failed (email may exist)', { email });
+      logger.warn('Auth', 'signup - user creation failed (email may exist)', { email });
       logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'An account with this email already exists.' },
@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
       const tmpl = otpVerificationEmailTemplate(user.name, otp);
       const sent = await sendEmail({ to: user.email, ...tmpl });
       if (!sent) {
-        logger.error('Auth', 'signup — verification email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
+        logger.error('Auth', 'signup - verification email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
       }
       logger.info('Auth', '[AUTH] Verification OTP Sent', { userId: user.id, delivered: sent });
     } else {
-      logger.warn('Auth', 'signup — OTP generation failed', { userId: user.id });
+      logger.warn('Auth', 'signup - OTP generation failed', { userId: user.id });
     }
 
     logger.info('Auth', '[AUTH] Signup', { userId: user.id });
@@ -101,11 +101,11 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof ValidationError) {
-      logger.warn('Auth', 'signup — validation failed', { error: error.message });
+      logger.warn('Auth', 'signup - validation failed', { error: error.message });
       logger.api('POST', '/api/auth/signup', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('Auth', 'signup — unhandled error', {
+    logger.error('Auth', 'signup - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/signup', 500, Date.now() - start);

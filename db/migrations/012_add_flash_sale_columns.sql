@@ -4,7 +4,7 @@
 -- A flash sale is defined per-row by (sale_price, sale_starts_at, sale_ends_at).
 -- It is active whenever NOW() falls inside [sale_starts_at, sale_ends_at].
 -- Effective-price computation happens in application code (src/lib/products.ts)
--- and in the checkout trusted-price query, both keyed off these raw columns —
+-- and in the checkout trusted-price query, both keyed off these raw columns -
 -- no cron job is needed, the sale reverts itself the moment sale_ends_at passes.
 --
 -- Safe to run multiple times (all statements are idempotent).

@@ -58,7 +58,7 @@ export default function EditProductPage() {
     salePrice: '', saleStartsAt: '', saleEndsAt: '', saleMinOrder: '',
     nameHi: '', descriptionHi: '', hiReviewed: false,
   });
-  // Hindi fields as loaded — PATCH only sends them when they change
+  // Hindi fields as loaded - PATCH only sends them when they change
   const [loadedHindi, setLoadedHindi] = useState<HindiFields>({ nameHi: '', descriptionHi: '', hiReviewed: false });
   const [categorySlug, setCategorySlug] = useState('');
   const [loading, setLoading]     = useState(true);
@@ -287,7 +287,7 @@ export default function EditProductPage() {
               <span className={`normal-case text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
                 formData.hiReviewed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
               }`}>
-                {formData.hiReviewed ? 'Reviewed' : 'Machine translated — needs review'}
+                {formData.hiReviewed ? 'Reviewed' : 'Machine translated - needs review'}
               </span>
             )}
           </legend>
@@ -361,20 +361,20 @@ export default function EditProductPage() {
               if (now < start) {
                 return (
                   <p className="text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                    Scheduled — starts {formatDateTime(new Date(start).toISOString())}
+                    Scheduled - starts {formatDateTime(new Date(start).toISOString())}
                   </p>
                 );
               }
               if (now > end) {
                 return (
                   <p className="text-xs font-medium text-brand-steel bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2">
-                    Ended {formatDateTime(new Date(end).toISOString())} — save with new dates to run it again, or clear it.
+                    Ended {formatDateTime(new Date(end).toISOString())} - save with new dates to run it again, or clear it.
                   </p>
                 );
               }
               return (
                 <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  🔥 Live now — ends {formatDateTime(new Date(end).toISOString())}
+                  🔥 Live now - ends {formatDateTime(new Date(end).toISOString())}
                 </p>
               );
             }
@@ -404,16 +404,16 @@ export default function EditProductPage() {
             <div className="col-span-2 sm:col-span-1">
               <label className={labelCls}>Minimum Order Value (₹)</label>
               <input type="number" name="saleMinOrder" value={formData.saleMinOrder} onChange={handleChange}
-                placeholder="Optional — e.g. 100" min="0" step="0.01" className={inputCls} disabled={saving} />
+                placeholder="Optional - e.g. 100" min="0" step="0.01" className={inputCls} disabled={saving} />
               <p className="text-xs text-brand-steel mt-1">
                 Leave blank for no minimum. Otherwise the sale price only applies once the shopper has this much
-                (at regular prices) of OTHER products in their cart — it falls back to the regular price below that.
+                (at regular prices) of OTHER products in their cart - it falls back to the regular price below that.
               </p>
             </div>
           </div>
           <p className="text-xs text-brand-steel">
             While the sale is running, this product shows a discounted price everywhere (storefront, product page,
-            checkout) and reverts automatically the moment it ends — no follow-up action needed.
+            checkout) and reverts automatically the moment it ends - no follow-up action needed.
           </p>
         </fieldset>
 

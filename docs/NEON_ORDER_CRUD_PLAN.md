@@ -27,7 +27,7 @@ Create and verify the `orders` table schema in Neon Postgres.
     - `landmark` (text, nullable)
     - `delivery_type` (varchar 20, check constraint: 'urgent' or 'scheduled')
     - `scheduled_time` (timestamp with timezone, nullable)
-    - `items` (JSONB, not null — stores array of OrderItem)
+    - `items` (JSONB, not null - stores array of OrderItem)
     - `subtotal` (integer, not null)
     - `convenience_fee` (integer, not null)
     - `total` (integer, not null)
@@ -200,8 +200,8 @@ Verify order CRUD works end-to-end without breaking existing UI.
 
 #### **Build & Type Check**
 
-- [ ] `npm run typecheck` — zero TypeScript errors
-- [ ] `npm run build` — production build succeeds
+- [ ] `npm run typecheck` - zero TypeScript errors
+- [ ] `npm run build` - production build succeeds
 - [ ] No console errors or warnings from order routes
 
 #### **Local Development**

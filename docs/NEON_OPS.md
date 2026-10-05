@@ -225,4 +225,4 @@ If queries are slow:
 ---
 
 **Last Updated:** May 11, 2026  
-**Migration Status:** ✅ Complete — All orders in Neon, Google Sheets legacy removed
+**Migration Status:** ✅ Complete - All orders in Neon, Google Sheets legacy removed

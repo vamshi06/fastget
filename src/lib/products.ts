@@ -13,7 +13,7 @@ function wantsTranslation(locale?: Locale): locale is Locale {
 
 /**
  * The product_translations table arrives via migration 021. Until that has run,
- * catalog queries that join it would fail outright — callers use this to retry
+ * catalog queries that join it would fail outright - callers use this to retry
  * in English instead of returning an empty catalog.
  */
 function isMissingTranslationsTable(error: unknown): boolean {
@@ -205,7 +205,7 @@ const VALID_CATEGORY_TABLES = new Set([
 /**
  * A row's flash sale is active when it has a sale_price and NOW() falls
  * inside [sale_starts_at, sale_ends_at]. Computed client-side (not trusted
- * for checkout — see the CASE expression in getTrustedUnitPrices) so it works
+ * for checkout - see the CASE expression in getTrustedUnitPrices) so it works
  * identically whether the row came from a category table or the view.
  */
 function isSaleActive(row: any): boolean {
@@ -280,7 +280,7 @@ export async function getProductsFromCategoryTables(
       : 'products_catalog_view';
 
     if (!tableName || !VALID_CATEGORY_TABLES.has(tableName)) {
-      // Unknown category slug — fall back to empty result (not an error)
+      // Unknown category slug - fall back to empty result (not an error)
       logger.warn('Products', `getProductsFromCategoryTables: unknown slug "${categorySlug}"`);
       return { products: [], total: 0 };
     }
@@ -295,7 +295,7 @@ export async function getProductsFromCategoryTables(
               ON t.product_code = c.product_code AND t.locale = $1) src`
       : tableName;
 
-    // Price filter (and optionally search) as WHERE args — split out so the
+    // Price filter (and optionally search) as WHERE args - split out so the
     // fuzzy fallback below can re-run price/category filters without the
     // exact-substring search clause.
     const buildFilters = (includeSearch: boolean) => {
@@ -306,7 +306,7 @@ export async function getProductsFromCategoryTables(
         const pat = `%${search.trim()}%`;
         args.push(pat, pat, pat);
         const n = args.length;
-        // Match the English name too — plenty of shoppers type in English
+        // Match the English name too - plenty of shoppers type in English
         // even with the site in Hindi.
         const translatedMatch = translate ? ` OR COALESCE(name_i18n,'') ILIKE $${n - 2}` : '';
         clauses.push(
@@ -350,7 +350,7 @@ export async function getProductsFromCategoryTables(
     let products = (rows as any[]).map(categoryTableRowToProduct);
     let total    = Number((countRows as any[])[0]?.total ?? 0);
 
-    // Exact substring search found nothing — the shopper likely mistyped the
+    // Exact substring search found nothing - the shopper likely mistyped the
     // product name. Re-scan the (category/price-scoped, search-unfiltered)
     // candidates with typo-tolerant matching instead of showing "no results".
     if (search?.trim() && total === 0 && offset === 0) {
@@ -408,7 +408,7 @@ export async function getProductsFromCategoryTables(
     return { products, total };
   } catch (error) {
     if (translate && isMissingTranslationsTable(error)) {
-      logger.warn('Products', 'product_translations missing (run migration 021) — serving English');
+      logger.warn('Products', 'product_translations missing (run migration 021) - serving English');
       return getProductsFromCategoryTables({ ...params, locale: undefined });
     }
     logger.error('Products', 'getProductsFromCategoryTables failed', {
@@ -496,14 +496,14 @@ export interface TrustedPriceInfo {
  *
  * Given the public product ids (product_code), returns the authoritative
  * original price, sale price (if any), whether the sale is currently active,
- * and the sale's minimum-order threshold — all straight from the catalog in
+ * and the sale's minimum-order threshold - all straight from the catalog in
  * PAISE, never trust a client-supplied price. The caller (order-pricing.ts)
  * decides whether the sale price applies, since that depends on the whole
  * cart's pre-discount subtotal, not any single line.
  *
  * Reads from products_catalog_view (the same source as GET /api/products), with
  * a fallback to the normalised products table for any codes not found there
- * (e.g. when LEGACY_PRODUCTS_TABLE=1) — treated as having no active sale.
+ * (e.g. when LEGACY_PRODUCTS_TABLE=1) - treated as having no active sale.
  * Codes missing from both are simply absent from the returned map, and the
  * caller must reject them.
  */
@@ -1471,7 +1471,7 @@ export async function deleteProductFromCategoryTable(
     try {
       await sqlClient.query('DELETE FROM product_translations WHERE product_code = $1', [productCode]);
     } catch (error) {
-      // Table may not exist yet (migration 021) — nothing to clean up then
+      // Table may not exist yet (migration 021) - nothing to clean up then
       if (!isMissingTranslationsTable(error)) throw error;
     }
     return true;

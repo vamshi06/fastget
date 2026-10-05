@@ -28,14 +28,14 @@ export async function POST(request: NextRequest) {
 
     const email = body.email.toLowerCase().trim();
 
-    // Throttle reset requests per IP and per account (H3) — limits reset-email
+    // Throttle reset requests per IP and per account (H3) - limits reset-email
     // spam and OTP regeneration churn.
     const limited = await limitOrResponse([
       { key: `forgot:ip:${getClientIp(request)}`, limit: 6, windowSec: 3600 },
       { key: `forgot:acct:${email}`, limit: 4, windowSec: 3600 },
     ]);
     if (limited) {
-      logger.warn('Auth', 'forgot-password — rate limited', { email });
+      logger.warn('Auth', 'forgot-password - rate limited', { email });
       logger.api('POST', '/api/auth/forgot-password', 429, Date.now() - start);
       return limited;
     }
@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      logger.info('Auth', 'forgot-password — user not found (silent)', { email });
+      logger.info('Auth', 'forgot-password - user not found (silent)', { email });
       logger.api('POST', '/api/auth/forgot-password', 200, Date.now() - start);
       return okResponse;
     }
 
     const otp = await setResetPasswordOtp(user.id);
     if (!otp) {
-      logger.error('Auth', 'forgot-password — failed to generate OTP', { userId: user.id });
+      logger.error('Auth', 'forgot-password - failed to generate OTP', { userId: user.id });
       logger.api('POST', '/api/auth/forgot-password', 200, Date.now() - start);
       return okResponse;
     }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const sent = await sendEmail({ to: user.email, ...tmpl });
 
     if (!sent) {
-      logger.error('Auth', 'forgot-password — email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
+      logger.error('Auth', 'forgot-password - email delivery failed (check EMAIL_PROVIDER / RESEND_API_KEY / domain verification)', { userId: user.id });
     }
 
     logger.info('Auth', '[AUTH] Password Reset email sent', { userId: user.id, delivered: sent });
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     return okResponse;
   } catch (error) {
-    logger.error('Auth', 'forgot-password — unhandled error', {
+    logger.error('Auth', 'forgot-password - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/forgot-password', 500, Date.now() - start);

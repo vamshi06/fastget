@@ -37,7 +37,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     hour: '2-digit',
     minute: '2-digit',
     // This page renders on the server (Vercel functions run in UTC), so the
-    // timezone must be pinned explicitly — 'en-IN' only sets formatting
+    // timezone must be pinned explicitly - 'en-IN' only sets formatting
     // conventions, not the clock. Without this, times were off by +5:30.
     timeZone: 'Asia/Kolkata',
   });
@@ -50,7 +50,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     cancelled: 'bg-red-100 border-red-300 text-red-800',
   };
 
-  // Orders written before status_history existed have an empty array — fall
+  // Orders written before status_history existed have an empty array - fall
   // back to a single 'received' entry at created_at so the timeline still
   // renders something sensible instead of looking broken.
   const timeline: StatusHistoryEntry[] =
@@ -278,7 +278,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               })}
             </ol>
             {!isTerminal && (
-              <p className="text-xs text-brand-slate italic -mt-2">Order is still in progress — timer is running.</p>
+              <p className="text-xs text-brand-slate italic -mt-2">Order is still in progress - timer is running.</p>
             )}
           </div>
 

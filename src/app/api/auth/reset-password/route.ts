@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Validate token before resetting (gives a better UX error message)
     const tokenUser = await getUserByResetToken(token);
     if (!tokenUser) {
-      logger.warn('Auth', 'reset-password — invalid or expired token');
+      logger.warn('Auth', 'reset-password - invalid or expired token');
       logger.api('POST', '/api/auth/reset-password', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Reset link is invalid or has expired. Please request a new one.' },
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const updated = await resetUserPasswordByToken(token, password);
     if (!updated) {
-      logger.error('Auth', 'reset-password — update failed', { userId: tokenUser.id });
+      logger.error('Auth', 'reset-password - update failed', { userId: tokenUser.id });
       logger.api('POST', '/api/auth/reset-password', 500, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });
     }
@@ -61,11 +61,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof ValidationError) {
-      logger.warn('Auth', 'reset-password — validation failed', { error: error.message });
+      logger.warn('Auth', 'reset-password - validation failed', { error: error.message });
       logger.api('POST', '/api/auth/reset-password', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('Auth', 'reset-password — unhandled error', {
+    logger.error('Auth', 'reset-password - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/reset-password', 500, Date.now() - start);

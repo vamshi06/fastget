@@ -19,9 +19,9 @@
  * Usage:  npm run import-sheet
  *
  * Optional env:
- *   GOOGLE_SHEETS_API_KEY  — fetch live data from the sheet
- *   DRY_RUN=1              — preview without writing
- *   SKIP_CLEANUP=1         — skip Phase 0 legacy cleanup
+ *   GOOGLE_SHEETS_API_KEY  - fetch live data from the sheet
+ *   DRY_RUN=1              - preview without writing
+ *   SKIP_CLEANUP=1         - skip Phase 0 legacy cleanup
  */
 
 import { neon } from '@neondatabase/serverless';
@@ -88,7 +88,7 @@ async function fetchLiveData(): Promise<CatalogueRow[]> {
   const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
   if (!apiKey) return CATALOGUE_ROWS;
 
-  console.log('GOOGLE_SHEETS_API_KEY set — fetching live sheet data...');
+  console.log('GOOGLE_SHEETS_API_KEY set - fetching live sheet data...');
 
   const TAB_SLUGS: Record<string, { slug: string; name: string }> = {
     '1. Carpentry – Boards': { slug: 'carpentry',           name: 'Carpentry'            },
@@ -142,7 +142,7 @@ async function fetchLiveData(): Promise<CatalogueRow[]> {
 // ─── Phase 0: Remove legacy grouped products ──────────────────────────────────
 //
 // Products created by the old import had no product_code (NULL).
-// These are safe to delete — their variants/inventory cascade-delete, and
+// These are safe to delete - their variants/inventory cascade-delete, and
 // orders store item data as JSONB (no FK to products).
 
 async function cleanupLegacyProducts() {
@@ -165,7 +165,7 @@ async function cleanupLegacyProducts() {
   if (!DRY_RUN) {
     await sql`DELETE FROM products WHERE product_code IS NULL`;
     summary.legacy.deleted = count;
-    console.log(`  Done — ${count} products deleted.`);
+    console.log(`  Done - ${count} products deleted.`);
   } else {
     console.log(`  [DRY] Would delete ${count} legacy products.`);
   }
@@ -239,7 +239,7 @@ async function upsertProducts(
         summary.products.skipped++;
         const reason = 'empty product code';
         skippedRows.push({ sku: '(empty)', reason });
-        console.warn(`  SKIP row ${i}: ${reason} — "${row.productName}"`);
+        console.warn(`  SKIP row ${i}: ${reason} - "${row.productName}"`);
         continue;
       }
 
@@ -498,8 +498,8 @@ async function generateMismatchReport(rows: CatalogueRow[]) {
 async function main() {
   console.log('═══════════════════════════════════════════════════');
   console.log('  FastGet Catalogue Import  (Product Code = key)');
-  if (DRY_RUN)      console.log('  MODE: DRY RUN — no writes to database');
-  if (SKIP_CLEANUP) console.log('  SKIP_CLEANUP=1 — legacy cleanup skipped');
+  if (DRY_RUN)      console.log('  MODE: DRY RUN - no writes to database');
+  if (SKIP_CLEANUP) console.log('  SKIP_CLEANUP=1 - legacy cleanup skipped');
   console.log('═══════════════════════════════════════════════════');
 
   const rows = await fetchLiveData();

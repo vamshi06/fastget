@@ -79,7 +79,7 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-black text-brand-charcoal">Dashboard</h1>
-        <p className="text-brand-slate text-sm mt-1">FastGet Admin — Overview</p>
+        <p className="text-brand-slate text-sm mt-1">FastGet Admin - Overview</p>
       </div>
 
       {/* Stat Cards */}

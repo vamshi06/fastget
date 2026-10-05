@@ -51,7 +51,7 @@ export interface DbUser {
   reset_password_token: string | null;
   reset_password_token_expiry: Date | null;
   resend_verification_at: Date | null;
-  // Added in migration 015 — self-linked by admin/agent users via my-profile
+  // Added in migration 015 - self-linked by admin/agent users via my-profile
   telegram_chat_id: string | null;
 }
 
@@ -272,7 +272,7 @@ export async function authenticateUser(
 
 /**
  * Update a user's editable profile fields (name, phone). Email is intentionally
- * excluded — changing it would desync email_verified, so that goes through a
+ * excluded - changing it would desync email_verified, so that goes through a
  * dedicated re-verification flow instead.
  */
 export async function updateUserProfile(
@@ -324,7 +324,7 @@ export async function updateTelegramChatId(
 
 /**
  * Staff (admin + agent) users to notify when a new order is placed.
- * Used by src/lib/order-notifications.ts — never exposed to customers.
+ * Used by src/lib/order-notifications.ts - never exposed to customers.
  */
 export async function getStaffForOrderNotifications(): Promise<User[]> {
   const sql = getClient();
@@ -622,7 +622,7 @@ export async function setVerificationToken(
       RETURNING id
     `;
     if (result.length === 0) {
-      logger.error('Users', 'setVerificationToken — UPDATE matched 0 rows', { userId });
+      logger.error('Users', 'setVerificationToken - UPDATE matched 0 rows', { userId });
       return null;
     }
     return token;
@@ -651,7 +651,7 @@ export async function setVerificationOtp(userId: string): Promise<string | null>
       RETURNING id
     `;
     if (result.length === 0) {
-      logger.error('Users', 'setVerificationOtp — UPDATE matched 0 rows', { userId });
+      logger.error('Users', 'setVerificationOtp - UPDATE matched 0 rows', { userId });
       return null;
     }
     return otp;
@@ -776,7 +776,7 @@ export async function setResetPasswordOtp(userId: string): Promise<string | null
       RETURNING id
     `;
     if (result.length === 0) {
-      logger.error('Users', 'setResetPasswordOtp — UPDATE matched 0 rows', { userId });
+      logger.error('Users', 'setResetPasswordOtp - UPDATE matched 0 rows', { userId });
       return null;
     }
     return otp;
@@ -838,10 +838,10 @@ export async function setResetPasswordToken(userId: string): Promise<string | nu
       RETURNING id
     `;
     if (result.length === 0) {
-      logger.error('Users', 'setResetPasswordToken — UPDATE matched 0 rows', { userId });
+      logger.error('Users', 'setResetPasswordToken - UPDATE matched 0 rows', { userId });
       return null;
     }
-    logger.debug('Users', 'setResetPasswordToken — stored', { prefix: token.slice(0, 8), userId });
+    logger.debug('Users', 'setResetPasswordToken - stored', { prefix: token.slice(0, 8), userId });
     return token;
   } catch (error) {
     logger.error('Users', 'Failed to set reset password token', { error: error instanceof Error ? error.message : String(error) });
@@ -853,11 +853,11 @@ export async function setResetPasswordToken(userId: string): Promise<string | nu
  * Look up a user by their password reset token, verifying it is not expired.
  */
 export async function getUserByResetToken(token: string): Promise<User | null> {
-  // Use the pooled client — same connection path as setResetPasswordToken writes.
+  // Use the pooled client - same connection path as setResetPasswordToken writes.
   // The unpooled (direct) endpoint can lag behind the pooler for freshly committed rows.
   const sql = getClient();
   try {
-    logger.debug('Users', 'getUserByResetToken — looking up token', { prefix: token.slice(0, 8) });
+    logger.debug('Users', 'getUserByResetToken - looking up token', { prefix: token.slice(0, 8) });
     const result = await sql`
       SELECT * FROM users
       WHERE reset_password_token = ${token}
@@ -872,11 +872,11 @@ export async function getUserByResetToken(token: string): Promise<User | null> {
         LIMIT 1
       `;
       if (anyMatch.length > 0) {
-        logger.warn('Users', 'getUserByResetToken — token found but EXPIRED', {
+        logger.warn('Users', 'getUserByResetToken - token found but EXPIRED', {
           expiry: anyMatch[0].reset_password_token_expiry,
         });
       } else {
-        logger.warn('Users', 'getUserByResetToken — token NOT FOUND in DB (never stored, already used, or overwritten)', {
+        logger.warn('Users', 'getUserByResetToken - token NOT FOUND in DB (never stored, already used, or overwritten)', {
           prefix: token.slice(0, 8),
         });
       }

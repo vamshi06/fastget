@@ -50,7 +50,7 @@ export async function fetchPayment(paymentId: string) {
 /**
  * Verifies a Razorpay webhook payload signature (HMAC SHA256 over the exact
  * raw request body, keyed with the webhook secret set in Razorpay Dashboard →
- * Settings → Webhooks — NOT the same as RAZORPAY_KEY_SECRET).
+ * Settings → Webhooks - NOT the same as RAZORPAY_KEY_SECRET).
  * https://razorpay.com/docs/webhooks/validate-test/#validate-webhooks-manually
  */
 export function verifyWebhookSignature(rawBody: string, signature: string): boolean {

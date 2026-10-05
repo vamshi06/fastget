@@ -4,12 +4,12 @@
 -- variant_id is a soft reference back to product_variants.id so that inventory
 -- lookups still work without requiring an FK that spans 8 tables.
 --
--- The original products table is NOT touched — it remains the FK anchor for
+-- The original products table is NOT touched - it remains the FK anchor for
 -- product_variants, inventory, and wishlists.
 --
 -- Safe to run multiple times (all statements are idempotent).
 
--- ── Shared column macro (via DO block comment — actual CREATE statements below) ──
+-- ── Shared column macro (via DO block comment - actual CREATE statements below) ──
 -- Each table has:
 --   product_code  VARCHAR(100)  PRIMARY KEY  (= SKU from the sheet)
 --   name          VARCHAR(500)  NOT NULL

@@ -13,7 +13,7 @@ export function HeroSection() {
   const t = useTranslations('home');
   const slides = t.raw('heroSlides') as HeroSlide[];
   // A clone of the first slide appended at the end lets the track scroll one
-  // step past the last real slide, which we then jump back from invisibly —
+  // step past the last real slide, which we then jump back from invisibly -
   // giving a seamless loop from slide 3 back to slide 1.
   const extendedSlides = useMemo(() => [...slides, slides[0]], [slides]);
   const [dot, setDot] = useState(0);
@@ -38,7 +38,7 @@ export function HeroSection() {
     track.scrollTo({ left, behavior: 'smooth' });
   }, []);
 
-  // Autoplay — pauses while the user is actively dragging/swiping the track
+  // Autoplay - pauses while the user is actively dragging/swiping the track
   useEffect(() => {
     const t = setInterval(() => {
       if (isInteracting.current || Date.now() < resumeAt.current) return;
@@ -123,7 +123,7 @@ export function HeroSection() {
 
       <div className="page-container relative z-10 py-7 md:py-10">
 
-        {/* Scrollable, snap-paged track — auto-advances but the user can swipe/drag too */}
+        {/* Scrollable, snap-paged track - auto-advances but the user can swipe/drag too */}
         <div
           ref={trackRef}
           className="flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
@@ -152,7 +152,7 @@ export function HeroSection() {
           ))}
         </div>
 
-        {/* Indicators — outside the track, always in the same place */}
+        {/* Indicators - outside the track, always in the same place */}
         <div className="flex items-center gap-2">
           {slides.map((_, i) => (
             <button

@@ -57,7 +57,7 @@ for (const table of TABLES) {
   `;
 
   if (!exists.ok) {
-    console.log(`⚠️  Table "${table}" does not exist — skipping`);
+    console.log(`⚠️  Table "${table}" does not exist - skipping`);
     continue;
   }
 
@@ -70,7 +70,7 @@ for (const table of TABLES) {
   const affected = Number(count);
 
   if (affected === 0) {
-    console.log(`✅ ${table.padEnd(25)} — no rows to update`);
+    console.log(`✅ ${table.padEnd(25)} - no rows to update`);
     continue;
   }
 
@@ -82,7 +82,7 @@ for (const table of TABLES) {
       LIMIT 3
     `;
 
-    console.log(`🔍 ${table.padEnd(25)} — ${affected} row(s) would be updated`);
+    console.log(`🔍 ${table.padEnd(25)} - ${affected} row(s) would be updated`);
     for (const { image_url: original } of samples) {
       const updated = original.replaceAll(FROM, TO);
       console.log(`     Before: ${original}`);
@@ -96,7 +96,7 @@ for (const table of TABLES) {
       WHERE image_url LIKE ${`%${FROM}%`}
     `;
 
-    console.log(`✅ ${table.padEnd(25)} — updated ${affected} row(s)`);
+    console.log(`✅ ${table.padEnd(25)} - updated ${affected} row(s)`);
   }
 
   grandTotal += affected;

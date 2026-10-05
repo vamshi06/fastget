@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger';
  *
  * Validates the order form, reprices from the trusted catalog (H1), creates a
  * Razorpay order, then returns an HMAC-signed `orderToken` that encapsulates the
- * validated order data.  No DB record is written here — the order is only
+ * validated order data.  No DB record is written here - the order is only
  * persisted in `verify-payment` after Razorpay confirms a successful capture.
  *
  * Body: { ...orderFormData, items, total?, currency? }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Only INR is supported; reject anything else before it reaches Razorpay.
     if (currency !== 'INR') {
-      logger.warn('Payment', 'create-order — unsupported currency', { currency: String(currency).slice(0, 16) });
+      logger.warn('Payment', 'create-order - unsupported currency', { currency: String(currency).slice(0, 16) });
       logger.api('POST', '/api/payment/create-order', 400, Date.now() - start);
       return NextResponse.json({ error: 'Only INR payments are supported.' }, { status: 400 });
     }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Re-use the same form validation as the COD orders flow
     const validationError = validateOrderForm(formFields);
     if (validationError) {
-      logger.warn('Payment', 'create-order — validation failed', { reason: validationError });
+      logger.warn('Payment', 'create-order - validation failed', { reason: validationError });
       logger.api('POST', '/api/payment/create-order', 400, Date.now() - start);
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
@@ -50,13 +50,13 @@ export async function POST(request: NextRequest) {
       typeof coinsToRedeem === 'number' ? coinsToRedeem : undefined,
     );
     if (!pricing.ok) {
-      logger.warn('Payment', 'create-order — pricing rejected', { reason: pricing.error });
+      logger.warn('Payment', 'create-order - pricing rejected', { reason: pricing.error });
       logger.api('POST', '/api/payment/create-order', pricing.status, Date.now() - start);
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
     const { items: pricedItems, subtotal, convenienceFee, discount, total: serverTotal, coinsRedeemed } = pricing.priced;
 
-    // Razorpay can't process a zero-amount payment — an order fully covered by
+    // Razorpay can't process a zero-amount payment - an order fully covered by
     // coins has nothing left to pay online, so it must go through COD instead.
     if (serverTotal <= 0) {
       logger.api('POST', '/api/payment/create-order', 400, Date.now() - start);
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       orderToken,
     });
   } catch (error) {
-    logger.error('Payment', 'create-order — unhandled error', {
+    logger.error('Payment', 'create-order - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/payment/create-order', 500, Date.now() - start);

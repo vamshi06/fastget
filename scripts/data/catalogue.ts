@@ -16,7 +16,7 @@ export interface CatalogueRow {
 }
 
 export const CATALOGUE_ROWS: CatalogueRow[] = [
-  // ── Carpentry (83 SKUs — boards + hardware combined) ─────────────────────
+  // ── Carpentry (83 SKUs - boards + hardware combined) ─────────────────────
   { categorySlug:'carpentry', categoryName:'Carpentry', productName:'Plywood', brand:'CenturyPly', sku:'PLY-CP-04', description:'CenturyPly BWR (Boiling Water Resistant) grade plywood, 4mm; resists moisture and delamination in humid environments, ideal for back panels and pharma cabinet bases. Sheet size 8×4 ft.', variantSize:'4mm', colourFinish:'Natural', uom:'Sheet', mrpRupees:850, fastgetPriceRupees:780, moq:1, imageUrl:'', remarks:'For pharma/back panels' },
   { categorySlug:'carpentry', categoryName:'Carpentry', productName:'Plywood', brand:'CenturyPly', sku:'PLY-CP-06', description:'CenturyPly BWR grade plywood, 6mm; strong cross-ply construction for lightweight partitions, drawer bottoms, and concealed shelving in moisture-prone areas. Sheet size 8×4 ft.', variantSize:'6mm', colourFinish:'Natural', uom:'Sheet', mrpRupees:1050, fastgetPriceRupees:970, moq:1, imageUrl:'', remarks:'' },
   { categorySlug:'carpentry', categoryName:'Carpentry', productName:'Plywood', brand:'CenturyPly', sku:'PLY-CP-09', description:'CenturyPly BWR grade plywood, 9mm; suitable for cabinet side panels, backing boards, and mid-shelf supports where moderate load-bearing and moisture resistance are needed. Sheet size 8×4 ft.', variantSize:'9mm', colourFinish:'Natural', uom:'Sheet', mrpRupees:1350, fastgetPriceRupees:1240, moq:1, imageUrl:'', remarks:'' },

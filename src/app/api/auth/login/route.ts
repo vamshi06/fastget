@@ -14,12 +14,12 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
-  logger.info('Auth', '[AUTH] Login — POST /api/auth/login');
+  logger.info('Auth', '[AUTH] Login - POST /api/auth/login');
   try {
     const body = await request.json();
 
     if (!body.password || typeof body.password !== 'string') {
-      logger.warn('Auth', 'login — missing password');
+      logger.warn('Auth', 'login - missing password');
       logger.api('POST', '/api/auth/login', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Password is required' },
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Brute-force protection (H3): cap attempts per IP and per account.
     // Only FAILED attempts are counted (see recordFailedAttempt below), so a
-    // server-side error or a successful login never burns a slot — a transient
+    // server-side error or a successful login never burns a slot - a transient
     // 500 can't lock a legitimate user out.
     const ip = getClientIp(request);
     const acct =
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     ];
     const limited = await peekLimit(rules);
     if (limited) {
-      logger.warn('Auth', 'login — rate limited', { ip });
+      logger.warn('Auth', 'login - rate limited', { ip });
       logger.api('POST', '/api/auth/login', 429, Date.now() - start);
       return limited;
     }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       user = await authenticateUserByPhone(body.phone.trim(), body.password);
       if (!user) {
         await recordFailedAttempt(rules);
-        logger.warn('Auth', 'login — phone auth failed', { phone: body.phone });
+        logger.warn('Auth', 'login - phone auth failed', { phone: body.phone });
         logger.api('POST', '/api/auth/login', 401, Date.now() - start);
         return NextResponse.json(
           { success: false, error: 'Invalid phone number or password' },
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       user = await authenticateUser(email, body.password);
       if (!user) {
         await recordFailedAttempt(rules);
-        logger.warn('Auth', 'login — email auth failed', { email });
+        logger.warn('Auth', 'login - email auth failed', { email });
         logger.api('POST', '/api/auth/login', 401, Date.now() - start);
         return NextResponse.json(
           { success: false, error: 'Invalid email or password' },
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      logger.warn('Auth', 'login — missing phone or email');
+      logger.warn('Auth', 'login - missing phone or email');
       logger.api('POST', '/api/auth/login', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Phone number or email is required' },
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Credentials were correct — clear this account's failed-attempt counter so
+    // Credentials were correct - clear this account's failed-attempt counter so
     // a few earlier typos don't leave the legitimate owner near the lockout
     // threshold. Only the per-account bucket is cleared, never the shared per-IP
     // one (otherwise an attacker could reset it by logging into their own account).
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     // emailVerified defaults to true (via migration) for all pre-existing users,
     // so only newly-registered accounts that haven't clicked the link are blocked.
     if (user.emailVerified === false) {
-      logger.warn('Auth', 'login — email not verified', { userId: user.id });
+      logger.warn('Auth', 'login - email not verified', { userId: user.id });
       logger.api('POST', '/api/auth/login', 403, Date.now() - start);
       return NextResponse.json(
         {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, sessionCookieOptions(user.role));
     return response;
   } catch (error) {
-    logger.error('Auth', 'login — unhandled error', {
+    logger.error('Auth', 'login - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/auth/login', 500, Date.now() - start);

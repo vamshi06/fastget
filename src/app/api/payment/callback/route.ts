@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     NextResponse.redirect(`${origin}/checkout?payment_error=${encodeURIComponent(reason)}`, 303);
 
   if (!orderToken) {
-    return redirectError('Invalid payment callback — missing order reference.');
+    return redirectError('Invalid payment callback - missing order reference.');
   }
 
   const orderData = verifyOrderToken(orderToken);
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-    logger.info('Payment', 'callback — payment cancelled or incomplete');
+    logger.info('Payment', 'callback - payment cancelled or incomplete');
     return redirectError('Payment was cancelled. Please try again.');
   }
 
@@ -62,19 +62,19 @@ export async function POST(request: NextRequest) {
   try {
     isValid = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
   } catch (err) {
-    logger.error('Payment', 'callback — signature verification threw', {
+    logger.error('Payment', 'callback - signature verification threw', {
       error: err instanceof Error ? err.message : String(err),
     });
     return redirectError('Payment verification failed.');
   }
 
   if (!isValid) {
-    logger.warn('Payment', 'callback — invalid signature');
+    logger.warn('Payment', 'callback - invalid signature');
     return redirectError('Payment signature mismatch. Please contact support.');
   }
 
   if (orderData.razorpayOrderId !== razorpay_order_id) {
-    logger.warn('Payment', 'callback — razorpay_order_id mismatch', { razorpay_order_id });
+    logger.warn('Payment', 'callback - razorpay_order_id mismatch', { razorpay_order_id });
     return redirectError('Payment order reference mismatch. Please contact support.');
   }
 
@@ -82,18 +82,18 @@ export async function POST(request: NextRequest) {
   try {
     payment = await fetchPayment(razorpay_payment_id);
   } catch (err) {
-    logger.error('Payment', 'callback — Razorpay fetch failed', {
+    logger.error('Payment', 'callback - Razorpay fetch failed', {
       error: err instanceof Error ? err.message : String(err),
     });
     return redirectError('Could not verify payment status. Please contact support.');
   }
 
   if (payment.status !== 'captured' && payment.status !== 'authorized') {
-    logger.warn('Payment', 'callback — payment not captured', { status: payment.status });
+    logger.warn('Payment', 'callback - payment not captured', { status: payment.status });
     return redirectError(`Payment was not completed (status: ${payment.status}). Please try again.`);
   }
 
-  // Payment confirmed — create the order in the DB
+  // Payment confirmed - create the order in the DB
   const orderId = generateUUID();
   const statusToken = generateToken();
   const updateToken = generateToken();
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   const dbSuccess = await createOrder(order);
   if (!dbSuccess) {
-    logger.error('Payment', 'callback — DB write failed', { orderId });
+    logger.error('Payment', 'callback - DB write failed', { orderId });
     return redirectError('Failed to save order. Please contact support.');
   }
 
@@ -133,11 +133,11 @@ export async function POST(request: NextRequest) {
   );
 
   if (!confirmed) {
-    logger.error('Payment', 'callback — payment confirmation DB update failed', { orderId });
+    logger.error('Payment', 'callback - payment confirmation DB update failed', { orderId });
     await deleteOrder(orderId);
     return redirectError('Payment recorded but order save failed. Please contact support.');
   }
 
-  logger.info('Payment', 'callback — payment confirmed and order created', { orderId, razorpay_payment_id });
+  logger.info('Payment', 'callback - payment confirmed and order created', { orderId, razorpay_payment_id });
   return NextResponse.redirect(`${origin}/order/${statusToken}`, 303);
 }

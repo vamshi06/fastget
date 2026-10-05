@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    logger.error('API', 'GET /api/products — unhandled error', {
+    logger.error('API', 'GET /api/products - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/products', 500, Date.now() - start);

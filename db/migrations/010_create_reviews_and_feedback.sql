@@ -1,11 +1,11 @@
 -- Migration 010: Product reviews and order delivery feedback
 --
--- product_reviews: one row per (order, product) — a review always represents
+-- product_reviews: one row per (order, product) - a review always represents
 -- a verified purchase (the order must be 'delivered' and contain the product;
 -- enforced in the API layer, not the DB). Upserted via ON CONFLICT so a
 -- customer can edit their review for that purchase.
 --
--- order_feedback: one row per order — rates the delivery experience itself,
+-- order_feedback: one row per order - rates the delivery experience itself,
 -- independent of any specific product.
 
 CREATE TABLE IF NOT EXISTS product_reviews (

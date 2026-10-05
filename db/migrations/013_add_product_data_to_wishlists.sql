@@ -29,7 +29,7 @@ ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS product_data JSONB;
 
 -- A unique index enforces the same (user_id, product_id) de-dup guarantee as a
 -- named UNIQUE constraint and works fine as an ON CONFLICT target (which is all
--- addToWishlist() needs) — used instead of ADD CONSTRAINT because Postgres has
+-- addToWishlist() needs) - used instead of ADD CONSTRAINT because Postgres has
 -- no ADD CONSTRAINT IF NOT EXISTS, and the DO $$ EXCEPTION block that would
 -- otherwise guard it isn't safe here: sync-schema.ts splits each file on a bare
 -- semicolon, which shreds a dollar-quoted PL/pgSQL block into invalid fragments.

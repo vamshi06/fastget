@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
  * the amount charged can never be tampered with from the browser.
  */
 
-// Convenience fee has been removed — total equals subtotal. Kept at 0 (rather
+// Convenience fee has been removed - total equals subtotal. Kept at 0 (rather
 // than deleting the field) so the `convenience_fee` DB column, order types,
 // and API payloads don't need a schema migration.
 // Must stay in sync with CartContext.CONVENIENCE_FEE_PERCENTAGE (client display).
@@ -20,7 +20,7 @@ export const CONVENIENCE_FEE_PERCENTAGE = 0;
 
 const MAX_QTY_PER_ITEM = 1000;
 
-// Only this many units of a flash-sale item get the sale price per order —
+// Only this many units of a flash-sale item get the sale price per order -
 // without a cap, a customer who unlocks the ₹1 price could buy 100 units at
 // ₹1 each. Extra units are still sold, at the regular price.
 // Must stay in sync with CartContext.FLASH_SALE_QTY_PER_ORDER (client cart).
@@ -55,10 +55,10 @@ export type PriceResult =
  *
  * @param rawItems      cart items as received from the client (only id + quantity
  *                      are trusted; the client price is ignored)
- * @param clientTotal   optional total the client computed — if it disagrees with
+ * @param clientTotal   optional total the client computed - if it disagrees with
  *                      the server total the order is rejected (tampered or stale
  *                      cart), so a customer is never charged a price they didn't see
- * @param userId        logged-in user redeeming coins — coins never apply to guest orders
+ * @param userId        logged-in user redeeming coins - coins never apply to guest orders
  * @param coinsToRedeem coins the client asked to redeem; clamped server-side to the
  *                       user's actual balance and to the order total, never trusted as-is
  */
@@ -90,7 +90,7 @@ export async function priceOrderFromCatalog(
 
   // Pass 1: each line's ORIGINAL (pre-discount) contribution, plus their sum.
   // A flash sale's minimum-order threshold is checked against the OTHER items
-  // in the cart — not the sale item's own price — so "min order ₹100" means
+  // in the cart - not the sale item's own price - so "min order ₹100" means
   // "₹100 of other products", not "₹100 including the ₹1 item itself".
   let originalSubtotal = 0;
   const originalLineTotals = new Map<string, number>(); // code -> original unit*qty (rupees)
@@ -122,11 +122,11 @@ export async function priceOrderFromCatalog(
       ? Math.min(i.quantity, FLASH_SALE_QTY_PER_ORDER - (saleUnitsUsed.get(i.code) ?? 0))
       : 0;
     const regularQty = i.quantity - saleQty;
-    // Record the catalog's English name — the client's name may be a
+    // Record the catalog's English name - the client's name may be a
     // translation (Hindi UI), and order records / invoices / admin stay English.
     const name = info.name || i.name;
     // Sale and regular units go on separate lines (same SKU) since an order
-    // line carries a single unit price — invoices/emails then show the split.
+    // line carries a single unit price - invoices/emails then show the split.
     if (saleQty > 0) {
       saleUnitsUsed.set(i.code, (saleUnitsUsed.get(i.code) ?? 0) + saleQty);
       subtotal += saleUnit! * saleQty;
@@ -145,7 +145,7 @@ export async function priceOrderFromCatalog(
     return { ok: false, status: 400, error: 'Invalid order total' };
   }
 
-  // First-order coupon — like coins, it never applies to guest (unattributed)
+  // First-order coupon - like coins, it never applies to guest (unattributed)
   // orders since eligibility depends on stable order history tied to a user.
   // Re-checked here against the DB on every price, never trusted from the client.
   let discount = 0;
@@ -157,7 +157,7 @@ export async function priceOrderFromCatalog(
   }
   const postDiscountTotal = preDiscountTotal - discount;
 
-  // Coins never apply to guest (unattributed) orders — there's no stable
+  // Coins never apply to guest (unattributed) orders - there's no stable
   // identity to hold a balance against. Balance is always re-fetched from the
   // DB here; a client-supplied balance is never trusted.
   let coinsRedeemed = 0;
@@ -172,7 +172,7 @@ export async function priceOrderFromCatalog(
   const total = postDiscountTotal - coinDiscount;
 
   if (typeof clientTotal === 'number' && Math.round(clientTotal) !== total) {
-    logger.warn('Pricing', 'Client total mismatch — rejecting order', {
+    logger.warn('Pricing', 'Client total mismatch - rejecting order', {
       clientTotal,
       serverTotal: total,
     });

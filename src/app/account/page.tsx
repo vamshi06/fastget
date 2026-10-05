@@ -215,7 +215,7 @@ export default function AccountPage() {
   // Still hydrating
   if (!isLoaded) return null;
 
-  // Guest state — no redirect, just show the guest screen
+  // Guest state - no redirect, just show the guest screen
   if (!currentUser) return <GuestAccount />;
 
   const displayPhone = currentUser.phone
@@ -253,7 +253,7 @@ export default function AccountPage() {
           <p className="text-sm font-medium text-brand-charcoal">{t('menu.myCoins')}</p>
           <p className="text-xs text-brand-slate">{t('menu.myCoinsSubtitle')}</p>
         </div>
-        <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '—'}</span>
+        <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '-'}</span>
         <ChevronRight className="w-4 h-4 text-brand-steel" />
       </Link>
 

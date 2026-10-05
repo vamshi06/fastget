@@ -10,7 +10,7 @@
   "clearFailed": "Could not clear cart. Try again.",
   "clearCart": "Clear Cart",
   "flashSaleUnlockHint": "Add {amount} more of other products to unlock the {price} flash price",
-  "flashSaleLimit": "Flash price on {max} per order — extra units at {original} each",
+  "flashSaleLimit": "Flash price on {max} per order - extra units at {original} each",
   "flashBreakdown": "{saleQty} × {saleUnit} (flash price) + {regularQty} × {regularUnit} = {total}",
   "orderSummary": "Order Summary",
   "subtotal": "Subtotal",

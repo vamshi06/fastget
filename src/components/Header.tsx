@@ -410,13 +410,13 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Location selector — desktop */}
+          {/* Location selector - desktop */}
           <button
             onClick={openSplash}
             aria-label={t("changeLocation")}
             className="hidden md:flex items-center gap-2 shrink-0 group"
           >
-            {/* Green badge — matches mobile */}
+            {/* Green badge - matches mobile */}
             <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
               <span className="text-[13px] font-black leading-none">~60</span>
               <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">
@@ -439,7 +439,7 @@ export function Header() {
             </div>
           </button>
 
-          {/* Search Bar — desktop */}
+          {/* Search Bar - desktop */}
           <form
             onSubmit={handleSearch}
             className="flex-1 min-w-0 hidden md:block"
@@ -583,7 +583,7 @@ export function Header() {
                     >
                       <Coins className="w-4 h-4 text-brand-primary flex-shrink-0" />
                       <span className="flex-1">{t('myCoins')}</span>
-                      <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '—'}</span>
+                      <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '-'}</span>
                     </Link>
 
                     {/* Support */}

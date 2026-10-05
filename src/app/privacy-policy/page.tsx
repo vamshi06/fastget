@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
-export const metadata = { title: "Privacy Policy — FastGet" };
+export const metadata = { title: "Privacy Policy - FastGet" };
 
 export default async function PrivacyPolicyPage() {
   const t = await getTranslations("legal.privacy");
@@ -36,16 +36,16 @@ export default async function PrivacyPolicyPage() {
         <p>{t("s4.intro")}</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            <strong>Razorpay</strong> — {t("s4.razorpay")}
+            <strong>Razorpay</strong> - {t("s4.razorpay")}
           </li>
           <li>
-            <strong>Resend</strong> — {t("s4.resend")}
+            <strong>Resend</strong> - {t("s4.resend")}
           </li>
           <li>
-            <strong>Cloudinary</strong> — {t("s4.cloudinary")}
+            <strong>Cloudinary</strong> - {t("s4.cloudinary")}
           </li>
           <li>
-            <strong>Neon (PostgreSQL hosting)</strong> — {t("s4.neon")}
+            <strong>Neon (PostgreSQL hosting)</strong> - {t("s4.neon")}
           </li>
         </ul>
         <p>{t("s4.outro")}</p>

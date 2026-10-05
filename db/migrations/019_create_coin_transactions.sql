@@ -1,6 +1,6 @@
 -- Migration 019: Coins loyalty program
 --
--- coin_transactions is the ledger: one row per credit or debit — 10% of an
+-- coin_transactions is the ledger: one row per credit or debit - 10% of an
 -- order's total credited when it's marked delivered, a checkout redemption
 -- (1 coin = ₹1), a refund of a redemption when its order is later cancelled,
 -- or a manual admin correction.
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS coin_transactions (
 
 CREATE INDEX IF NOT EXISTS idx_coin_transactions_user ON coin_transactions(user_id, created_at DESC);
 
--- One earn-credit and one refund per order — guards against double-crediting on retry.
+-- One earn-credit and one refund per order - guards against double-crediting on retry.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_delivered ON coin_transactions(order_id) WHERE reason = 'order_delivered';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_refund ON coin_transactions(order_id) WHERE reason = 'redemption_refund';
 

@@ -67,7 +67,7 @@ export default function ProductsPage() {
       .finally(() => setLoadingCats(false));
   }, []);
 
-  // Fetch products for the active tab — always fresh, no caching
+  // Fetch products for the active tab - always fresh, no caching
   const loadProducts = useCallback((slug: string) => {
     setLoadingProds(true);
     const url =
@@ -239,7 +239,7 @@ export default function ProductsPage() {
 
                   {/* Brand */}
                   <td className="px-4 py-3 text-brand-graphite whitespace-nowrap">
-                    {product.brand ?? <span className="text-brand-steel">—</span>}
+                    {product.brand ?? <span className="text-brand-steel">-</span>}
                   </td>
 
                   {/* Sub-category slug */}
@@ -259,7 +259,7 @@ export default function ProductsPage() {
                   <td className="px-4 py-3 text-brand-steel whitespace-nowrap">
                     {product.mrpPrice
                       ? `₹${product.mrpPrice.toLocaleString('en-IN')}`
-                      : <span className="text-neutral-300">—</span>}
+                      : <span className="text-neutral-300">-</span>}
                   </td>
 
                   {/* MOQ */}
@@ -278,7 +278,7 @@ export default function ProductsPage() {
                         {product.stockQuantity}
                       </span>
                     ) : (
-                      <span className="text-neutral-300 text-xs">—</span>
+                      <span className="text-neutral-300 text-xs">-</span>
                     )}
                   </td>
 

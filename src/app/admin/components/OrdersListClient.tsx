@@ -37,7 +37,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
       setOrders((prev) => prev.filter((o) => o.id !== pendingDeleteId));
       setPendingDeleteId(null);
     } catch {
-      // best-effort admin action — row simply stays if the delete failed
+      // best-effort admin action - row simply stays if the delete failed
     } finally {
       setDeleting(false);
     }
@@ -271,7 +271,7 @@ function PaymentBadge({ order }: { order: Order }) {
   }
 
   // Razorpay orders are only ever persisted once payment is captured (see
-  // /api/payment/verify-payment) — payment_status momentarily null right
+  // /api/payment/verify-payment) - payment_status momentarily null right
   // after that write is the only case that isn't "Paid", so it's labelled
   // Pending rather than assumed captured.
   const captured = order.paymentStatus === 'captured';

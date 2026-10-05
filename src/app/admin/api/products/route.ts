@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const category = await getOrCreateCategory(categoryName, categorySlug, categoryDescription);
 
     if (!category) {
-      logger.error('API', 'POST /admin/api/products — failed to resolve category', { slug: categorySlug });
+      logger.error('API', 'POST /admin/api/products - failed to resolve category', { slug: categorySlug });
       logger.api('POST', '/admin/api/products', 500, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Failed to resolve category' }, { status: 500 });
     }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const priceInPaise = Math.round(price * 100);
     const mrpInPaise   = mrpPrice !== undefined ? Math.round(mrpPrice * 100) : undefined;
 
-    // product_code is the PK of every category table — must never be empty
+    // product_code is the PK of every category table - must never be empty
     const productCode = productCodeInput || generateProductCode(categorySlug);
 
     // ── Insert into products table ────────────────────────────────
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!product) {
-      logger.error('API', 'POST /admin/api/products — product creation failed');
+      logger.error('API', 'POST /admin/api/products - product creation failed');
       logger.api('POST', '/admin/api/products', 500, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Failed to create product in database' }, { status: 500 });
     }
@@ -164,11 +164,11 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof ValidationError) {
-      logger.warn('API', 'POST /admin/api/products — validation failed', { error: error.message });
+      logger.warn('API', 'POST /admin/api/products - validation failed', { error: error.message });
       logger.api('POST', '/admin/api/products', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('API', 'POST /admin/api/products — unhandled error', {
+    logger.error('API', 'POST /admin/api/products - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/admin/api/products', 500, Date.now() - start);

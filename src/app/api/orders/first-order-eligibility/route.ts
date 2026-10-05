@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/orders/first-order-eligibility
  *
  * Whether the logged-in user still qualifies for the first-order coupon (for
- * the checkout summary display only — the actual discount is always
+ * the checkout summary display only - the actual discount is always
  * recomputed server-side in priceOrderFromCatalog, never trusted from here).
  */
 export async function GET() {
@@ -25,7 +25,7 @@ export async function GET() {
       minOrderValue: FIRST_ORDER_MIN_ORDER_RUPEES,
     });
   } catch (error) {
-    logger.error('API', 'GET /api/orders/first-order-eligibility — unhandled error', {
+    logger.error('API', 'GET /api/orders/first-order-eligibility - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ error: 'Something went wrong on our end. Please try again in a few moments.' }, { status: 500 });

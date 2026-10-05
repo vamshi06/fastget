@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  *
  * For the logged-in user: can they review this product, and have they
  * already? Powers the "Write a review" / "Edit your review" CTA on the
- * product detail page. `orderId` is the order to submit against — either an
+ * product detail page. `orderId` is the order to submit against - either an
  * unreviewed delivered purchase (new review) or the most recent reviewed one
  * (edit).
  */
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/reviews/eligibility — unhandled error', {
+    logger.error('API', 'GET /api/reviews/eligibility - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/reviews/eligibility', 500, Date.now() - start);

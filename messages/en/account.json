@@ -81,7 +81,7 @@
     "worthAtCheckout": "Worth {amount} at checkout",
     "earnInfo": "Earn 10% of every delivered order back in coins, and redeem them for ₹1 off per coin on a future order. Coins never expire.",
     "historyTitle": "History",
-    "noActivity": "No coin activity yet — place an order to start earning.",
+    "noActivity": "No coin activity yet - place an order to start earning.",
     "reasonOrderDelivered": "Earned from delivered order",
     "reasonRedemption": "Redeemed at checkout",
     "reasonRedemptionRefund": "Refunded (order cancelled)",

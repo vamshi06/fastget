@@ -57,7 +57,7 @@ export function ProductReviews({ productCode }: { productCode: string }) {
           setCount(json.data.count);
         }
       })
-      .catch(() => {/* ignore — reviews are non-critical */})
+      .catch(() => {/* ignore - reviews are non-critical */})
       .finally(() => setLoading(false));
   }, [productCode]);
 
@@ -76,7 +76,7 @@ export function ProductReviews({ productCode }: { productCode: string }) {
           }
         }
       })
-      .catch(() => {/* ignore — write-review CTA just won't show */});
+      .catch(() => {/* ignore - write-review CTA just won't show */});
   }, [isLoaded, currentUser, productCode]);
 
   const handleSubmit = async () => {

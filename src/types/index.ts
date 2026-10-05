@@ -17,7 +17,7 @@ export interface Product {
   mrpPrice?: number;   // in rupees
   moq?: number;
   variantCount?: number;
-  // Flash-sale fields — populated when a limited-time sale_price is active
+  // Flash-sale fields - populated when a limited-time sale_price is active
   isFlashSale?: boolean;
   saleEndsAt?: string; // ISO timestamp
   // `price` above is already the discounted sale price when isFlashSale is
@@ -76,7 +76,7 @@ export interface OrderItem {
   price: number;
 }
 
-/** One entry in an order's status timeline — when it entered a given status. */
+/** One entry in an order's status timeline - when it entered a given status. */
 export interface StatusHistoryEntry {
   status: OrderStatus;
   timestamp: string; // ISO 8601
@@ -105,7 +105,7 @@ export interface Order {
   userId?: string;
   // Timeline of status changes, oldest first (e.g. received -> eta_assigned -> ...).
   // Populated by the DB layer (createOrder seeds it, updateOrderStatus appends to
-  // it) — undefined only on an in-memory Order built just before its first save.
+  // it) - undefined only on an in-memory Order built just before its first save.
   statusHistory?: StatusHistoryEntry[];
 }
 

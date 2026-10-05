@@ -2,7 +2,7 @@
 /**
  * sync-schema.ts
  * Runs all pending SQL migrations against the Neon database.
- * Safe to run multiple times — all migrations use IF NOT EXISTS / IF EXISTS guards.
+ * Safe to run multiple times - all migrations use IF NOT EXISTS / IF EXISTS guards.
  *
  * Usage:  npm run sync-schema
  */

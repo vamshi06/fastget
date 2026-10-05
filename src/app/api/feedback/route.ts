@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * POST /api/feedback
  *
  * Submit or update delivery-experience feedback for an order. The order must
- * belong to the caller (session cookie — IDOR fix) and be 'delivered'.
+ * belong to the caller (session cookie - IDOR fix) and be 'delivered'.
  */
 export async function POST(request: NextRequest) {
   const start = Date.now();
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       logger.api('POST', '/api/feedback', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('API', 'POST /api/feedback — unhandled error', {
+    logger.error('API', 'POST /api/feedback - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/feedback', 500, Date.now() - start);
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
  * DELETE /api/feedback
  *
  * Delete the caller's own delivery feedback for an order (no edit-window
- * restriction). Scoped to the session user — never trusts a userId from the
+ * restriction). Scoped to the session user - never trusts a userId from the
  * request body.
  */
 export async function DELETE(request: NextRequest) {
@@ -85,7 +85,7 @@ export async function DELETE(request: NextRequest) {
       logger.api('DELETE', '/api/feedback', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('API', 'DELETE /api/feedback — unhandled error', {
+    logger.error('API', 'DELETE /api/feedback - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('DELETE', '/api/feedback', 500, Date.now() - start);

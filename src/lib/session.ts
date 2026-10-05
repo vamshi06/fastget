@@ -1,5 +1,5 @@
 // HMAC-SHA-256 signed session tokens.
-// Uses globalThis.crypto (Web Crypto API) — works in Edge runtime and Node 18+.
+// Uses globalThis.crypto (Web Crypto API) - works in Edge runtime and Node 18+.
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -39,7 +39,7 @@ function b64urlDecode(s: string): ArrayBuffer {
 
 // HMAC-SHA-256, built by hand from crypto.subtle.digest() rather than
 // crypto.subtle.sign()/verify(). Railway's self-hosted Next.js Edge runtime
-// has a real bug where sign()/verify() do not round-trip — a token signed
+// has a real bug where sign()/verify() do not round-trip - a token signed
 // and verified back-to-back in the very same request, with the confirmed
 // same key, still fails (see git history for the diagnostic that proved
 // this). digest() alone was confirmed reliable, so HMAC is constructed from

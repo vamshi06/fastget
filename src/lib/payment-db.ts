@@ -1,7 +1,7 @@
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
-// Run once per server lifetime — idempotent on repeat calls (IF NOT EXISTS).
+// Run once per server lifetime - idempotent on repeat calls (IF NOT EXISTS).
 let columnsEnsured = false;
 
 async function ensurePaymentColumns(): Promise<void> {
@@ -61,7 +61,7 @@ export async function confirmOrderPayment(
  * This is a safety net, not the primary confirmation path (that's
  * confirmOrderPayment, called from /api/payment/verify-payment when the
  * customer's browser returns from checkout). No order row exists here at all
- * if the customer closed the tab right after paying — this update simply
+ * if the customer closed the tab right after paying - this update simply
  * no-ops in that case (0 rows matched); the caller logs that for visibility.
  */
 export async function reconcileCapturedPayment(

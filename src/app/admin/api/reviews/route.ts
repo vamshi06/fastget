@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest) {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
-    logger.error('API', 'GET /admin/api/reviews — unhandled error', {
+    logger.error('API', 'GET /admin/api/reviews - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/admin/api/reviews', 500, Date.now() - start);

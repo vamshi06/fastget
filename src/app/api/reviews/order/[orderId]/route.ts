@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 
     const reviewsBySku = new Map(reviews.map((r) => [r.productCode, r]));
     // A product can span two order lines (flash-sale units + regular-price
-    // units share a SKU), but it's reviewed once — so list each SKU once.
+    // units share a SKU), but it's reviewed once - so list each SKU once.
     const seenSkus = new Set<string>();
     const items = order.items
       .filter((item) => !seenSkus.has(item.sku) && seenSkus.add(item.sku))
@@ -57,7 +57,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/reviews/order/[orderId] — unhandled error', {
+    logger.error('API', 'GET /api/reviews/order/[orderId] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/reviews/order/[orderId]', 500, Date.now() - start);

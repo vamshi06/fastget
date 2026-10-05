@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/reviews — unhandled error', {
+    logger.error('API', 'GET /api/reviews - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/reviews', 500, Date.now() - start);
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
  * POST /api/reviews
  *
  * Submit or update a product review. The order must belong to the caller
- * (session cookie, not the request body — IDOR fix), be 'delivered', and
+ * (session cookie, not the request body - IDOR fix), be 'delivered', and
  * actually contain the product being reviewed.
  */
 export async function POST(request: NextRequest) {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       logger.api('POST', '/api/reviews', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('API', 'POST /api/reviews — unhandled error', {
+    logger.error('API', 'POST /api/reviews - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/reviews', 500, Date.now() - start);
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
  * DELETE /api/reviews
  *
  * Delete the caller's own review for a product on an order (no edit-window
- * restriction). Scoped to the session user — never trusts a userId from the
+ * restriction). Scoped to the session user - never trusts a userId from the
  * request body.
  */
 export async function DELETE(request: NextRequest) {
@@ -121,7 +121,7 @@ export async function DELETE(request: NextRequest) {
       logger.api('DELETE', '/api/reviews', 400, Date.now() - start);
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    logger.error('API', 'DELETE /api/reviews — unhandled error', {
+    logger.error('API', 'DELETE /api/reviews - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('DELETE', '/api/reviews', 500, Date.now() - start);

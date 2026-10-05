@@ -98,7 +98,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               </div>
             )}
 
-            {/* Wishlist heart — compact card */}
+            {/* Wishlist heart - compact card */}
             <button
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
@@ -119,7 +119,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               </div>
             )}
 
-            {/* Cart control — overlaid bottom-right of image */}
+            {/* Cart control - overlaid bottom-right of image */}
             {product.stockStatus !== 'out' && (
               <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
                 {quantity === 0 ? (
@@ -181,7 +181,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               {t('percentOff', { discount })}
             </span>
           )}
-          {/* Wishlist heart — full card */}
+          {/* Wishlist heart - full card */}
           <button
             onClick={handleWishlistToggle}
             aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}

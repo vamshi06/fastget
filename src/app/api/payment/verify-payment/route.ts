@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
  * POST /api/payment/verify-payment
  *
  * Verifies the Razorpay payment and, only on confirmed capture, creates the
- * order in the DB.  No DB record exists before this point — the `orderToken`
+ * order in the DB.  No DB record exists before this point - the `orderToken`
  * carries the HMAC-signed, server-validated order data from `create-order`.
  *
  * Body: { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderToken }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderToken } = body;
 
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !orderToken) {
-      logger.warn('Payment', 'verify-payment — missing fields');
+      logger.warn('Payment', 'verify-payment - missing fields');
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Missing required payment fields' }, { status: 400 });
     }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValid) {
-      logger.warn('Payment', 'verify-payment — invalid signature', { razorpay_order_id });
+      logger.warn('Payment', 'verify-payment - invalid signature', { razorpay_order_id });
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json({ error: 'Payment verification failed. Signature mismatch.' }, { status: 400 });
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Verify and decode the server-signed order token
     const orderData = verifyOrderToken(orderToken);
     if (!orderData) {
-      logger.warn('Payment', 'verify-payment — invalid or expired orderToken');
+      logger.warn('Payment', 'verify-payment - invalid or expired orderToken');
       logger.api('POST', '/api/payment/verify-payment', 400, Date.now() - start);
       return NextResponse.json(
         { error: 'Order session expired or invalid. Please start a new checkout.' },
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // The signature only proves the (order_id, payment_id) pair came from Razorpay;
     // this check confirms the payment is for exactly the order the user initiated.
     if (orderData.razorpayOrderId !== razorpay_order_id) {
-      logger.warn('Payment', 'verify-payment — razorpay_order_id does not match orderToken', {
+      logger.warn('Payment', 'verify-payment - razorpay_order_id does not match orderToken', {
         razorpay_order_id,
         tokenOrderId: orderData.razorpayOrderId,
       });
@@ -74,14 +74,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment order reference mismatch.' }, { status: 400 });
     }
 
-    // Signature proves the response came from Razorpay — NOT that payment succeeded.
+    // Signature proves the response came from Razorpay - NOT that payment succeeded.
     // Cancelled/failed UPI payments also produce a valid signature, so fetch the
     // actual payment status.
     let payment: Awaited<ReturnType<typeof fetchPayment>>;
     try {
       payment = await fetchPayment(razorpay_payment_id);
     } catch (err) {
-      logger.error('Payment', 'verify-payment — Razorpay payment fetch failed', {
+      logger.error('Payment', 'verify-payment - Razorpay payment fetch failed', {
         razorpay_payment_id,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (payment.status !== 'captured' && payment.status !== 'authorized') {
-      logger.warn('Payment', 'verify-payment — payment not captured', {
+      logger.warn('Payment', 'verify-payment - payment not captured', {
         razorpay_payment_id,
         status: payment.status,
       });
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Payment confirmed — now create the order in the DB
+    // Payment confirmed - now create the order in the DB
     const orderId = generateUUID();
     const statusToken = generateToken();
     const updateToken = generateToken();
@@ -129,14 +129,14 @@ export async function POST(request: NextRequest) {
 
     const dbSuccess = await createOrder(order);
     if (!dbSuccess) {
-      logger.error('Payment', 'verify-payment — DB write failed', { orderId });
+      logger.error('Payment', 'verify-payment - DB write failed', { orderId });
       logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
       return NextResponse.json({ error: 'Failed to save order. Please contact support.' }, { status: 502 });
     }
 
     const confirmed = await confirmOrderPayment(orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature);
     if (!confirmed) {
-      logger.error('Payment', 'verify-payment — payment confirmation DB update failed', { orderId });
+      logger.error('Payment', 'verify-payment - payment confirmation DB update failed', { orderId });
       await deleteOrder(orderId);
       logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
       return NextResponse.json({ error: 'Failed to record payment. Contact support.' }, { status: 502 });
@@ -145,12 +145,12 @@ export async function POST(request: NextRequest) {
     logger.info('Payment', 'Payment verified and order created', { orderId, razorpay_payment_id });
 
     // Debit the coins reserved at create-order time now that the order is
-    // confirmed paid & saved. Best-effort — a debit failure here is a
+    // confirmed paid & saved. Best-effort - a debit failure here is a
     // reconciliation issue to log, not a reason to fail the (already paid) order.
     if (orderData.userId && orderData.coinsRedeemed && orderData.coinsRedeemed > 0) {
       const debited = await debitCoins(orderData.userId, orderData.coinsRedeemed, orderId);
       if (!debited) {
-        logger.error('Payment', 'verify-payment — coin debit failed after order creation', {
+        logger.error('Payment', 'verify-payment - coin debit failed after order creation', {
           orderId,
           userId: orderData.userId,
           coinsRedeemed: orderData.coinsRedeemed,
@@ -158,14 +158,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Best-effort staff alert (Telegram + email) — never blocks/fails the response.
+    // Best-effort staff alert (Telegram + email) - never blocks/fails the response.
     await notifyStaffOfNewOrder(order);
 
     logger.api('POST', '/api/payment/verify-payment', 200, Date.now() - start);
 
     return NextResponse.json({ success: true, statusToken });
   } catch (error) {
-    logger.error('Payment', 'verify-payment — unhandled error', {
+    logger.error('Payment', 'verify-payment - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('POST', '/api/payment/verify-payment', 500, Date.now() - start);

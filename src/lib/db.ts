@@ -8,7 +8,7 @@ export { REVIEW_EDIT_WINDOW_MINUTES };
 // The Neon HTTP driver posts every query to the same `/sql` URL, varying only
 // in the request body. Next.js's fetch Data Cache doesn't key on POST bodies,
 // so without this override it can serve a stale response from an earlier,
-// different query — silently returning wrong data from a fresh-looking call.
+// different query - silently returning wrong data from a fresh-looking call.
 neonConfig.fetchFunction = (url: string, options: RequestInit) =>
   fetch(url, { ...options, cache: 'no-store' });
 
@@ -125,7 +125,7 @@ export async function initializeDatabase(): Promise<void> {
 
     // Migration: add status_history to orders tables created before this column
     // existed. Backend code always appends to it, so old rows would otherwise
-    // have a NULL/missing history — the DEFAULT here covers that on ALTER too
+    // have a NULL/missing history - the DEFAULT here covers that on ALTER too
     // (Postgres backfills the default for existing rows).
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS status_history JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
@@ -362,7 +362,7 @@ export async function initializeWishlistsTable(): Promise<void> {
     try {
       await sql`ALTER TABLE wishlists ADD CONSTRAINT uk_wishlists_user_product UNIQUE (user_id, product_id)`;
     } catch {
-      // constraint already exists — safe to ignore
+      // constraint already exists - safe to ignore
     }
 
     await sql`CREATE INDEX IF NOT EXISTS idx_wishlists_user_id ON wishlists(user_id)`;
@@ -435,7 +435,7 @@ export async function removeFromWishlist(userId: string, productId: string): Pro
 
 /**
  * Initialize product_reviews table. A review is tied to a specific delivered
- * order so it always represents a verified purchase — one review per
+ * order so it always represents a verified purchase - one review per
  * (order, product) pair, editable via ON CONFLICT upsert.
  */
 export async function initializeProductReviewsTable(): Promise<void> {
@@ -460,7 +460,7 @@ export async function initializeProductReviewsTable(): Promise<void> {
       )
     `;
 
-    // Denormalized name snapshot — added after the table originally shipped;
+    // Denormalized name snapshot - added after the table originally shipped;
     // safe no-op on fresh installs where the CREATE TABLE above already has it.
     await sql`ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS product_name VARCHAR(255) NOT NULL DEFAULT ''`;
 
@@ -619,7 +619,7 @@ export async function initializeCoinsTable(): Promise<void> {
       )
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_coin_transactions_user ON coin_transactions(user_id, created_at DESC)`;
-    // One earn-credit and one refund per order — guards against double-crediting on retry.
+    // One earn-credit and one refund per order - guards against double-crediting on retry.
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_delivered ON coin_transactions(order_id) WHERE reason = 'order_delivered'`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_coin_tx_order_refund ON coin_transactions(order_id) WHERE reason = 'redemption_refund'`;
 
@@ -706,10 +706,10 @@ export async function createOrder(order: Order): Promise<boolean> {
     });
 
     // If the user_id FK is violated (stale/deleted user attribution), don't lose
-    // the sale — retry once as an unattributed order (user_id NULL). The schema
+    // the sale - retry once as an unattributed order (user_id NULL). The schema
     // explicitly allows a null user_id (guest orders, ON DELETE SET NULL).
     if (error instanceof Error && error.message.includes('fk_orders_user_id')) {
-      logger.warn('DB', 'Order user_id has no matching user — saving order unattributed', {
+      logger.warn('DB', 'Order user_id has no matching user - saving order unattributed', {
         orderId: order.id,
         userId: order.userId,
       });
@@ -741,7 +741,7 @@ export async function createOrder(order: Order): Promise<boolean> {
 
     // If table doesn't exist, try to initialize it once
     if (error instanceof Error && error.message.includes('relation "orders" does not exist')) {
-      logger.warn('DB', 'Orders table missing — attempting auto-init');
+      logger.warn('DB', 'Orders table missing - attempting auto-init');
       try {
         await initializeDatabase();
         logger.info('DB', 'DB auto-init succeeded, retrying order creation');
@@ -812,7 +812,7 @@ export async function updateOrderStatus(
   eta?: string
 ): Promise<{ success: boolean; error?: string; orderId?: string; changedAt?: string }> {
   try {
-    // Authorization is handled by the route (admin session) — no shared PIN.
+    // Authorization is handled by the route (admin session) - no shared PIN.
     // Fetch current order to validate transition.
     const currentOrder = await getOrderById(orderId);
 
@@ -859,7 +859,7 @@ export async function updateOrderStatus(
       return { success: false, error: 'Order status changed by another agent. Please refresh.' };
     }
 
-    // Coins are best-effort side effects of the transition above — a failure
+    // Coins are best-effort side effects of the transition above - a failure
     // here must not fail the status update itself (delivery/cancellation is
     // the primary effect). Guest orders (no userId) don't participate.
     if (currentOrder.userId) {
@@ -1005,7 +1005,7 @@ export async function getOrdersByUserId(userId: string): Promise<Order[]> {
 }
 
 /**
- * Whether a user has ever placed an order (any status) — used to gate the
+ * Whether a user has ever placed an order (any status) - used to gate the
  * first-order coupon. A lightweight existence check rather than fetching
  * every order, since only presence/absence of a row matters here.
  */
@@ -1024,7 +1024,7 @@ export async function hasUserOrderedBefore(userId: string): Promise<boolean> {
 
 /**
  * Cancel an order by its public statusToken (customer-facing).
- * Only allowed from 'received' or 'eta_assigned' — not once out for delivery.
+ * Only allowed from 'received' or 'eta_assigned' - not once out for delivery.
  * Uses optimistic locking (WHERE status = currentStatus) to prevent race conditions.
  */
 export async function cancelOrderByStatusToken(
@@ -1065,7 +1065,7 @@ export async function cancelOrderByStatusToken(
     `;
 
     if (result.length === 0) {
-      return { cancelled: false, reason: 'Order status changed — please refresh and try again' };
+      return { cancelled: false, reason: 'Order status changed - please refresh and try again' };
     }
 
     logger.info('DB', 'Order cancelled by customer', { statusToken });
@@ -1136,7 +1136,7 @@ function rowToOrderFeedback(row: Record<string, unknown>): OrderFeedback {
 
 /**
  * Create or update a customer's review for a product on a given order
- * (one review per order+product — callers must have already verified the
+ * (one review per order+product - callers must have already verified the
  * order belongs to the user, is 'delivered', and contains this product).
  */
 function isMissingRelation(error: unknown, table: string): boolean {
@@ -1154,7 +1154,7 @@ export type UpsertFeedbackResult =
 /**
  * Create or update a customer's review for a product on a given order. Edits
  * are only accepted within REVIEW_EDIT_WINDOW_MINUTES of the review's first
- * submission — enforced atomically via the ON CONFLICT ... WHERE clause, so a
+ * submission - enforced atomically via the ON CONFLICT ... WHERE clause, so a
  * conflicting row outside the window is left untouched (0 rows returned)
  * rather than silently overwritten.
  */
@@ -1192,7 +1192,7 @@ export async function upsertProductReview(
 }
 
 /**
- * Get all reviews for a product (public — shown on the product detail page),
+ * Get all reviews for a product (public - shown on the product detail page),
  * plus the average rating and review count.
  */
 export async function getProductReviews(
@@ -1381,7 +1381,7 @@ export async function getAllOrderFeedbackForAdmin(
 }
 
 /**
- * Delete a customer's own product review (no edit-window restriction —
+ * Delete a customer's own product review (no edit-window restriction -
  * deletion is allowed anytime). Scoped by user_id so one customer can't
  * delete another's review.
  */
@@ -1401,7 +1401,7 @@ export async function deleteProductReview(orderId: string, userId: string, produ
   }
 }
 
-/** Admin moderation delete — removes any product review by id, no ownership check. */
+/** Admin moderation delete - removes any product review by id, no ownership check. */
 export async function adminDeleteProductReview(reviewId: string): Promise<boolean> {
   const sql = getClient();
   try {
@@ -1434,7 +1434,7 @@ export async function deleteOrderFeedback(orderId: string, userId: string): Prom
   }
 }
 
-/** Admin moderation delete — removes any order feedback by id, no ownership check. */
+/** Admin moderation delete - removes any order feedback by id, no ownership check. */
 export async function adminDeleteOrderFeedback(feedbackId: string): Promise<boolean> {
   const sql = getClient();
   try {
@@ -1448,7 +1448,7 @@ export async function adminDeleteOrderFeedback(feedbackId: string): Promise<bool
 }
 
 /**
- * Admin moderation delete — permanently removes an order by id, no ownership check.
+ * Admin moderation delete - permanently removes an order by id, no ownership check.
  * Associated product reviews and delivery feedback cascade-delete with it
  * (ON DELETE CASCADE on their order_id foreign keys).
  */
@@ -1551,7 +1551,7 @@ export async function getCoinTransactions(userId: string, limit: number = 100): 
 }
 
 /**
- * Credit coins to a user — order-delivered rewards and redemption refunds.
+ * Credit coins to a user - order-delivered rewards and redemption refunds.
  * Idempotent per (order_id, reason) via the partial unique indexes on
  * coin_transactions, so a retried call for the same order/reason is a no-op.
  * Returns the resulting balance, or null if nothing was credited.
@@ -1587,7 +1587,7 @@ export async function creditCoins(
 /**
  * Debit coins for a checkout redemption. The balance check and the debit
  * happen in the same statement (WHERE coin_balance >= amount), so this can
- * never take a balance negative even without a wrapping transaction — the
+ * never take a balance negative even without a wrapping transaction - the
  * Neon HTTP driver has no multi-statement transaction support.
  */
 export async function debitCoins(userId: string, amount: number, orderId?: string): Promise<boolean> {
@@ -1629,7 +1629,7 @@ async function getRedeemedCoinsForOrder(orderId: string): Promise<number> {
 }
 
 /**
- * Admin correction — adds or subtracts an arbitrary amount, unlike the
+ * Admin correction - adds or subtracts an arbitrary amount, unlike the
  * balance-checked/idempotent paths above. Always recorded in the ledger with
  * the acting admin's user id.
  */

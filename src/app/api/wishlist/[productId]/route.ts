@@ -13,7 +13,7 @@ export async function DELETE(
   const productId = decodeURIComponent(params.productId);
 
   try {
-    // removeFromWishlist matches on (user_id AND product_id) — IDOR fix (C3).
+    // removeFromWishlist matches on (user_id AND product_id) - IDOR fix (C3).
     const success = await removeFromWishlist(auth.session.userId, productId);
     if (!success) {
       logger.api('DELETE', '/api/wishlist/[productId]', 500, Date.now() - start);
@@ -23,7 +23,7 @@ export async function DELETE(
     logger.api('DELETE', '/api/wishlist/[productId]', 200, Date.now() - start);
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('API', 'DELETE /api/wishlist/[productId] — unhandled error', {
+    logger.error('API', 'DELETE /api/wishlist/[productId] - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('DELETE', '/api/wishlist/[productId]', 500, Date.now() - start);

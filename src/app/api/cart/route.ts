@@ -52,7 +52,7 @@ export async function GET(_request: NextRequest) {
     logger.api('GET', '/api/cart', 200, Date.now() - start);
     return NextResponse.json({ items });
   } catch (error) {
-    logger.error('API', 'GET /api/cart — unhandled error', {
+    logger.error('API', 'GET /api/cart - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('GET', '/api/cart', 500, Date.now() - start);
@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest) {
       logger.api('PUT', '/api/cart', 400, Date.now() - start);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    logger.error('API', 'PUT /api/cart — unhandled error', {
+    logger.error('API', 'PUT /api/cart - unhandled error', {
       error: error instanceof Error ? error.message : String(error),
     });
     logger.api('PUT', '/api/cart', 500, Date.now() - start);

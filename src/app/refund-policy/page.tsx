@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
-export const metadata = { title: "Refund Policy — FastGet" };
+export const metadata = { title: "Refund Policy - FastGet" };
 
 export default async function RefundPolicyPage() {
   const t = await getTranslations("legal.refund");

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     const nameFilter = (request.nextUrl.searchParams.get('name') || '').slice(0, 100);
 
     // Invalid dates would make every comparison false and silently export an
-    // empty file — reject them with a clear message instead.
+    // empty file - reject them with a clear message instead.
     let fromDate: Date | null = null;
     const dateFromFilter = request.nextUrl.searchParams.get('dateFrom') || '';
     if (dateFromFilter) {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('API', 'GET /admin/api/orders/export — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'GET /admin/api/orders/export - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('GET', '/admin/api/orders/export', 500, Date.now() - start);
     return NextResponse.json({ error: 'Failed to generate CSV' }, { status: 500 });
   }

@@ -134,7 +134,7 @@ export default function WishlistPage() {
               {wishlistItems.map(product => (
                 <div key={product.id} className="relative group">
                   <ProductCard product={product} compact />
-                  {/* Remove from wishlist button — overlaid top-right */}
+                  {/* Remove from wishlist button - overlaid top-right */}
                   <button
                     onClick={() => handleRemove(product)}
                     aria-label={t('removeNamedFromWishlist', { name: product.name })}

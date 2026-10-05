@@ -12,7 +12,7 @@ import {
 const ADDRESS_TYPES = ['home', 'work', 'other'] as const;
 
 // The user is derived from the verified session cookie, never from the request
-// (IDOR fix, C3) — a client can only read/create its own addresses.
+// (IDOR fix, C3) - a client can only read/create its own addresses.
 export async function GET(_req: NextRequest) {
   const auth = await requireSession();
   if ('response' in auth) return auth.response;

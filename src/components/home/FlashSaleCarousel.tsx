@@ -21,7 +21,7 @@ export function FlashSaleCarousel({ sales: initialSales }: FlashSaleCarouselProp
   const [canScroll, setCanScroll] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Arrows/dots only make sense when cards overflow — e.g. 2 sales on desktop
+  // Arrows/dots only make sense when cards overflow - e.g. 2 sales on desktop
   // both fit side by side, so there's nothing to navigate.
   useEffect(() => {
     const track = trackRef.current;

@@ -12,7 +12,7 @@ export function RentalBanner() {
       {/* Industrial motion lines */}
       <div className="absolute inset-0 bg-motion-lines pointer-events-none" />
 
-      {/* Orange glow — top right */}
+      {/* Orange glow - top right */}
       <div
         className="absolute top-0 right-0 w-96 h-96 pointer-events-none"
         style={{
@@ -47,7 +47,7 @@ export function RentalBanner() {
         </h2>
 
         <p className="text-neutral-400 mb-6 leading-relaxed">
-          Carpentry, plumbing, hardware, electrical & adhesives — all from one place
+          Carpentry, plumbing, hardware, electrical & adhesives - all from one place
           with 30–60 min delivery across Mumbai.
         </p>
 

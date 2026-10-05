@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const categories = await getAllCategories();
 
-    logger.debug('API', 'GET /api/categories — fetched', { count: categories.length });
+    logger.debug('API', 'GET /api/categories - fetched', { count: categories.length });
     logger.api('GET', '/api/categories', 200, Date.now() - start);
 
     return NextResponse.json(
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    logger.error('API', 'GET /api/categories — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'GET /api/categories - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('GET', '/api/categories', 500, Date.now() - start);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch categories' },

@@ -68,7 +68,7 @@ const CartContext = createContext<
 /**
  * A flash-sale product's `price` is already the discounted sale price (set
  * at catalog-fetch time). This returns what it would cost WITHOUT the sale,
- * for the minimum-order check below — must stay in sync with the server's
+ * for the minimum-order check below - must stay in sync with the server's
  * originalPaise handling in order-pricing.priceOrderFromCatalog.
  */
 export function getOriginalUnitPrice(product: Product): number {
@@ -77,7 +77,7 @@ export function getOriginalUnitPrice(product: Product): number {
     : product.price;
 }
 
-// Only this many units of a flash-sale item get the sale price per order —
+// Only this many units of a flash-sale item get the sale price per order -
 // without a cap, a customer who unlocks the ₹1 price could buy 100 units at
 // ₹1 each. Extra units can still be bought, at the regular price.
 // Must stay in sync with order-pricing.FLASH_SALE_QTY_PER_ORDER (server pricing).
@@ -192,7 +192,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
-// Convenience fee has been removed — total equals subtotal.
+// Convenience fee has been removed - total equals subtotal.
 // Must stay in sync with order-pricing.CONVENIENCE_FEE_PERCENTAGE (server pricing).
 const CONVENIENCE_FEE_PERCENTAGE = 0;
 
@@ -206,7 +206,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Coin redemption choice lives here (not on the cart/checkout pages) so it
   // carries over when a customer checks "Use coins" on the cart page and then
-  // continues to checkout — they shouldn't have to make the same choice twice.
+  // continues to checkout - they shouldn't have to make the same choice twice.
   const [coinBalance, setCoinBalance] = useState(0);
   const [redeemCoins, setRedeemCoins] = useState(false);
   const [coinsToRedeem, setCoinsToRedeem] = useState(0);
@@ -257,7 +257,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // On login, fetch this account's saved cart and merge it into whatever is
   // already in the browser (e.g. items added as a guest). Runs once per login
-  // — mergedForUserIdRef guards against re-fetching on every render/cart change.
+  // - mergedForUserIdRef guards against re-fetching on every render/cart change.
   useEffect(() => {
     if (!isLoaded || !userIsLoaded) return;
 
@@ -308,7 +308,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh stored prices from the catalog whenever the set of products in
   // the cart changes (initial load, login merge, a new product added). Without
-  // this, a cart keeps the price from when an item was added — so it can show
+  // this, a cart keeps the price from when an item was added - so it can show
   // a price the checkout no longer charges.
   const cartIdsKey = state.items.map(item => item.product.id).sort().join(',');
   useEffect(() => {
@@ -353,7 +353,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [state.items]);
 
   // Cart subtotal at ORIGINAL (pre-discount) prices, optionally excluding one
-  // product's own line (used for the flash-sale minimum-order check below —
+  // product's own line (used for the flash-sale minimum-order check below -
   // "min order ₹100" means ₹100 of OTHER products, not counting the sale
   // item's own price). Must stay in sync with order-pricing.priceOrderFromCatalog.
   const getPreDiscountSubtotal = useCallback((excludeProductId?: string) => {
@@ -369,7 +369,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return getPreDiscountSubtotal(product.id) >= product.saleMinOrderRupees;
   }, [getPreDiscountSubtotal]);
 
-  // The price this line actually charges — falls back to the original price
+  // The price this line actually charges - falls back to the original price
   // when the cart hasn't reached the flash sale's minimum order value yet.
   const getEffectiveUnitPrice = useCallback((product: Product) => {
     if (product.isFlashSale && !isFlashSaleEligible(product)) {

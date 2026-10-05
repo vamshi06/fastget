@@ -2,7 +2,7 @@ import { Product } from '@/types';
 
 // ── Typo-tolerant product matching ────────────────────────────────────────────
 //
-// Used as a fallback when a plain substring (ILIKE) search returns nothing —
+// Used as a fallback when a plain substring (ILIKE) search returns nothing -
 // the common case being a shopper mistyping a product name (e.g. "hamer" for
 // "hammer", "scrwe" for "screw"). Runs entirely in JS against an already
 // category/price-filtered candidate set, so it only needs to be cheap for the
@@ -10,7 +10,7 @@ import { Product } from '@/types';
 
 // Optimal string alignment distance: Levenshtein plus adjacent-transposition
 // as a single edit, so "scrwe" → "screw" (swapped last two letters) costs 1
-// instead of 2 — swapped-letter typos are common enough to matter.
+// instead of 2 - swapped-letter typos are common enough to matter.
 function editDistance(a: string, b: string): number {
   const al = a.length;
   const bl = b.length;
@@ -56,7 +56,7 @@ function normalizeWords(text: string): string[] {
  */
 function fuzzyScore(queryWords: string[], targetText: string): number | null {
   // Drop 1-char tokens (unit/size initials like the "c" in "USB A+C" or the
-  // "m" in "M-Sand") — otherwise `qw.includes(tw)` trivially matches almost
+  // "m" in "M-Sand") - otherwise `qw.includes(tw)` trivially matches almost
   // any query, since most words contain some single letter.
   const targetWords = normalizeWords(targetText).filter((w) => w.length >= 2);
   if (targetWords.length === 0) return null;
@@ -66,7 +66,7 @@ function fuzzyScore(queryWords: string[], targetText: string): number | null {
     let best = Infinity;
     for (const tw of targetWords) {
       // Containment only counts as a free match for words of similar length
-      // (e.g. "pipes" vs "pipe") — otherwise a long query word coincidentally
+      // (e.g. "pipes" vs "pipe") - otherwise a long query word coincidentally
       // contains an unrelated short target word (e.g. "emultion" contains
       // "multi") and scores a false positive over the real typo match.
       const substringMatch = tw.length >= 3 && qw.length >= 3

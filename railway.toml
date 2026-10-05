@@ -2,9 +2,9 @@
 builder = "nixpacks"
 # Nixpacks mounts .next/cache as a persistent Docker build-cache volume, so it
 # survives across deploys (and `rm -rf .next` fails on it with "Device or
-# resource busy" — it's a mount point, not a plain dir). A stale copy of that
+# resource busy" - it's a mount point, not a plain dir). A stale copy of that
 # webpack cache from a prior build can produce corrupted output after
-# config/dependency changes — e.g. "<Html> should not be imported outside of
+# config/dependency changes - e.g. "<Html> should not be imported outside of
 # pages/_document" on /404 and /500 cascading into "Cannot read properties of
 # null (reading 'useContext')" on every other page, even though the source
 # builds clean from scratch. Clearing the cache's *contents* (not the mount

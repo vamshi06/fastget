@@ -19,7 +19,7 @@
  * Translating needs ANTHROPIC_API_KEY (or an `ant auth login` profile). Every
  * mode needs DATABASE_URL / fastget_DATABASE_URL and migration 021 applied.
  *
- * Import file: JSON array of { product_code, name, description? } — extra keys
+ * Import file: JSON array of { product_code, name, description? } - extra keys
  * (e.g. en_name) are ignored. A blank description keeps any existing one.
  */
 
@@ -172,7 +172,7 @@ async function translateBatch(batch: ProductRow[]) {
     throw new Error(`model declined this batch (${response.stop_details?.category ?? 'no category'})`);
   }
   if (response.stop_reason === 'max_tokens') {
-    throw new Error('response hit max_tokens — lower BATCH_SIZE');
+    throw new Error('response hit max_tokens - lower BATCH_SIZE');
   }
   if (!response.parsed_output) {
     throw new Error('response did not match the expected JSON shape');
@@ -199,7 +199,7 @@ async function main() {
   )) as ProductRow[];
 
   if (rows.length === 0) {
-    console.log('Nothing to translate — every product already has a Hindi name.');
+    console.log('Nothing to translate - every product already has a Hindi name.');
     return;
   }
   console.log(`Translating ${rows.length} product(s) with ${MODEL}${DRY_RUN ? ' (dry run)' : ''}\n`);
@@ -231,7 +231,7 @@ async function main() {
       const noCredentials = error instanceof Error && /authentication method/i.test(error.message);
       if (error instanceof Anthropic.AuthenticationError || noCredentials) {
         console.error(
-          'ERROR: Anthropic credentials missing or invalid — set ANTHROPIC_API_KEY in .env.local.\n' +
+          'ERROR: Anthropic credentials missing or invalid - set ANTHROPIC_API_KEY in .env.local.\n' +
           'To load the prepared translations instead (no key needed): npm run import-translations',
         );
         process.exit(1);
@@ -245,7 +245,7 @@ async function main() {
 
   console.log(
     `\nDone. ${saved} translation(s) ${DRY_RUN ? 'generated' : 'saved'}` +
-      (failedBatches ? `, ${failedBatches} batch(es) failed — re-run to retry them.` : '.'),
+      (failedBatches ? `, ${failedBatches} batch(es) failed - re-run to retry them.` : '.'),
   );
 }
 

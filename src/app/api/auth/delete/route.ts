@@ -16,7 +16,7 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
 
     if (!body.userId || typeof body.userId !== 'string') {
-      logger.warn('API', 'DELETE /api/auth/delete — missing userId');
+      logger.warn('API', 'DELETE /api/auth/delete - missing userId');
       logger.api('DELETE', '/api/auth/delete', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'User ID is required' },
@@ -25,7 +25,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (!body.password || typeof body.password !== 'string') {
-      logger.warn('API', 'DELETE /api/auth/delete — missing password confirmation');
+      logger.warn('API', 'DELETE /api/auth/delete - missing password confirmation');
       logger.api('DELETE', '/api/auth/delete', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Password is required to delete account' },
@@ -37,7 +37,7 @@ export async function DELETE(request: NextRequest) {
     const user = await getUserById(body.userId);
     if (!user || !user.passwordHash) {
       // Generic message to avoid leaking whether the userId exists
-      logger.warn('API', 'DELETE /api/auth/delete — user not found or no password hash', { userId: body.userId });
+      logger.warn('API', 'DELETE /api/auth/delete - user not found or no password hash', { userId: body.userId });
       logger.api('DELETE', '/api/auth/delete', 401, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
@@ -47,7 +47,7 @@ export async function DELETE(request: NextRequest) {
 
     const passwordValid = await verifyPassword(body.password, user.passwordHash);
     if (!passwordValid) {
-      logger.warn('API', 'DELETE /api/auth/delete — wrong password', { userId: body.userId });
+      logger.warn('API', 'DELETE /api/auth/delete - wrong password', { userId: body.userId });
       logger.api('DELETE', '/api/auth/delete', 401, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
@@ -58,7 +58,7 @@ export async function DELETE(request: NextRequest) {
     const deleted = await deleteUser(body.userId);
 
     if (!deleted) {
-      logger.warn('API', 'DELETE /api/auth/delete — deletion failed', { userId: body.userId });
+      logger.warn('API', 'DELETE /api/auth/delete - deletion failed', { userId: body.userId });
       logger.api('DELETE', '/api/auth/delete', 400, Date.now() - start);
       return NextResponse.json(
         { success: false, error: 'Failed to delete user or user not found' },
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest) {
       }
     );
   } catch (error) {
-    logger.error('API', 'DELETE /api/auth/delete — unhandled error', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('API', 'DELETE /api/auth/delete - unhandled error', { error: error instanceof Error ? error.message : String(error) });
     logger.api('DELETE', '/api/auth/delete', 500, Date.now() - start);
     return NextResponse.json(
       { success: false, error: 'Something went wrong on our end. Please try again in a few moments.' },

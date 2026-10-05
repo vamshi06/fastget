@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WebViewScreen from '../screens/WebViewScreen';
 
 /**
- * Root param list — extend this when adding native screens.
+ * Root param list - extend this when adding native screens.
  * Example:
  *   Cart: { productId: string };
  *   OrderConfirmation: { orderId: string };

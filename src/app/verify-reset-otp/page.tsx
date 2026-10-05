@@ -22,7 +22,7 @@ function VerifyResetOtpContent() {
   const handleDigitChange = (index: number, value: string) => {
     const clean = value.replace(/\D/g, '');
     if (clean.length > 1) {
-      // Keyboard paste via onChange — distribute digits starting from current box
+      // Keyboard paste via onChange - distribute digits starting from current box
       const next = [...digits];
       clean.slice(0, 6).split('').forEach((d, i) => { if (index + i < 6) next[index + i] = d; });
       setDigits(next);

@@ -89,7 +89,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
           </div>
         )}
 
-        {/* Cart control — overlaid at bottom-right of image */}
+        {/* Cart control - overlaid at bottom-right of image */}
         {inStock && (
           <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
             {qty === 0 ? (

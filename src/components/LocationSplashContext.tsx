@@ -4,9 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { LocationSplash } from './LocationSplash';
 
 export const SERVICE_AREAS = [
-  { id: 'andheri',  name: 'Andheri',  eta: '2–3 hrs' },
-  { id: 'goregaon', name: 'Goregaon', eta: '2–3 hrs' },
-  { id: 'malad',    name: 'Malad',    eta: '3–4 hrs' },
+  { id: 'mumbai', name: 'Mumbai', eta: '2–4 hrs' },
 ] as const;
 
 export type AreaId = typeof SERVICE_AREAS[number]['id'];
@@ -34,7 +32,13 @@ export function LocationSplashProvider({ children }: { children: React.ReactNode
     setMounted(true);
     const saved = localStorage.getItem('selectedLocation');
     const seen = localStorage.getItem('splashSeen');
-    if (saved) setSelectedLocation(saved);
+    if (saved) {
+      // Migrate legacy area ids (andheri/goregaon/malad) to the current service area
+      const valid = SERVICE_AREAS.some(a => a.id === saved);
+      const area = valid ? saved : SERVICE_AREAS[0].id;
+      setSelectedLocation(area);
+      if (!valid) localStorage.setItem('selectedLocation', area);
+    }
     if (!seen) setIsOpen(true);
   }, []);
 
