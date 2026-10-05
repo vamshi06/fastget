@@ -25,6 +25,7 @@ import {
   Star,
   BookOpen,
   Coins,
+  Gift,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -254,6 +255,21 @@ export default function AccountPage() {
           <p className="text-xs text-brand-slate">{t('menu.myCoinsSubtitle')}</p>
         </div>
         <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '-'}</span>
+        <ChevronRight className="w-4 h-4 text-brand-steel" />
+      </Link>
+
+      {/* Refer & Earn */}
+      <Link
+        href={'/refer' as any}
+        className="mx-4 mt-3 flex items-center px-4 py-4 bg-white rounded-2xl shadow-sm border border-neutral-100 hover:bg-neutral-50 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+          <Gift className="w-5 h-5 text-brand-primary" />
+        </div>
+        <div className="ml-3 flex-1">
+          <p className="text-sm font-medium text-brand-charcoal">{t('menu.referAndEarn')}</p>
+          <p className="text-xs text-brand-slate">{t('menu.referAndEarnSubtitle')}</p>
+        </div>
         <ChevronRight className="w-4 h-4 text-brand-steel" />
       </Link>
 

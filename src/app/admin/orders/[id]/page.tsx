@@ -6,6 +6,9 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS, StatusHistoryEntry } fr
 import { requireAdminPage } from '@/lib/auth';
 import { formatDuration } from '@/lib/utils';
 import { DeleteOrderButton } from './DeleteOrderButton';
+import { getUserById } from '@/lib/users';
+import { REFERRAL_REWARD_RUPEES } from '@/lib/referral';
+import { MarkReferralPaidButton } from '../../referrals/MarkReferralPaidButton';
 
 interface OrderDetailPageProps {
   params: {
@@ -25,9 +28,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   // click through to the product's details page. Items with no matching
   // variant (e.g. discontinued products, legacy Google Sheets orders)
   // resolve to null and render without a link.
-  const itemProductCodes = await Promise.all(
-    order.items.map((item) => getProductCodeByVariantSku(item.sku)),
-  );
+  const [itemProductCodes, referrer] = await Promise.all([
+    Promise.all(order.items.map((item) => getProductCodeByVariantSku(item.sku))),
+    order.referrerUserId ? getUserById(order.referrerUserId) : Promise.resolve(null),
+  ]);
 
   const createdDate = new Date(order.createdAt);
   const formattedDate = createdDate.toLocaleDateString('en-IN', {
@@ -229,6 +233,44 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </div>
             </div>
           </div>
+
+          {/* Referral payout */}
+          {order.referralCode && (
+            <div className="card p-6 animate-in fade-in slide-in-from-right-2 duration-500 delay-100">
+              <h3 className="text-lg font-bold text-brand-charcoal mb-4">Referral</h3>
+              <div className="space-y-3 text-sm">
+                <p>
+                  <span className="text-brand-slate">Code: </span>
+                  <span className="font-mono font-bold tracking-wider text-brand-charcoal">{order.referralCode}</span>
+                </p>
+                {referrer ? (
+                  <div>
+                    <p className="text-xs text-brand-steel font-semibold uppercase tracking-wide">Referrer - pay to</p>
+                    <p className="font-semibold text-brand-charcoal mt-1">{referrer.name}</p>
+                    <p className="text-brand-slate">{referrer.phone}</p>
+                    <p className="text-brand-slate">{referrer.email}</p>
+                  </div>
+                ) : (
+                  <p className="text-red-600">Referrer account no longer exists - no payout.</p>
+                )}
+                {order.referralPaidAt ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800">
+                    <p className="font-bold">Paid ₹{order.referralPayoutAmount ?? REFERRAL_REWARD_RUPEES}</p>
+                    <p className="text-xs mt-0.5">
+                      {new Date(order.referralPaidAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
+                      {order.referralPayoutRef && ` · Ref: ${order.referralPayoutRef}`}
+                    </p>
+                  </div>
+                ) : order.status === 'delivered' && referrer ? (
+                  <MarkReferralPaidButton orderId={order.id} amount={REFERRAL_REWARD_RUPEES} />
+                ) : order.status === 'cancelled' ? (
+                  <p className="text-brand-slate">Order cancelled - no payout.</p>
+                ) : referrer ? (
+                  <p className="text-brand-slate">Pay ₹{REFERRAL_REWARD_RUPEES} to the referrer once this order is delivered.</p>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           {/* Status Timeline */}
           <div className="card p-6 animate-in fade-in slide-in-from-right-2 duration-500 delay-125">

@@ -28,6 +28,7 @@ function telegramText(order: Order, appUrl: string): string {
     `<b>₹${order.total.toLocaleString('en-IN')}</b> - ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} - ${order.paymentMethod.toUpperCase()}\n\n` +
     `<b>${order.customerName}</b>\n${order.customerPhone}\n${order.siteAddress}\n\n` +
     `${itemLines}\n\n` +
+    (order.referralCode ? `🎁 Referral code: <b>${order.referralCode}</b> (pay referrer after delivery)\n\n` : '') +
     `${appUrl}/admin/orders/${order.id}`
   );
 }

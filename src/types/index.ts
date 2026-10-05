@@ -107,6 +107,14 @@ export interface Order {
   // Populated by the DB layer (createOrder seeds it, updateOrderStatus appends to
   // it) - undefined only on an in-memory Order built just before its first save.
   statusHistory?: StatusHistoryEntry[];
+  // Referral program (migration 022) - set when the customer entered a
+  // friend's referral code at checkout. The referrer is paid cash by an admin
+  // once the order is delivered; the referralPaid* fields record that payout.
+  referralCode?: string;
+  referrerUserId?: string;
+  referralPaidAt?: string;
+  referralPayoutAmount?: number;
+  referralPayoutRef?: string;
 }
 
 export interface OrderFormData {

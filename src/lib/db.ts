@@ -88,6 +88,13 @@ export interface DbOrder {
   payment_captured_at: Date | null;
   user_id: string | null;
   status_history: { status: OrderStatus; timestamp: string }[] | null;
+  // Referral program (migration 022)
+  referral_code: string | null;
+  referrer_user_id: string | null;
+  referral_paid_at: Date | null;
+  referral_paid_by: string | null;
+  referral_payout_amount: number | null;
+  referral_payout_ref: string | null;
 }
 
 /**
@@ -687,14 +694,15 @@ export async function createOrder(order: Order): Promise<boolean> {
       INSERT INTO orders (
         id, created_at, customer_name, customer_phone, site_address, landmark,
         delivery_type, scheduled_time, items, subtotal, convenience_fee, discount, total,
-        payment_method, status, eta, status_token, update_token, user_id, status_history
+        payment_method, status, eta, status_token, update_token, user_id, status_history,
+        referral_code, referrer_user_id
       ) VALUES (
         ${order.id}, ${order.createdAt}, ${order.customerName}, ${order.customerPhone},
         ${order.siteAddress}, ${order.landmark || null}, ${order.deliveryType},
         ${order.scheduledTime || null}, ${JSON.stringify(order.items)}, ${order.subtotal},
         ${order.convenienceFee}, ${order.discount || 0}, ${order.total}, ${order.paymentMethod}, ${order.status},
         ${order.eta || null}, ${order.statusToken}, ${order.updateToken}, ${order.userId || null},
-        ${initialHistory}
+        ${initialHistory}, ${order.referralCode || null}, ${order.referrerUserId || null}
       )
     `;
     logger.info('DB', 'Order created successfully', { orderId: order.id });
@@ -708,6 +716,7 @@ export async function createOrder(order: Order): Promise<boolean> {
     // If the user_id FK is violated (stale/deleted user attribution), don't lose
     // the sale - retry once as an unattributed order (user_id NULL). The schema
     // explicitly allows a null user_id (guest orders, ON DELETE SET NULL).
+    // Any referral is dropped too - it's tied to the (missing) customer account.
     if (error instanceof Error && error.message.includes('fk_orders_user_id')) {
       logger.warn('DB', 'Order user_id has no matching user - saving order unattributed', {
         orderId: order.id,
@@ -983,6 +992,11 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     updateToken: dbOrder.update_token,
     userId: dbOrder.user_id || undefined,
     statusHistory: dbOrder.status_history || [],
+    referralCode: dbOrder.referral_code || undefined,
+    referrerUserId: dbOrder.referrer_user_id || undefined,
+    referralPaidAt: dbOrder.referral_paid_at ? toIso(dbOrder.referral_paid_at) : undefined,
+    referralPayoutAmount: dbOrder.referral_payout_amount ?? undefined,
+    referralPayoutRef: dbOrder.referral_payout_ref || undefined,
   };
 }
 
@@ -1018,6 +1032,21 @@ export async function hasUserOrderedBefore(userId: string): Promise<boolean> {
     logger.error('DB', 'Failed to check prior orders for user', { userId, error: error instanceof Error ? error.message : String(error) });
     // Fail closed on the coupon (treat as "not eligible") rather than risk
     // granting it repeatedly if the existence check errors out.
+    return true;
+  }
+}
+
+/**
+ * Whether the user has any order that isn't cancelled - referral codes only
+ * apply to a first order. Fails closed (true) like hasUserOrderedBefore.
+ */
+export async function hasNonCancelledOrder(userId: string): Promise<boolean> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT 1 FROM orders WHERE user_id = ${userId} AND status <> 'cancelled' LIMIT 1`;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to check non-cancelled orders for user', { userId, error: error instanceof Error ? error.message : String(error) });
     return true;
   }
 }
@@ -1652,6 +1681,155 @@ export async function adjustCoinsAdmin(userId: string, delta: number, adminUserI
   } catch (error) {
     logger.error('DB', 'Failed to adjust coins (admin)', { userId, delta, error: error instanceof Error ? error.message : String(error) });
     return null;
+  }
+}
+
+/* ─── Referral program (cash payout) ────────────────────────────────────── */
+
+/**
+ * Payout state of a referred order:
+ * - pending:   order not delivered yet
+ * - to_pay:    delivered, referrer not paid yet
+ * - paid:      admin marked the cash payout done
+ * - cancelled: order cancelled - no payout
+ */
+export type ReferralPayoutStatus = 'pending' | 'to_pay' | 'paid' | 'cancelled';
+
+function referralPayoutStatus(status: OrderStatus, paidAt: unknown): ReferralPayoutStatus {
+  if (paidAt) return 'paid';
+  if (status === 'cancelled') return 'cancelled';
+  if (status === 'delivered') return 'to_pay';
+  return 'pending';
+}
+
+export interface ReferrerReferral {
+  orderId: string;
+  createdAt: string;
+  friendFirstName: string;
+  payoutStatus: ReferralPayoutStatus;
+  payoutAmount?: number;
+}
+
+/** Orders placed with this user's referral code, newest first (customer's Refer & Earn page). */
+export async function getReferralsForReferrer(userId: string, limit: number = 100): Promise<ReferrerReferral[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT id, created_at, customer_name, status, referral_paid_at, referral_payout_amount
+      FROM orders
+      WHERE referrer_user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `;
+    return result.map((row) => ({
+      orderId: row.id as string,
+      createdAt: toIso(row.created_at as Date | string),
+      // First name only - the referrer doesn't need the friend's full details.
+      friendFirstName: String(row.customer_name ?? '').trim().split(/\s+/)[0] || '',
+      payoutStatus: referralPayoutStatus(row.status as OrderStatus, row.referral_paid_at),
+      payoutAmount: (row.referral_payout_amount as number | null) ?? undefined,
+    }));
+  } catch (error) {
+    logger.error('DB', 'Failed to get referrals for referrer', { userId, error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+export interface AdminReferralRow {
+  orderId: string;
+  createdAt: string;
+  orderStatus: OrderStatus;
+  orderTotal: number;
+  customerName: string;
+  customerPhone: string;
+  referralCode: string;
+  referrerUserId: string | null;
+  referrerName: string | null;
+  referrerPhone: string | null;
+  referrerEmail: string | null;
+  payoutStatus: ReferralPayoutStatus;
+  paidAt?: string;
+  payoutAmount?: number;
+  payoutRef?: string;
+}
+
+/** Every order placed with a referral code, newest first (admin payouts page). */
+export async function getReferralOrdersForAdmin(limit: number = 500): Promise<AdminReferralRow[]> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`
+      SELECT o.id, o.created_at, o.status, o.total, o.customer_name, o.customer_phone,
+             o.referral_code, o.referrer_user_id, o.referral_paid_at,
+             o.referral_payout_amount, o.referral_payout_ref,
+             u.name AS referrer_name, u.phone AS referrer_phone, u.email AS referrer_email
+      FROM orders o
+      LEFT JOIN users u ON u.id = o.referrer_user_id
+      WHERE o.referral_code IS NOT NULL
+      ORDER BY o.created_at DESC
+      LIMIT ${limit}
+    `;
+    return result.map((row) => ({
+      orderId: row.id as string,
+      createdAt: toIso(row.created_at as Date | string),
+      orderStatus: row.status as OrderStatus,
+      orderTotal: row.total as number,
+      customerName: row.customer_name as string,
+      customerPhone: row.customer_phone as string,
+      referralCode: row.referral_code as string,
+      referrerUserId: (row.referrer_user_id as string | null) ?? null,
+      referrerName: (row.referrer_name as string | null) ?? null,
+      referrerPhone: (row.referrer_phone as string | null) ?? null,
+      referrerEmail: (row.referrer_email as string | null) ?? null,
+      payoutStatus: referralPayoutStatus(row.status as OrderStatus, row.referral_paid_at),
+      paidAt: row.referral_paid_at ? toIso(row.referral_paid_at as Date | string) : undefined,
+      payoutAmount: (row.referral_payout_amount as number | null) ?? undefined,
+      payoutRef: (row.referral_payout_ref as string | null) ?? undefined,
+    }));
+  } catch (error) {
+    logger.error('DB', 'Failed to get referral orders for admin', { error: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+/**
+ * Record that an admin paid the referrer of `orderId` in cash/UPI.
+ * Only succeeds for a delivered, not-yet-paid referred order whose referrer
+ * still exists - the WHERE clause makes a double-click / second admin a no-op.
+ */
+export async function markReferralPaid(
+  orderId: string,
+  adminUserId: string,
+  amount: number,
+  payoutRef?: string,
+): Promise<{ success: true; paidAt: string } | { success: false; error: string }> {
+  const sql = getClient();
+  try {
+    const result = await sql`
+      UPDATE orders
+      SET referral_paid_at = CURRENT_TIMESTAMP,
+          referral_paid_by = ${adminUserId},
+          referral_payout_amount = ${amount},
+          referral_payout_ref = ${payoutRef || null}
+      WHERE id = ${orderId}
+        AND referrer_user_id IS NOT NULL
+        AND status = 'delivered'
+        AND referral_paid_at IS NULL
+      RETURNING referral_paid_at
+    `;
+    if (result.length > 0) {
+      return { success: true, paidAt: toIso(result[0].referral_paid_at as Date | string) };
+    }
+
+    // Explain why nothing was updated.
+    const rows = await sql`SELECT status, referrer_user_id, referral_paid_at FROM orders WHERE id = ${orderId} LIMIT 1`;
+    if (rows.length === 0) return { success: false, error: 'Order not found' };
+    const row = rows[0];
+    if (row.referral_paid_at) return { success: false, error: 'This referral has already been marked paid.' };
+    if (!row.referrer_user_id) return { success: false, error: 'This order has no referrer (or the referrer account was deleted).' };
+    return { success: false, error: 'The order must be delivered before the referral is paid.' };
+  } catch (error) {
+    logger.error('DB', 'Failed to mark referral paid', { orderId, error: error instanceof Error ? error.message : String(error) });
+    return { success: false, error: 'Database error' };
   }
 }
 

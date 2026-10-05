@@ -9,6 +9,7 @@ import {
 import { createOrder, debitCoins } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
+import { resolveReferralForOrder } from '@/lib/referral';
 import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
 import { logger } from '@/lib/logger';
 
@@ -58,6 +59,15 @@ export async function POST(request: NextRequest) {
     }
     const { items: pricedItems, subtotal, convenienceFee, discount, total: serverTotal, coinsRedeemed } = pricing.priced;
 
+    // Optional friend's referral code - recorded on the order for an admin to
+    // pay the referrer once it's delivered. Doesn't affect the price.
+    const referral = await resolveReferralForOrder(body.referralCode, session?.userId);
+    if (!referral.ok) {
+      logger.warn('API', 'POST /api/orders - referral code rejected', { reason: referral.error });
+      logger.api('POST', '/api/orders', 400, Date.now() - start);
+      return NextResponse.json({ error: referral.error }, { status: 400 });
+    }
+
     // Generate tokens and IDs
     const orderId = generateUUID();
     const statusToken = generateToken();
@@ -83,6 +93,8 @@ export async function POST(request: NextRequest) {
       statusToken,
       updateToken,
       userId: session?.userId,
+      referralCode: referral.code,
+      referrerUserId: referral.referrerId,
     };
 
     // Save to Neon database

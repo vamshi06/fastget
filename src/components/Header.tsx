@@ -51,6 +51,7 @@ import {
   BookOpen,
   LayoutDashboard,
   Coins,
+  Gift,
 } from "lucide-react";
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
@@ -584,6 +585,17 @@ export function Header() {
                       <Coins className="w-4 h-4 text-brand-primary flex-shrink-0" />
                       <span className="flex-1">{t('myCoins')}</span>
                       <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '-'}</span>
+                    </Link>
+
+                    {/* Refer & Earn */}
+                    <Link
+                      href={'/refer' as any}
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-5 py-3.5 text-sm text-brand-charcoal hover:bg-neutral-50 transition-colors border-b border-neutral-100"
+                    >
+                      <Gift className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                      <span className="flex-1">{t('referAndEarn')}</span>
+                      <span className="text-[10px] font-bold text-white bg-brand-primary px-1.5 py-0.5 rounded">₹200</span>
                     </Link>
 
                     {/* Support */}

@@ -4,6 +4,7 @@ import { createOrderToken } from '@/lib/order-token';
 import { formatPhoneNumber, validateOrderForm } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
+import { resolveReferralForOrder } from '@/lib/referral';
 import { logger } from '@/lib/logger';
 
 /**
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { currency = 'INR', items, total, coinsToRedeem, ...formFields } = body;
+    const { currency = 'INR', items, total, coinsToRedeem, referralCode, ...formFields } = body;
 
     // Only INR is supported; reject anything else before it reaches Razorpay.
     if (currency !== 'INR') {
@@ -55,6 +56,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: pricing.error }, { status: pricing.status });
     }
     const { items: pricedItems, subtotal, convenienceFee, discount, total: serverTotal, coinsRedeemed } = pricing.priced;
+
+    // Validated here, before the customer pays - verify-payment trusts the signed token.
+    const referral = await resolveReferralForOrder(referralCode, session?.userId);
+    if (!referral.ok) {
+      logger.warn('Payment', 'create-order - referral code rejected', { reason: referral.error });
+      logger.api('POST', '/api/payment/create-order', 400, Date.now() - start);
+      return NextResponse.json({ error: referral.error }, { status: 400 });
+    }
 
     // Razorpay can't process a zero-amount payment - an order fully covered by
     // coins has nothing left to pay online, so it must go through COD instead.
@@ -95,6 +104,8 @@ export async function POST(request: NextRequest) {
       total: serverTotal,
       userId: session?.userId,
       coinsRedeemed,
+      referralCode: referral.code,
+      referrerUserId: referral.referrerId,
     });
 
     logger.info('Payment', 'Razorpay order created', {

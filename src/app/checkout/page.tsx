@@ -9,7 +9,7 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
@@ -68,6 +68,38 @@ function CheckoutPageContent() {
   // just for display).
   const maxRedeemable = Math.min(coinBalance, getTotal() - firstOrderDiscount);
   const coinDiscount = redeemCoins ? Math.min(coinsToRedeem, maxRedeemable) : 0;
+
+  // Friend's referral code - doesn't change the price, it's recorded on the
+  // order so the referrer can be paid once it's delivered. The order APIs
+  // re-validate it; this Apply step is just early feedback.
+  const [referralInput, setReferralInput] = useState('');
+  const [appliedReferral, setAppliedReferral] = useState<string | null>(null);
+  const [referralError, setReferralError] = useState<string | null>(null);
+  const [applyingReferral, setApplyingReferral] = useState(false);
+
+  const handleApplyReferral = async () => {
+    const code = referralInput.trim();
+    if (!code) return;
+    setApplyingReferral(true);
+    setReferralError(null);
+    try {
+      const res = await fetch('/api/referral/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setAppliedReferral(data.code);
+      } else {
+        setReferralError(data.error || t('referralInvalid'));
+      }
+    } catch {
+      setReferralError(t('referralInvalid'));
+    } finally {
+      setApplyingReferral(false);
+    }
+  };
 
   // Show error redirected back from /api/payment/callback (e.g. cancelled UPI)
   useEffect(() => {
@@ -292,6 +324,7 @@ function CheckoutPageContent() {
           convenienceFee: getConvenienceFee(),
           total: getTotal() - firstOrderDiscount - coinDiscount,
           coinsToRedeem: coinDiscount,
+          referralCode: appliedReferral || undefined,
         }),
       });
       const data = await res.json();
@@ -354,6 +387,7 @@ function CheckoutPageContent() {
           convenienceFee: getConvenienceFee(),
           total: getTotal() - firstOrderDiscount - coinDiscount,
           coinsToRedeem: coinDiscount,
+          referralCode: appliedReferral || undefined,
           currency: 'INR',
           userId: currentUser?.id,
         }),
@@ -912,6 +946,53 @@ function CheckoutPageContent() {
                     <span className="font-medium">−{formatCurrency(coinDiscount)}</span>
                   </div>
                 )}
+
+                <div className="border-t border-neutral-100 pt-3">
+                  <p className="flex items-center gap-1.5 text-sm text-brand-charcoal font-medium mb-2">
+                    <Gift className="w-4 h-4 text-brand-primary" />
+                    {t('referralLabel')}
+                  </p>
+                  {appliedReferral ? (
+                    <div className="flex items-center justify-between gap-2 p-2.5 bg-green-50 border border-green-200 rounded-xl">
+                      <p className="text-xs text-green-800">
+                        <span className="font-bold tracking-wider">{appliedReferral}</span> {t('referralApplied')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setAppliedReferral(null); setReferralInput(''); }}
+                        className="text-xs font-semibold text-brand-slate hover:text-red-600 transition-colors"
+                      >
+                        {t('referralRemove')}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={referralInput}
+                          onChange={(e) => {
+                            setReferralInput(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 16));
+                            setReferralError(null);
+                          }}
+                          placeholder={t('referralPlaceholder')}
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                          className="flex-1 min-w-0 px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-brand-charcoal uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyReferral}
+                          disabled={!referralInput.trim() || applyingReferral}
+                          className="px-3 py-1.5 rounded-lg bg-brand-charcoal text-white text-xs font-bold disabled:opacity-40 transition-opacity"
+                        >
+                          {applyingReferral ? '…' : t('referralApply')}
+                        </button>
+                      </div>
+                      {referralError && <p className="text-xs text-red-600 mt-1.5">{referralError}</p>}
+                    </>
+                  )}
+                </div>
 
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between font-black text-brand-charcoal">

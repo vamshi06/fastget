@@ -125,6 +125,8 @@ export async function POST(request: NextRequest) {
       statusToken,
       updateToken,
       userId: orderData.userId,
+      referralCode: orderData.referralCode,
+      referrerUserId: orderData.referrerUserId,
     };
 
     const dbSuccess = await createOrder(order);

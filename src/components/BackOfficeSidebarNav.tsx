@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Package, ShoppingBag, Star, Truck, Coins } from 'lucide-react';
+import { BarChart3, Package, ShoppingBag, Star, Truck, Coins, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/orders',    label: 'Orders',          icon: ShoppingBag },
   { href: '/admin/reviews',   label: 'Reviews',         icon: Star        },
   { href: '/admin/coins',     label: 'Coins',           icon: Coins       },
+  { href: '/admin/referrals', label: 'Referrals',       icon: Gift        },
   { href: '/agent-dashboard', label: 'Agent Dashboard', icon: Truck       },
 ];
 

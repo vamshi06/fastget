@@ -16,6 +16,8 @@ export interface OrderTokenData {
   total: number;
   userId?: string;
   coinsRedeemed?: number;
+  referralCode?: string;
+  referrerUserId?: string;
   expiresAt: number;
 }
 

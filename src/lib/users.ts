@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import { User, UserAddress, AddressType, UserRole } from '@/types';
 import { logger } from '@/lib/logger';
 
@@ -53,6 +53,8 @@ export interface DbUser {
   resend_verification_at: Date | null;
   // Added in migration 015 - self-linked by admin/agent users via my-profile
   telegram_chat_id: string | null;
+  // Added in migration 022 - shareable code for the referral program
+  referral_code: string | null;
 }
 
 /**
@@ -132,6 +134,69 @@ export async function createUser(
     return dbUserToUser(result[0] as DbUser);
   } catch (error) {
     logger.error('Users', 'Failed to create user', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+// ============================================================================
+// Referral codes (migration 022) - see src/lib/referral.ts for the program rules
+// ============================================================================
+
+// No 0/O/1/I/L - codes get read aloud and typed in by hand.
+const REFERRAL_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const REFERRAL_CODE_LENGTH = 8;
+
+function generateReferralCode(): string {
+  let code = '';
+  for (let i = 0; i < REFERRAL_CODE_LENGTH; i++) {
+    code += REFERRAL_CODE_ALPHABET[randomInt(REFERRAL_CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+/** Look up the user who owns a referral code. Expects an already-normalized code. */
+export async function getUserIdByReferralCode(code: string): Promise<string | null> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT id FROM users WHERE referral_code = ${code} LIMIT 1`;
+    if (result.length === 0) return null;
+    return result[0].id as string;
+  } catch (error) {
+    logger.error('Users', 'Failed to get user by referral code', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Return the user's referral code, generating one the first time it's asked
+ * for (existing users never had one). Retries on the rare unique-index clash.
+ */
+export async function getOrCreateReferralCode(userId: string): Promise<string | null> {
+  const sql = getUnpooledClient();
+  try {
+    const existing = await sql`SELECT referral_code FROM users WHERE id = ${userId} LIMIT 1`;
+    if (existing.length === 0) return null;
+    if (existing[0].referral_code) return existing[0].referral_code as string;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const result = await sql`
+          UPDATE users SET referral_code = ${generateReferralCode()}
+          WHERE id = ${userId} AND referral_code IS NULL
+          RETURNING referral_code
+        `;
+        if (result.length > 0) return result[0].referral_code as string;
+        // A concurrent request set it first - read theirs.
+        const current = await sql`SELECT referral_code FROM users WHERE id = ${userId} LIMIT 1`;
+        return (current[0]?.referral_code as string) ?? null;
+      } catch (error) {
+        const isUniqueViolation = (error as { code?: string })?.code === '23505';
+        if (!isUniqueViolation) throw error;
+      }
+    }
+    return null;
+  } catch (error) {
+    logger.error('Users', 'Failed to get or create referral code', { userId, error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
