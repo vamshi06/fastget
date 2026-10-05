@@ -205,7 +205,7 @@ export default function WebViewScreen() {
           {/* Splash overlay only on first launch - dismissed once the initial page loads */}
           {initialLoading && (
             <View style={StyleSheet.absoluteFill}>
-              <LoadingScreen message="Loading FastGet..." />
+              <LoadingScreen />
             </View>
           )}
         </View>
