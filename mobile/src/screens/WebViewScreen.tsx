@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Linking, Platform, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, Platform, Share, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
@@ -190,6 +190,10 @@ export default function WebViewScreen() {
                   // Android → Download Manager saves the file to Downloads
                   // iOS → Safari opens it as a PDF with share/print options
                   Linking.openURL(msg.url);
+                } else if (msg.type === 'SHARE_TEXT' && typeof msg.text === 'string' && msg.text.length <= 1000) {
+                  // Referral "Share with friends" - the WebView has no
+                  // navigator.share, so open the native share sheet instead.
+                  Share.share({ message: msg.text }).catch(() => {});
                 }
               } catch {}
             }}

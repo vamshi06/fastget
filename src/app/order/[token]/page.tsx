@@ -8,6 +8,7 @@ import { useToast } from "@/components/ToastContext";
 import Link from "next/link";
 import { Order, OrderStatus } from "@/types";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
 import {
   Package,
   Clock,
@@ -121,8 +122,8 @@ export default function OrderStatusPage() {
     await fetchOrder();
   };
 
-  const handleCopyToken = () => {
-    navigator.clipboard.writeText(token);
+  const handleCopyToken = async () => {
+    if (!(await copyText(token))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

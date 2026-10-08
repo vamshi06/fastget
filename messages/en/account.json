@@ -96,6 +96,7 @@
     "yourCode": "Your referral code",
     "copy": "Copy",
     "copied": "Copied",
+    "copyFailed": "Couldn't copy automatically - tap the code to select it, then copy.",
     "share": "Share with friends",
     "shareMessage": "Order construction materials on FastGet! Use my referral code {code} at checkout on your first order: {link}",
     "howItWorks": "How it works",

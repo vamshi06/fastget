@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { formatCurrency } from '@/lib/utils';
+import { copyText } from '@/lib/clipboard';
 import type { ReferrerReferral, ReferralPayoutStatus } from '@/lib/db';
 import { Gift, Copy, Check, Share2, ChevronRight, LogIn } from 'lucide-react';
 
@@ -39,6 +40,7 @@ export default function ReferPage() {
   const [info, setInfo] = useState<ReferralInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -76,14 +78,22 @@ export default function ReferPage() {
 
   const handleCopy = async () => {
     if (!info) return;
-    try {
-      await navigator.clipboard.writeText(info.code);
+    const ok = await copyText(info.code);
+    setCopyFailed(!ok);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    }
   };
 
   const handleShare = async () => {
+    // Mobile app: the WebView has no navigator.share, and window.open would
+    // navigate the app away to WhatsApp's site - use the native share sheet.
+    const rnWebView = (window as any).ReactNativeWebView;
+    if (rnWebView && typeof rnWebView.postMessage === 'function') {
+      rnWebView.postMessage(JSON.stringify({ type: 'SHARE_TEXT', text: shareText }));
+      return;
+    }
     if (navigator.share) {
       try {
         await navigator.share({ text: shareText });
@@ -121,7 +131,8 @@ export default function ReferPage() {
           <>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{t('referral.yourCode')}</p>
             <div className="mt-1 flex items-center gap-2">
-              <p className="flex-1 rounded-xl border border-dashed border-primary-200 bg-primary-50 px-3 py-2.5 text-xl font-black tracking-widest text-brand-charcoal">
+              {/* select-all: if copying is blocked, one tap selects the whole code for a manual copy */}
+              <p className="flex-1 select-all rounded-xl border border-dashed border-primary-200 bg-primary-50 px-3 py-2.5 text-xl font-black tracking-widest text-brand-charcoal">
                 {info.code}
               </p>
               <button
@@ -133,6 +144,7 @@ export default function ReferPage() {
                 {copied ? t('referral.copied') : t('referral.copy')}
               </button>
             </div>
+            {copyFailed && <p className="text-xs text-red-600 mt-1.5">{t('referral.copyFailed')}</p>}
             <button
               type="button"
               onClick={handleShare}
