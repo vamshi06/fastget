@@ -1,101 +1,85 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Order, OrderStatus, PaymentMethod, ORDER_STATUS_LABELS } from '@/types';
+import type { AdminOrderFilters } from '@/lib/db';
+import { adminOrderFiltersToQuery } from '@/lib/admin-order-filters';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 interface OrdersListProps {
   orders: Order[];
+  total: number;
+  page: number;
+  pageSize: number;
+  filters: AdminOrderFilters;
 }
 
 const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-brand-charcoal font-medium text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary transition-all duration-200';
 
-export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
-  const searchParams = useSearchParams();
-  const [orders, setOrders] = useState(initialOrders);
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
-    (searchParams.get('status') as OrderStatus | 'all') || 'all'
-  );
-  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'all'>(
-    (searchParams.get('payment') as PaymentMethod | 'all') || 'all'
-  );
-  const [nameFilter, setNameFilter] = useState(searchParams.get('name') || '');
-  const [dateFromFilter, setDateFromFilter] = useState(searchParams.get('dateFrom') || '');
-  const [dateToFilter, setDateToFilter] = useState(searchParams.get('dateTo') || '');
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+// Filtering and paging run on the server; this component only edits the URL.
+// Keeping filters in the URL means "View order → Back" returns to the same
+// filtered list, and the Export link always matches what's on screen.
+export function OrdersListClient({ orders, total, page, pageSize, filters }: OrdersListProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [searchText, setSearchText] = useState(filters.q ?? '');
+  const firstRender = useRef(true);
 
-  const handleDelete = async () => {
-    if (!pendingDeleteId) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(`/admin/api/orders/${pendingDeleteId}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Failed to delete');
-      setOrders((prev) => prev.filter((o) => o.id !== pendingDeleteId));
-      setPendingDeleteId(null);
-    } catch {
-      // best-effort admin action - row simply stays if the delete failed
-    } finally {
-      setDeleting(false);
-    }
+  const navigate = (next: AdminOrderFilters, nextPage = 1) => {
+    const query = adminOrderFiltersToQuery({ ...next, page: nextPage });
+    startTransition(() => {
+      router.replace(`/admin/orders${query ? `?${query}` : ''}` as any, { scroll: false });
+    });
   };
 
-  const filteredOrders = orders.filter((order) => {
-    if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-    if (paymentFilter !== 'all' && order.paymentMethod !== paymentFilter) return false;
-    if (nameFilter) {
-      const searchTerm = nameFilter.toLowerCase();
-      const matchesName = order.customerName.toLowerCase().includes(searchTerm);
-      const matchesPhone = order.customerPhone.includes(searchTerm);
-      if (!matchesName && !matchesPhone) return false;
+  const setFilter = <K extends keyof AdminOrderFilters>(key: K, value: AdminOrderFilters[K] | '') => {
+    navigate({ ...filters, [key]: value || undefined });
+  };
+
+  // Debounce the free-text search so the list doesn't reload on every keystroke.
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
     }
-    if (dateFromFilter) {
-      const orderDate = new Date(order.createdAt);
-      const fromDate = new Date(dateFromFilter);
-      if (orderDate < fromDate) return false;
-    }
-    if (dateToFilter) {
-      const orderDate = new Date(order.createdAt);
-      const toDate = new Date(dateToFilter);
-      toDate.setHours(23, 59, 59, 999);
-      if (orderDate > toDate) return false;
-    }
-    return true;
-  });
+    const handle = setTimeout(() => {
+      if ((filters.q ?? '') !== searchText.trim()) setFilter('q', searchText.trim());
+    }, 400);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText]);
 
   const handleReset = () => {
-    setStatusFilter('all');
-    setPaymentFilter('all');
-    setNameFilter('');
-    setDateFromFilter('');
-    setDateToFilter('');
+    setSearchText('');
+    navigate({});
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const exportQuery = adminOrderFiltersToQuery(filters);
+  const hasFilters = Object.values(filters).some(Boolean);
 
   return (
     <div className="space-y-6">
       {/* Filter Section */}
-      <div className="card p-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+      <div className="card p-4 sm:p-6 space-y-4">
         <h3 className="text-lg font-bold text-brand-charcoal">Filters</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
               Status
             </label>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'all')}
+              value={filters.status ?? 'all'}
+              onChange={(e) => setFilter('status', e.target.value === 'all' ? '' : (e.target.value as OrderStatus))}
               className={inputCls}
             >
               <option value="all">All Statuses</option>
-              <option value="received">Received</option>
-              <option value="eta_assigned">ETA Assigned</option>
-              <option value="out_for_delivery">Out for Delivery</option>
-              <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
+              {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => (
+                <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>
+              ))}
             </select>
           </div>
 
@@ -104,8 +88,8 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
               Payment Method
             </label>
             <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value as PaymentMethod | 'all')}
+              value={filters.payment ?? 'all'}
+              onChange={(e) => setFilter('payment', e.target.value === 'all' ? '' : (e.target.value as PaymentMethod))}
               className={inputCls}
             >
               <option value="all">All Payment Methods</option>
@@ -116,13 +100,13 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
 
           <div>
             <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-              Customer Name/Phone
+              Search
             </label>
             <input
               type="text"
-              value={nameFilter}
-              onChange={(e) => setNameFilter(e.target.value)}
-              placeholder="Search customer..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Name, phone or order ID"
               className={inputCls}
             />
           </div>
@@ -133,8 +117,8 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
             </label>
             <input
               type="date"
-              value={dateFromFilter}
-              onChange={(e) => setDateFromFilter(e.target.value)}
+              value={filters.dateFrom ?? ''}
+              onChange={(e) => setFilter('dateFrom', e.target.value)}
               className={inputCls}
             />
           </div>
@@ -145,37 +129,44 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
             </label>
             <input
               type="date"
-              value={dateToFilter}
-              onChange={(e) => setDateToFilter(e.target.value)}
+              value={filters.dateTo ?? ''}
+              onChange={(e) => setFilter('dateTo', e.target.value)}
               className={inputCls}
             />
           </div>
         </div>
 
-        <button
-          onClick={handleReset}
-          className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200"
-        >
-          ↺ Reset Filters
-        </button>
+        <div className="flex items-center justify-between gap-4">
+          <button
+            onClick={handleReset}
+            disabled={!hasFilters && !searchText}
+            className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200 disabled:opacity-40"
+          >
+            ↺ Reset Filters
+          </button>
+          <p className="text-xs text-brand-steel">Dates are in India time (IST).</p>
+        </div>
       </div>
 
       {/* Results Table */}
-      <div className="card overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-        <div className="px-6 py-5 bg-gradient-to-r from-primary-50 to-white border-b border-neutral-100 flex items-center justify-between">
+      <div className={`card overflow-hidden transition-opacity ${isPending ? 'opacity-60' : ''}`}>
+        <div className="px-4 sm:px-6 py-5 bg-gradient-to-r from-primary-50 to-white border-b border-neutral-100 flex items-center justify-between gap-3">
           <h3 className="text-lg font-bold text-brand-charcoal">
-            Orders <span className="text-brand-primary">({filteredOrders.length})</span>
+            Orders <span className="text-brand-primary">({total.toLocaleString('en-IN')})</span>
           </h3>
-          <Link
-            href={`/admin/api/orders/export?status=${statusFilter}&payment=${paymentFilter}&name=${nameFilter}&dateFrom=${dateFromFilter}&dateTo=${dateToFilter}`}
+          {/* Plain <a download> - a <Link> would try to prefetch/client-route the CSV. */}
+          <a
+            href={`/admin/api/orders/export${exportQuery ? `?${exportQuery}` : ''}`}
+            download
             className="btn-primary text-sm py-2"
           >
+            <Download className="w-4 h-4" />
             Export CSV
-          </Link>
+          </a>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[760px]">
             <thead>
               <tr className="bg-brand-fog border-b border-neutral-100">
                 <th className="px-6 py-3 text-left text-xs font-semibold text-brand-steel uppercase tracking-wide">Order ID</th>
@@ -188,29 +179,31 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map((order, index) => (
+              {orders.length > 0 ? (
+                orders.map((order) => (
                   <tr
                     key={order.id}
-                    className="border-b border-neutral-100 hover:bg-primary-50 transition-all duration-200 group animate-in fade-in slide-in-from-left-2 duration-300"
-                    style={{ animationDelay: `${index * 30}ms` }}
+                    className="border-b border-neutral-100 hover:bg-primary-50 transition-colors duration-200 group"
                   >
-                    <td className="px-6 py-4 text-sm font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors">
-                      {order.id}
+                    <td className="px-6 py-4 text-sm font-mono font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors" title={order.id}>
+                      {order.id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="font-medium text-brand-charcoal">{order.customerName}</div>
                       <div className="text-xs text-brand-steel">{order.customerPhone}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-brand-slate">
-                      {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                        year: 'numeric',
-                        month: 'short',
+                    <td className="px-6 py-4 text-sm text-brand-slate whitespace-nowrap">
+                      {new Date(order.createdAt).toLocaleString('en-IN', {
                         day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'Asia/Kolkata',
                       })}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-brand-charcoal">
-                      ₹{order.total.toFixed(2)}
+                    <td className="px-6 py-4 text-sm font-bold text-brand-charcoal whitespace-nowrap">
+                      ₹{order.total.toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4">
                       <PaymentBadge order={order} />
@@ -219,20 +212,12 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
                       <StatusBadge status={order.status} />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200"
-                        >
-                          View →
-                        </Link>
-                        <button
-                          onClick={() => setPendingDeleteId(order.id)}
-                          className="text-red-600 hover:text-red-700 font-semibold text-sm transition-colors duration-200"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="text-brand-primary hover:text-brand-dark font-semibold text-sm transition-colors duration-200 whitespace-nowrap"
+                      >
+                        Manage →
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -246,17 +231,29 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {pendingDeleteId && (
-        <ConfirmDeleteModal
-          title="Delete order?"
-          message="This will permanently remove the order along with any associated reviews and delivery feedback. This cannot be undone."
-          pending={deleting}
-          onCancel={() => setPendingDeleteId(null)}
-          onConfirm={handleDelete}
-        />
-      )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-neutral-100 bg-brand-fog">
+            <button
+              onClick={() => navigate(filters, page - 1)}
+              disabled={page <= 1 || isPending}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium bg-white border border-neutral-200 hover:border-brand-primary disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+            <p className="text-sm text-brand-slate">
+              Page {page} of {totalPages}
+            </p>
+            <button
+              onClick={() => navigate(filters, page + 1)}
+              disabled={page >= totalPages || isPending}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium bg-white border border-neutral-200 hover:border-brand-primary disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -264,7 +261,7 @@ export function OrdersListClient({ orders: initialOrders }: OrdersListProps) {
 function PaymentBadge({ order }: { order: Order }) {
   if (order.paymentMethod === 'cod') {
     return (
-      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 transition-all duration-200 group-hover:scale-105">
+      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
         COD
       </span>
     );
@@ -277,7 +274,7 @@ function PaymentBadge({ order }: { order: Order }) {
   const captured = order.paymentStatus === 'captured';
   return (
     <span
-      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${
+      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
         captured ? 'bg-green-100 text-green-800 border-green-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'
       }`}
     >
@@ -296,7 +293,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   };
 
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusColors[status]} transition-all duration-200 group-hover:scale-105`}>
+    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[status]}`}>
       {ORDER_STATUS_LABELS[status]}
     </span>
   );

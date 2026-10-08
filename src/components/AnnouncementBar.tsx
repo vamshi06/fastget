@@ -2,20 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { usePathname } from 'next/navigation';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { isStaffRoute } from '@/lib/staff-routes';
 
 export function AnnouncementBar() {
   const t = useTranslations('nav');
+  const pathname = usePathname();
   const messages = t.raw('announcements') as string[];
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
+  const staffRoute = isStaffRoute(pathname);
 
   useEffect(() => {
+    if (staffRoute) return;
     const timer = setInterval(() => setCurrent((p) => (p + 1) % messages.length), 4000);
     return () => clearInterval(timer);
-  }, [messages.length]);
+  }, [messages.length, staffRoute]);
 
-  if (!visible) return null;
+  // Customer promos don't belong on the admin/agent screens.
+  if (!visible || staffRoute) return null;
 
   const prev = () => setCurrent((p) => (p - 1 + messages.length) % messages.length);
   const next = () => setCurrent((p) => (p + 1) % messages.length);

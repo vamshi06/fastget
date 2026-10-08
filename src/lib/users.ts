@@ -286,25 +286,6 @@ export async function getUserByPhone(phone: string): Promise<User | null> {
 }
 
 /**
- * Authenticate a user with phone number and password.
- */
-export async function authenticateUserByPhone(
-  phone: string,
-  plainPassword: string
-): Promise<User | null> {
-  try {
-    const user = await getUserByPhone(phone);
-    if (!user || !user.passwordHash) return null;
-    const isValid = await verifyPassword(plainPassword, user.passwordHash);
-    if (!isValid) return null;
-    return user;
-  } catch (error) {
-    logger.error('Users', 'Failed to authenticate user by phone', { error: error instanceof Error ? error.message : String(error) });
-    return null;
-  }
-}
-
-/**
  * Authenticate a user with email and password.
  * Returns user object if credentials are valid, null otherwise.
  */

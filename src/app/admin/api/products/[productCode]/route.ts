@@ -374,7 +374,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // ── DELETE /admin/api/products/[productCode] ──────────────────────────────────
 // Hard-deletes the product from its category table, product_variants, inventory,
-// and (if linked) the normalised products table.
+// and (if linked) the normalised products table. Only discontinued products can
+// be deleted - discontinuing first is the reversible way to take one off sale.
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const auth = await requireRole('admin');
   if ('response' in auth) return auth.response;
@@ -383,6 +384,12 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const row = await getProductRawRow(productCode);
     if (!row) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+    }
+    if (row.status !== 'discontinued') {
+      return NextResponse.json(
+        { success: false, error: 'Discontinue the product before deleting it permanently.' },
+        { status: 409 },
+      );
     }
 
     const ok = await deleteProductFromCategoryTable(

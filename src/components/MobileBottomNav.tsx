@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Home, LayoutGrid, ShoppingCart, ClipboardList, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/components/CartContext';
+import { isStaffRoute } from '@/lib/staff-routes';
 
 const SIDE_TAB_DEFS = [
   { href: '/',           labelKey: 'home',     Icon: Home          },
@@ -15,7 +16,6 @@ const SIDE_TAB_DEFS = [
   { href: '/account',    labelKey: 'account',  Icon: User          },
 ];
 
-const HIDDEN_ROUTES = ['/admin', '/agent-dashboard', '/agent/'];
 
 // Fixed-position elements get pushed up above the on-screen keyboard on
 // mobile browsers (the viewport resizes, "bottom: 0" lands above the keyboard
@@ -47,7 +47,7 @@ function useKeyboardOpen() {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const isKeyboardOpen = useKeyboardOpen();
-  const isHiddenRoute = HIDDEN_ROUTES.some((r) => pathname.startsWith(r));
+  const isHiddenRoute = isStaffRoute(pathname);
   const isVisible = !isHiddenRoute && !isKeyboardOpen;
   const { getItemCount } = useCart();
   const itemCount = getItemCount();

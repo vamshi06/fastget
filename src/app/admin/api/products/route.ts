@@ -3,7 +3,9 @@ import {
   createProductWithCatalog,
   findProductConflicts,
   getProductsFromCategoryTables,
+  getStockAlertCounts,
   saveProductTranslation,
+  type StockFilter,
 } from '@/lib/products';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
@@ -50,17 +52,33 @@ function parseIsoDate(value: unknown, field: string): string {
 // ── GET /admin/api/products ───────────────────────────────────────────────────
 // Admin product list. Unlike the public /api/products it includes inactive and
 // discontinued products, so they can still be found, edited and deleted.
+// Query: ?category=&search=&page= (50 per page), &stock=out|low for stock alerts.
+// The response also carries stockAlerts (counts) for the filter buttons.
+const ADMIN_PRODUCTS_PAGE_SIZE = 50;
+
 export async function GET(request: NextRequest) {
   const auth = await requireRole('admin');
   if ('response' in auth) return auth.response;
-  const category = request.nextUrl.searchParams.get('category') || undefined;
-  const { products, total } = await getProductsFromCategoryTables({
-    categorySlug: category,
-    limit: 500,
-    includeInactive: true,
-  });
+  const params = request.nextUrl.searchParams;
+  const category = params.get('category') || undefined;
+  const search = (params.get('search') || '').trim().slice(0, 100) || undefined;
+  const stockParam = params.get('stock');
+  const stockFilter: StockFilter | undefined = stockParam === 'out' || stockParam === 'low' ? stockParam : undefined;
+  const pageParam = Number(params.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1;
+  const [{ products, total }, stockAlerts] = await Promise.all([
+    getProductsFromCategoryTables({
+      categorySlug: category,
+      search,
+      limit: ADMIN_PRODUCTS_PAGE_SIZE,
+      offset: (page - 1) * ADMIN_PRODUCTS_PAGE_SIZE,
+      includeInactive: true,
+      stockFilter,
+    }),
+    getStockAlertCounts(),
+  ]);
   return NextResponse.json(
-    { success: true, data: { products, total } },
+    { success: true, data: { products, total, page, pageSize: ADMIN_PRODUCTS_PAGE_SIZE, stockAlerts } },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

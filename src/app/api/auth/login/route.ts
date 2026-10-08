@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, authenticateUserByPhone } from '@/lib/users';
+import { authenticateUser } from '@/lib/users';
 import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/session';
 import { getClientIp, peekLimit, recordFailedAttempt, clearBuckets, type RateRule } from '@/lib/rate-limit';
 import type { User } from '@/types';
@@ -8,7 +8,9 @@ import { logger } from '@/lib/logger';
 /**
  * POST /api/auth/login
  *
- * Authenticate with email+password or phone+password.
+ * Authenticate with email+password - the one login for customers and admins
+ * (admins sign in on the same /login page and are sent to /admin). Phone-number
+ * login was removed: phone numbers aren't unique across accounts.
  * Blocks login if email_verified is explicitly false (new accounts must verify).
  * Existing users (email_verified = true by migration default) are unaffected.
  */
@@ -32,12 +34,7 @@ export async function POST(request: NextRequest) {
     // server-side error or a successful login never burns a slot - a transient
     // 500 can't lock a legitimate user out.
     const ip = getClientIp(request);
-    const acct =
-      typeof body.phone === 'string'
-        ? `phone:${body.phone.replace(/\D/g, '').slice(-10)}`
-        : typeof body.email === 'string'
-          ? `email:${body.email.toLowerCase().trim()}`
-          : null;
+    const acct = typeof body.email === 'string' ? `email:${body.email.toLowerCase().trim()}` : null;
     const acctKey = acct ? `login:acct:${acct}` : null;
     const rules: RateRule[] = [
       { key: `login:ip:${ip}`, limit: 20, windowSec: 600 },
@@ -52,18 +49,7 @@ export async function POST(request: NextRequest) {
 
     let user: User | null = null;
 
-    if (body.phone && typeof body.phone === 'string') {
-      user = await authenticateUserByPhone(body.phone.trim(), body.password);
-      if (!user) {
-        await recordFailedAttempt(rules);
-        logger.warn('Auth', 'login - phone auth failed', { phone: body.phone });
-        logger.api('POST', '/api/auth/login', 401, Date.now() - start);
-        return NextResponse.json(
-          { success: false, error: 'Invalid phone number or password' },
-          { status: 401 },
-        );
-      }
-    } else if (body.email && typeof body.email === 'string') {
+    if (body.email && typeof body.email === 'string') {
       const email = body.email.toLowerCase().trim();
       user = await authenticateUser(email, body.password);
       if (!user) {
@@ -76,10 +62,10 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      logger.warn('Auth', 'login - missing phone or email');
+      logger.warn('Auth', 'login - missing email');
       logger.api('POST', '/api/auth/login', 400, Date.now() - start);
       return NextResponse.json(
-        { success: false, error: 'Phone number or email is required' },
+        { success: false, error: 'Email is required' },
         { status: 400 },
       );
     }

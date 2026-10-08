@@ -26,6 +26,7 @@ import {
   BookOpen,
   Coins,
   Gift,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -199,6 +200,7 @@ const AUTH_ITEMS = [
 export default function AccountPage() {
   const t = useTranslations('account');
   const tc = useTranslations('common');
+  const tNav = useTranslations('nav');
   const { currentUser, isLoaded, logout } = useUser();
   const router = useRouter();
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
@@ -241,6 +243,20 @@ export default function AccountPage() {
         <h1 className="text-lg font-bold text-brand-charcoal">{currentUser.name}</h1>
         <p className="text-sm text-brand-slate mt-0.5">{displayPhone}</p>
       </div>
+
+      {/* Admin-only shortcut - the way into the admin panel on a phone */}
+      {currentUser.role === 'admin' && (
+        <Link
+          href={'/admin' as any}
+          className="mx-4 mt-4 flex items-center px-4 py-4 bg-brand-charcoal text-white rounded-2xl shadow-sm hover:opacity-90 transition-opacity"
+        >
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <LayoutDashboard className="w-5 h-5 text-white" />
+          </div>
+          <p className="ml-3 flex-1 text-sm font-semibold">{tNav('adminDashboard')}</p>
+          <ChevronRight className="w-4 h-4 text-white/70" />
+        </Link>
+      )}
 
       {/* Coins balance */}
       <Link

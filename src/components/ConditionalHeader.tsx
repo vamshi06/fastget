@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Header } from './Header';
+import { isStaffRoute } from '@/lib/staff-routes';
 
 const AUTH_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 
@@ -17,7 +18,7 @@ export function ConditionalHeader() {
     setIsNativeApp(!!(window as any).ReactNativeWebView);
   }, []);
 
-  if (pathname.startsWith('/admin') || pathname.startsWith('/agent-dashboard') || pathname.startsWith('/agent/')) {
+  if (isStaffRoute(pathname)) {
     return null;
   }
 

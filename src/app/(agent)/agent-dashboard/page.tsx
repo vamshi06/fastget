@@ -10,6 +10,8 @@ import {
 
 const STATUSES = ['received', 'eta_assigned', 'out_for_delivery', 'delivered', 'cancelled'];
 const PAGE_SIZE = 20;
+// New orders show up without clicking Refresh (only while the tab is visible).
+const AUTO_REFRESH_MS = 60_000;
 
 // ── Pagination range helper (same shape as the catalog page) ──────────────────
 function paginationRange(current: number, total: number): (number | '...')[] {
@@ -37,20 +39,25 @@ export default function AgentDashboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  // One request returns the page of orders AND the per-status tab counts.
   const fetchOrders = useCallback(async (status: string, page: number, sort: 'asc' | 'desc') => {
     try {
       setError(null);
       const offset = (page - 1) * PAGE_SIZE;
       const response = await fetch(
-        `/api/orders/pending?status=${status}&limit=${PAGE_SIZE}&offset=${offset}&sort=${sort}`
+        `/api/orders/pending?status=${status}&limit=${PAGE_SIZE}&offset=${offset}&sort=${sort}`,
+        { cache: 'no-store' },
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to fetch orders');
       setOrders(data.orders || []);
       setTotalCount(data.count || 0);
+      if (data.statusCounts) setStatusCounts(data.statusCounts);
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders');
     } finally {
@@ -59,31 +66,27 @@ export default function AgentDashboard() {
     }
   }, []);
 
-  const fetchStatusCounts = useCallback(async () => {
-    try {
-      const counts: Record<string, number> = {};
-      for (const status of STATUSES) {
-        const response = await fetch(`/api/orders/pending?status=${status}&limit=1`);
-        if (!response.ok) { counts[status] = 0; continue; }
-        const data = await response.json();
-        counts[status] = data.count || 0;
-      }
-      setStatusCounts(counts);
-    } catch (err) {
-      console.error('Failed to fetch status counts:', err);
-    }
-  }, []);
-
   useEffect(() => {
     fetchOrders(selectedStatus, currentPage, sortOrder);
-    fetchStatusCounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStatus, currentPage, sortOrder]);
+  }, [fetchOrders, selectedStatus, currentPage, sortOrder]);
+
+  // Background refresh while the tab is visible, plus an immediate one when
+  // the admin comes back to the tab.
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') fetchOrders(selectedStatus, currentPage, sortOrder);
+    };
+    const interval = setInterval(refreshIfVisible, AUTO_REFRESH_MS);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [fetchOrders, selectedStatus, currentPage, sortOrder]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchOrders(selectedStatus, currentPage, sortOrder);
-    await fetchStatusCounts();
   };
 
   const handleSelectStatus = (status: string) => {
@@ -134,10 +137,15 @@ export default function AgentDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-brand-charcoal">Agent Dashboard</h1>
-          <p className="text-brand-slate text-sm mt-1">Manage orders and update status</p>
+          <p className="text-brand-slate text-sm mt-1">
+            Manage orders and update status
+            {lastUpdated && (
+              <span className="text-brand-steel"> · updated {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}, refreshes every minute</span>
+            )}
+          </p>
         </div>
         <button
           onClick={handleRefresh}

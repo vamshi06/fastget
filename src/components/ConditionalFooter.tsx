@@ -2,14 +2,15 @@
 
 import { usePathname } from 'next/navigation';
 import { Footer } from './Footer';
+import { isStaffRoute } from '@/lib/staff-routes';
 
 export function ConditionalFooter() {
   const pathname = usePathname();
-  
+
   // Hide footer for admin and agent back-office routes
-  if (pathname.startsWith('/admin') || pathname.startsWith('/agent-dashboard') || pathname.startsWith('/agent/')) {
+  if (isStaffRoute(pathname)) {
     return null;
   }
-  
+
   return <Footer />;
 }

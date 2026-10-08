@@ -106,7 +106,24 @@ export interface CatalogParams {
   locale?:       Locale; // non-default locale → translated names, English fallback
   /** Admin only: include inactive/discontinued rows (storefront never sets this). */
   includeInactive?: boolean;
+  /** Admin only: just ACTIVE products that are out of stock / low on stock. */
+  stockFilter?: StockFilter;
 }
+
+/** Available stock (stock - reserved) at or below this counts as "low". Matches the admin/storefront badges. */
+export const LOW_STOCK_THRESHOLD = 10;
+export type StockFilter = 'out' | 'low';
+
+// Variant ids whose available stock is out / low. Used as `variant_id IN (...)`
+// so it works against any category table or the catalog view without an alias.
+const STOCK_FILTER_SQL: Record<StockFilter, string> = {
+  out: `variant_id IN (SELECT pv.id FROM product_variants pv
+          LEFT JOIN inventory inv ON inv.variant_id = pv.id
+          WHERE COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) <= 0)`,
+  low: `variant_id IN (SELECT pv.id FROM product_variants pv
+          JOIN inventory inv ON inv.variant_id = pv.id
+          WHERE inv.stock_quantity - inv.reserved_quantity BETWEEN 1 AND ${LOW_STOCK_THRESHOLD})`,
+};
 
 export interface CatalogResult {
   products: Product[];
@@ -288,7 +305,7 @@ export async function getProductsFromCategoryTables(
   params: CatalogParams = {},
 ): Promise<CatalogResult> {
   const sqlClient = getUnpooledClient();
-  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale, includeInactive } = params;
+  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale, includeInactive, stockFilter } = params;
   const translate = wantsTranslation(locale);
 
   try {
@@ -325,7 +342,10 @@ export async function getProductsFromCategoryTables(
       const args: unknown[] = translate ? [locale] : [];
       // Category tables hold every status; the storefront must only see active
       // products (the view already filters, the raw tables don't).
-      const clauses: string[] = [includeInactive ? 'TRUE' : `status = 'active'`];
+      // A stock alert only matters for products customers can actually buy,
+      // so the stock filter always narrows to active ones.
+      const clauses: string[] = [includeInactive && !stockFilter ? 'TRUE' : `status = 'active'`];
+      if (stockFilter) clauses.push(STOCK_FILTER_SQL[stockFilter]);
 
       if (includeSearch && search?.trim()) {
         const pat = `%${search.trim()}%`;
@@ -334,8 +354,10 @@ export async function getProductsFromCategoryTables(
         // Match the English name too - plenty of shoppers type in English
         // even with the site in Hindi.
         const translatedMatch = translate ? ` OR COALESCE(name_i18n,'') ILIKE $${n - 2}` : '';
+        // Admins also look products up by their code (e.g. "CARP-A1B2C3").
+        const codeMatch = includeInactive ? ` OR product_code ILIKE $${n - 2}` : '';
         clauses.push(
-          `(name ILIKE $${n - 2}${translatedMatch} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
+          `(name ILIKE $${n - 2}${translatedMatch}${codeMatch} OR brand ILIKE $${n - 1} OR COALESCE(description,'') ILIKE $${n})`,
         );
       }
 
@@ -1112,6 +1134,56 @@ export async function getProductCodeByVariantSku(sku: string): Promise<string | 
     logger.error('Products', 'Failed to resolve product code by variant SKU', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
+}
+
+/**
+ * How many ACTIVE products are out of stock / low on stock (admin alerts).
+ * Stock is maintained by hand, so this is what tells an admin to restock or
+ * update a count. Returns null on a DB error.
+ */
+export async function getStockAlertCounts(): Promise<{ outOfStock: number; lowStock: number } | null> {
+  const sql = getUnpooledClient();
+  try {
+    const rows = await sql.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE ${STOCK_FILTER_SQL.out})::int AS out_of_stock,
+         COUNT(*) FILTER (WHERE ${STOCK_FILTER_SQL.low})::int AS low_stock
+       FROM products_catalog_view`,
+    ) as any[];
+    return { outOfStock: Number(rows[0]?.out_of_stock ?? 0), lowStock: Number(rows[0]?.low_stock ?? 0) };
+  } catch (error) {
+    logger.error('Products', 'Failed to get stock alert counts', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/**
+ * Available stock (stock - reserved) for each product code - order line items
+ * store the product code as their `sku`. Products that no longer exist map to
+ * null. Never throws; returns an empty map on a DB error.
+ */
+export async function getAvailableStockByProductCodes(codes: string[]): Promise<Map<string, number | null>> {
+  const unique = Array.from(new Set(codes.filter(Boolean)));
+  const stock = new Map<string, number | null>();
+  if (unique.length === 0) return stock;
+  const sql = getUnpooledClient();
+  try {
+    const rows = await sql.query(
+      `SELECT k.code,
+              all_category_rows.product_code IS NOT NULL AS found,
+              COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS available
+       FROM unnest($1::text[]) AS k(code)
+       LEFT JOIN ${ALL_CATEGORY_ROWS_SQL} ON all_category_rows.product_code = k.code
+       LEFT JOIN inventory inv ON inv.variant_id = all_category_rows.variant_id`,
+      [unique] as any[],
+    ) as any[];
+    for (const row of rows) {
+      stock.set(row.code as string, row.found ? Number(row.available) : null);
+    }
+  } catch (error) {
+    logger.error('Products', 'Failed to get stock for product codes', { error: error instanceof Error ? error.message : String(error) });
+  }
+  return stock;
 }
 
 /**

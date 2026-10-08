@@ -956,6 +956,117 @@ export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
   }
 }
 
+/* ─── Admin order search & stats ─────────────────────────────────────────── */
+
+/**
+ * Filters for the admin order list and CSV export. Dates are calendar days
+ * (YYYY-MM-DD) in India time, so "From 5 Oct" means from 00:00 IST - the same
+ * whether the query runs on a laptop in IST or a Vercel function in UTC.
+ */
+export interface AdminOrderFilters {
+  status?: OrderStatus;
+  payment?: PaymentMethod;
+  q?: string; // customer name, phone, or order id prefix
+  dateFrom?: string; // YYYY-MM-DD, inclusive (IST)
+  dateTo?: string; // YYYY-MM-DD, inclusive (IST)
+}
+
+/** Escape LIKE wildcards so a search for "50%" matches the literal text. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Filtered, paginated admin order list. Filtering happens in SQL, so it covers
+ * every order rather than just a recent slice. Returns null on a DB error so
+ * the page can say so instead of showing an empty list.
+ */
+export async function searchOrdersForAdmin(
+  filters: AdminOrderFilters,
+  limit: number,
+  offset: number,
+): Promise<{ orders: Order[]; total: number } | null> {
+  const sql = getUnpooledClient();
+  const status = filters.status ?? null;
+  const payment = filters.payment ?? null;
+  const q = filters.q?.trim() ? `%${escapeLike(filters.q.trim())}%` : null;
+  const idPrefix = filters.q?.trim() ? `${escapeLike(filters.q.trim().toLowerCase())}%` : null;
+  const dateFrom = filters.dateFrom || null;
+  const dateTo = filters.dateTo || null;
+  try {
+    const result = await sql`
+      SELECT *, COUNT(*) OVER() AS full_count
+      FROM orders
+      WHERE (${status}::text IS NULL OR status = ${status})
+        AND (${payment}::text IS NULL OR payment_method = ${payment})
+        AND (${q}::text IS NULL
+             OR customer_name ILIKE ${q}
+             OR customer_phone LIKE ${q}
+             OR id::text LIKE ${idPrefix})
+        AND (${dateFrom}::date IS NULL
+             OR created_at >= (${dateFrom}::date)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        AND (${dateTo}::date IS NULL
+             OR created_at < (${dateTo}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+    const total = result.length > 0 ? Number(result[0].full_count) : 0;
+    return { orders: (result as DbOrder[]).map(dbOrderToOrder), total };
+  } catch (error) {
+    logger.error('DB', 'Failed to search orders for admin', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+export interface AdminOrderStats {
+  statusCounts: Partial<Record<OrderStatus, number>>;
+  totalOrders: number;
+  /** Value of orders that weren't cancelled and were either COD or paid online (rupees). */
+  bookedRevenue: number;
+  /** Value of delivered orders only (rupees) - money actually collected. */
+  deliveredRevenue: number;
+}
+
+/**
+ * Order counts and revenue across ALL orders (or one IST date range), computed
+ * in SQL. Cancelled orders and online orders whose payment never completed are
+ * excluded from revenue. Returns null on a DB error.
+ */
+export async function getAdminOrderStats(dateFrom?: string, dateTo?: string): Promise<AdminOrderStats | null> {
+  const sql = getUnpooledClient();
+  const from = dateFrom || null;
+  const to = dateTo || null;
+  try {
+    const rows = await sql`
+      SELECT status,
+             COUNT(*)::int AS count,
+             COALESCE(SUM(total) FILTER (
+               WHERE status <> 'cancelled' AND (payment_method = 'cod' OR payment_status = 'captured')
+             ), 0)::bigint AS booked,
+             COALESCE(SUM(total) FILTER (WHERE status = 'delivered'), 0)::bigint AS delivered
+      FROM orders
+      WHERE (${from}::date IS NULL
+             OR created_at >= (${from}::date)::timestamp AT TIME ZONE 'Asia/Kolkata')
+        AND (${to}::date IS NULL
+             OR created_at < (${to}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+      GROUP BY status
+    `;
+    const stats: AdminOrderStats = { statusCounts: {}, totalOrders: 0, bookedRevenue: 0, deliveredRevenue: 0 };
+    for (const row of rows) {
+      const count = Number(row.count);
+      stats.statusCounts[row.status as OrderStatus] = count;
+      stats.totalOrders += count;
+      stats.bookedRevenue += Number(row.booked);
+      stats.deliveredRevenue += Number(row.delivered);
+    }
+    return stats;
+  } catch (error) {
+    logger.error('DB', 'Failed to get admin order stats', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
 /**
  * Convert database row format to API Order object.
  * Maps snake_case columns to camelCase properties.
@@ -986,6 +1097,7 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     total: dbOrder.total,
     paymentMethod: dbOrder.payment_method as PaymentMethod,
     paymentStatus: dbOrder.payment_status ?? null,
+    razorpayPaymentId: dbOrder.razorpay_payment_id || undefined,
     status: dbOrder.status,
     eta: dbOrder.eta || undefined,
     statusToken: dbOrder.status_token,
@@ -1476,19 +1588,25 @@ export async function adminDeleteOrderFeedback(feedbackId: string): Promise<bool
   }
 }
 
+export type AdminDeleteOrderResult = 'deleted' | 'not_found' | 'not_cancelled' | 'error';
+
 /**
- * Admin moderation delete - permanently removes an order by id, no ownership check.
+ * Admin delete - permanently removes an order by id, no ownership check.
+ * Only cancelled orders can be deleted, so a live or delivered order (and its
+ * sales record) can never be wiped by a stray click - cancel it first.
  * Associated product reviews and delivery feedback cascade-delete with it
  * (ON DELETE CASCADE on their order_id foreign keys).
  */
-export async function adminDeleteOrder(id: string): Promise<boolean> {
+export async function adminDeleteOrder(id: string): Promise<AdminDeleteOrderResult> {
   const sql = getClient();
   try {
-    const result = await sql`DELETE FROM orders WHERE id = ${id} RETURNING id`;
-    return result.length > 0;
+    const result = await sql`DELETE FROM orders WHERE id = ${id} AND status = 'cancelled' RETURNING id`;
+    if (result.length > 0) return 'deleted';
+    const rows = await sql`SELECT 1 FROM orders WHERE id = ${id} LIMIT 1`;
+    return rows.length === 0 ? 'not_found' : 'not_cancelled';
   } catch (error) {
     logger.error('DB', 'Failed to admin-delete order', { error: error instanceof Error ? error.message : String(error) });
-    return false;
+    return 'error';
   }
 }
 
@@ -1501,6 +1619,7 @@ interface DbCoinTransaction {
   amount: number;
   reason: CoinTransactionReason;
   created_by: string | null;
+  note?: string | null;
   created_at: Date | string;
 }
 
@@ -1512,8 +1631,14 @@ function dbCoinTxToCoinTransaction(row: DbCoinTransaction): CoinTransaction {
     amount: row.amount,
     reason: row.reason,
     createdBy: row.created_by ?? undefined,
+    note: row.note ?? undefined,
     createdAt: toIso(row.created_at),
   };
+}
+
+/** True when a query failed because coin_transactions.note doesn't exist yet (migration 023 not run). */
+function isMissingNoteColumn(error: unknown): boolean {
+  return error instanceof Error && /column "note"/.test(error.message);
 }
 
 export interface UserCoinSummary {
@@ -1566,7 +1691,7 @@ export async function getCoinTransactions(userId: string, limit: number = 100): 
   const sql = getUnpooledClient();
   try {
     const result = await sql`
-      SELECT id, user_id, order_id, amount, reason, created_by, created_at
+      SELECT id, user_id, order_id, amount, reason, created_by, note, created_at
       FROM coin_transactions
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
@@ -1574,6 +1699,16 @@ export async function getCoinTransactions(userId: string, limit: number = 100): 
     `;
     return (result as DbCoinTransaction[]).map(dbCoinTxToCoinTransaction);
   } catch (error) {
+    if (isMissingNoteColumn(error)) {
+      const result = await sql`
+        SELECT id, user_id, order_id, amount, reason, created_by, created_at
+        FROM coin_transactions
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `;
+      return (result as DbCoinTransaction[]).map(dbCoinTxToCoinTransaction);
+    }
     logger.error('DB', 'Failed to get coin transactions', { userId, error: error instanceof Error ? error.message : String(error) });
     return [];
   }
@@ -1657,30 +1792,64 @@ async function getRedeemedCoinsForOrder(orderId: string): Promise<number> {
   }
 }
 
+export type AdjustCoinsResult =
+  | { success: true; balance: number }
+  | { success: false; error: 'not_found' | 'insufficient_balance' | 'db_error'; balance?: number };
+
 /**
- * Admin correction - adds or subtracts an arbitrary amount, unlike the
- * balance-checked/idempotent paths above. Always recorded in the ledger with
- * the acting admin's user id.
+ * Admin correction - adds or subtracts an amount with the admin's reason.
+ * The balance check and the update happen in one statement (like debitCoins),
+ * so a subtraction can never take a balance below zero. Always recorded in the
+ * ledger with the acting admin's user id.
  */
-export async function adjustCoinsAdmin(userId: string, delta: number, adminUserId: string): Promise<number | null> {
-  if (!Number.isInteger(delta) || delta === 0) return null;
+export async function adjustCoinsAdmin(
+  userId: string,
+  delta: number,
+  adminUserId: string,
+  note: string,
+): Promise<AdjustCoinsResult> {
+  if (!Number.isInteger(delta) || delta === 0) return { success: false, error: 'db_error' };
   const sql = getClient();
   try {
-    const result = await sql`
-      WITH ins AS (
-        INSERT INTO coin_transactions (user_id, order_id, amount, reason, created_by)
-        VALUES (${userId}, NULL, ${delta}, 'admin_adjustment', ${adminUserId})
-        RETURNING amount, user_id
-      )
-      UPDATE users SET coin_balance = coin_balance + (SELECT amount FROM ins)
-      WHERE id = (SELECT user_id FROM ins)
-      RETURNING coin_balance
-    `;
-    if (result.length === 0) return null;
-    return result[0].coin_balance as number;
+    let result;
+    try {
+      result = await sql`
+        WITH upd AS (
+          UPDATE users SET coin_balance = coin_balance + ${delta}
+          WHERE id = ${userId} AND coin_balance + ${delta} >= 0
+          RETURNING id, coin_balance
+        ), ins AS (
+          INSERT INTO coin_transactions (user_id, order_id, amount, reason, created_by, note)
+          SELECT id, NULL, ${delta}, 'admin_adjustment', ${adminUserId}, ${note} FROM upd
+          RETURNING id
+        )
+        SELECT coin_balance FROM upd
+      `;
+    } catch (error) {
+      if (!isMissingNoteColumn(error)) throw error;
+      // Migration 023 not run yet - still record the adjustment, without its note.
+      result = await sql`
+        WITH upd AS (
+          UPDATE users SET coin_balance = coin_balance + ${delta}
+          WHERE id = ${userId} AND coin_balance + ${delta} >= 0
+          RETURNING id, coin_balance
+        ), ins AS (
+          INSERT INTO coin_transactions (user_id, order_id, amount, reason, created_by)
+          SELECT id, NULL, ${delta}, 'admin_adjustment', ${adminUserId} FROM upd
+          RETURNING id
+        )
+        SELECT coin_balance FROM upd
+      `;
+    }
+    if (result.length > 0) return { success: true, balance: result[0].coin_balance as number };
+
+    // Nothing updated - either the user doesn't exist or the subtraction would go negative.
+    const rows = await sql`SELECT coin_balance FROM users WHERE id = ${userId} LIMIT 1`;
+    if (rows.length === 0) return { success: false, error: 'not_found' };
+    return { success: false, error: 'insufficient_balance', balance: rows[0].coin_balance as number };
   } catch (error) {
     logger.error('DB', 'Failed to adjust coins (admin)', { userId, delta, error: error instanceof Error ? error.message : String(error) });
-    return null;
+    return { success: false, error: 'db_error' };
   }
 }
 

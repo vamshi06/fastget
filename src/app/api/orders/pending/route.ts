@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { requireRole } from '@/lib/auth';
 
 // Force dynamic rendering to allow search params
 export const dynamic = 'force-dynamic';
@@ -16,8 +17,15 @@ export const dynamic = 'force-dynamic';
  * - limit (optional): Number of results per page (default: 20, max: 100)
  * - offset (optional): Number of results to skip, for pagination (default: 0)
  * - sort (optional): 'asc' or 'desc' by created_at (default: 'desc')
+ *
+ * The response also carries `statusCounts` (orders per status) so the dashboard
+ * tabs need one request instead of one per status.
  */
 export async function GET(request: NextRequest) {
+  // Middleware already restricts this route to admins; checked here too so
+  // authorization doesn't rely on middleware alone.
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
   const start = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -45,14 +53,19 @@ export async function GET(request: NextRequest) {
     // Use unpooled connection to read fresh data from primary
     const sqlConn = getUnpooledConnection();
 
-    // Get total count for the status
-    const countResult = await sqlConn`
-      SELECT COUNT(*)::integer AS total
+    // Count orders in every status at once (feeds the tab badges); the
+    // selected status's count is the total for pagination.
+    const countRows = await sqlConn`
+      SELECT status, COUNT(*)::integer AS total
       FROM orders
-      WHERE status = ${statusFilter}
+      GROUP BY status
     `;
-    // Neon returns COUNT as bigint string - cast to number safely
-    const totalCount = Number(countResult[0]?.total ?? 0);
+    const statusCounts: Record<string, number> = Object.fromEntries(validStatuses.map((s) => [s, 0]));
+    for (const row of countRows) {
+      // Neon returns COUNT as bigint string - cast to number safely
+      statusCounts[row.status as string] = Number(row.total ?? 0);
+    }
+    const totalCount = statusCounts[statusFilter] ?? 0;
 
     // Fetch orders with the specified status.
     // ORDER BY direction can't be parameter-bound with the neon tagged-template
@@ -108,6 +121,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         count: totalCount,
+        statusCounts,
         status: statusFilter,
         orders: formattedOrders,
         offset,

@@ -261,18 +261,31 @@ export function passwordChangedTemplate(
 export function orderPlacedStaffEmailTemplate(
   order: Order,
   appUrl: string,
+  /** Stock warning per sku (e.g. "Out of stock") - items the recorded stock can't cover. */
+  stockWarnings: Map<string, string> = new Map(),
 ): { subject: string; html: string; text: string } {
   const orderUrl = `${appUrl}/admin/orders/${order.id}`;
   const itemsRows = order.items
     .map(
       (item) => `
       <tr>
-        <td style="padding:8px 0;font-size:14px;color:${C};">${esc(item.name)} <span style="color:${S};">&times;${item.quantity}</span></td>
+        <td style="padding:8px 0;font-size:14px;color:${C};">${esc(item.name)} <span style="color:${S};">&times;${item.quantity}</span>${
+          stockWarnings.has(item.sku)
+            ? ` <span style="color:#B91C1C;font-weight:700;font-size:12px;">⚠ ${esc(stockWarnings.get(item.sku)!)}</span>`
+            : ''
+        }</td>
         <td style="padding:8px 0;font-size:14px;color:${C};text-align:right;white-space:nowrap;">₹${(item.price * item.quantity).toLocaleString('en-IN')}</td>
       </tr>`,
     )
     .join('');
-  const itemsText = order.items.map((i) => `  - ${i.name} x${i.quantity} - ₹${i.price * i.quantity}`).join('\n');
+  const itemsText = order.items
+    .map((i) => `  - ${i.name} x${i.quantity} - ₹${i.price * i.quantity}${stockWarnings.has(i.sku) ? ` [${stockWarnings.get(i.sku)}]` : ''}`)
+    .join('\n');
+  const stockBanner = stockWarnings.size > 0
+    ? `<div style="margin:20px 0 0;padding:12px 16px;border-radius:12px;background:#FEF2F2;border:1px solid #FECACA;font-size:13px;color:#7F1D1D;">
+        <strong>⚠ Stock check:</strong> ${stockWarnings.size} item${stockWarnings.size !== 1 ? 's' : ''} in this order ${stockWarnings.size !== 1 ? "don't" : "doesn't"} have enough stock. Check before confirming.
+      </div>`
+    : '';
 
   const body = `
     <div style="padding:36px 40px;">
@@ -281,6 +294,7 @@ export function orderPlacedStaffEmailTemplate(
         <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:${C};">New order placed</h1>
         <p style="margin:6px 0 0;font-size:14px;color:${S};">₹${order.total.toLocaleString('en-IN')} &middot; ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} &middot; ${esc(order.paymentMethod.toUpperCase())}</p>
       </div>
+      ${stockBanner}
 
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:24px 0;background:${G};border-radius:14px;padding:18px 20px;">
         <tr><td style="font-size:13px;color:${S};padding:4px 0;">Customer</td><td style="font-size:13px;color:${C};font-weight:600;text-align:right;padding:4px 0;">${esc(order.customerName)}</td></tr>
@@ -299,8 +313,8 @@ export function orderPlacedStaffEmailTemplate(
     </div>`;
 
   return {
-    subject: `New order - ₹${order.total.toLocaleString('en-IN')} from ${order.customerName}`,
+    subject: `${stockWarnings.size > 0 ? '⚠ Stock issue - ' : ''}New order - ₹${order.total.toLocaleString('en-IN')} from ${order.customerName}`,
     html: wrap(body),
-    text: `New order placed\n\nCustomer: ${order.customerName}\nPhone: ${order.customerPhone}\nAddress: ${order.siteAddress}\nTotal: ₹${order.total}\n\nItems:\n${itemsText}\n\nView: ${orderUrl}`,
+    text: `New order placed\n\n${stockWarnings.size > 0 ? `STOCK CHECK: ${stockWarnings.size} item(s) don't have enough stock - check before confirming.\n\n` : ''}Customer: ${order.customerName}\nPhone: ${order.customerPhone}\nAddress: ${order.siteAddress}\nTotal: ₹${order.total}\n\nItems:\n${itemsText}\n\nView: ${orderUrl}`,
   };
 }

@@ -113,6 +113,15 @@ export function isValidStatusTransition(
   return VALID_STATUS_TRANSITIONS[currentStatus].includes(newStatus);
 }
 
+/**
+ * Rupees paid with coins on an order. Orders don't store this separately, but
+ * total = subtotal + convenience fee - discount - coins (see order-pricing.ts),
+ * so it's whatever the other fields don't account for.
+ */
+export function orderCoinDiscount(order: Pick<Order, 'subtotal' | 'convenienceFee' | 'discount' | 'total'>): number {
+  return Math.max(0, order.subtotal + order.convenienceFee - (order.discount || 0) - order.total);
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',

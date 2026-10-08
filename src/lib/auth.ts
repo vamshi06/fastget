@@ -95,13 +95,13 @@ export async function requireSession(): Promise<
 }
 
 /**
- * Server-component guard. Redirects to the admin login when the visitor is not
- * an authenticated admin; otherwise returns the session.
+ * Server-component guard. Redirects to the common login page when the visitor
+ * is not an authenticated admin; otherwise returns the session.
  */
 export async function requireAdminPage(): Promise<SessionPayload> {
   const session = await getSession();
   if (!session || session.role !== 'admin') {
-    redirect('/admin/login');
+    redirect('/login?redirect=/admin');
   }
   return session;
 }

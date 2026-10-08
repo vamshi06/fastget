@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Search, Coins, Plus, Minus, ChevronRight } from 'lucide-react';
 import type { CoinTransaction } from '@/types';
 import type { UserCoinSummary } from '@/lib/db';
@@ -24,7 +25,7 @@ const REASON_LABELS: Record<CoinTransaction['reason'], string> = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 }
 
 export function CoinsLookupClient({ initialBalances }: CoinsLookupClientProps) {
@@ -36,20 +37,30 @@ export function CoinsLookupClient({ initialBalances }: CoinsLookupClientProps) {
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
 
   const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustNote, setAdjustNote] = useState('');
   const [adjusting, setAdjusting] = useState(false);
   const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [adjustSuccess, setAdjustSuccess] = useState<string | null>(null);
+  // The adjustment waiting for confirmation (+N or -N).
+  const [pendingDelta, setPendingDelta] = useState<number | null>(null);
 
   const loadBalance = async (userId: string) => {
     const res = await fetch(`/admin/api/coins/${userId}`, { cache: 'no-store' });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (data.success) {
       setBalance(data.balance);
       setTransactions(data.transactions);
+    } else {
+      setSearchError('Could not load this customer\'s coin history. Please try again.');
     }
   };
 
   const selectUser = async (found: FoundUser) => {
     setSearchError(null);
+    setAdjustError(null);
+    setAdjustSuccess(null);
+    setAdjustAmount('');
+    setAdjustNote('');
     setUser(found);
     await loadBalance(found.id);
   };
@@ -75,32 +86,50 @@ export function CoinsLookupClient({ initialBalances }: CoinsLookupClientProps) {
     }
   };
 
-  const handleAdjust = async (sign: 1 | -1) => {
-    if (!user) return;
-    const magnitude = Math.round(Number(adjustAmount));
-    if (!Number.isInteger(magnitude) || magnitude <= 0) {
+  // Step 1: validate and open the confirmation dialog.
+  const requestAdjust = (sign: 1 | -1) => {
+    setAdjustError(null);
+    setAdjustSuccess(null);
+    const amount = Number(adjustAmount);
+    if (!Number.isInteger(amount) || amount <= 0) {
       setAdjustError('Enter a whole number of coins');
       return;
     }
+    if (sign === -1 && amount > balance) {
+      setAdjustError(`Can't subtract ${amount} coins - the balance is only ${balance}.`);
+      return;
+    }
+    if (adjustNote.trim().length < 3) {
+      setAdjustError('Please give a reason for this adjustment.');
+      return;
+    }
+    setPendingDelta(sign * amount);
+  };
+
+  // Step 2: the admin confirmed - apply it.
+  const confirmAdjust = async () => {
+    if (!user || pendingDelta === null) return;
     setAdjusting(true);
-    setAdjustError(null);
     try {
       const res = await fetch(`/admin/api/coins/${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ delta: sign * magnitude }),
+        body: JSON.stringify({ delta: pendingDelta, note: adjustNote.trim() }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!data.success) {
         setAdjustError(data.error || 'Failed to adjust balance');
         return;
       }
+      setAdjustSuccess(`${pendingDelta > 0 ? 'Added' : 'Subtracted'} ${Math.abs(pendingDelta)} coins. New balance: ${data.balance}.`);
       setAdjustAmount('');
+      setAdjustNote('');
       await loadBalance(user.id);
     } catch {
       setAdjustError('Something went wrong. Please try again.');
     } finally {
       setAdjusting(false);
+      setPendingDelta(null);
     }
   };
 
@@ -185,25 +214,70 @@ export function CoinsLookupClient({ initialBalances }: CoinsLookupClientProps) {
                 placeholder="Amount"
                 className="w-32 px-3 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all"
               />
+              <input
+                type="text"
+                value={adjustNote}
+                onChange={(e) => setAdjustNote(e.target.value)}
+                placeholder="Reason (required), e.g. compensation for late delivery"
+                maxLength={300}
+                className="flex-1 min-w-[220px] px-3 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all"
+              />
               <button
                 type="button"
                 disabled={adjusting}
-                onClick={() => handleAdjust(1)}
+                onClick={() => requestAdjust(1)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-semibold hover:bg-green-100 transition-colors disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
               <button
                 type="button"
-                disabled={adjusting}
-                onClick={() => handleAdjust(-1)}
+                disabled={adjusting || balance <= 0}
+                onClick={() => requestAdjust(-1)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"
               >
                 <Minus className="w-4 h-4" /> Subtract
               </button>
             </div>
             {adjustError && <p className="text-sm text-red-600 mt-2">{adjustError}</p>}
+            {adjustSuccess && <p className="text-sm text-green-700 mt-2">{adjustSuccess}</p>}
           </div>
+
+          {pendingDelta !== null && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div className="absolute inset-0 bg-black/40" onClick={() => !adjusting && setPendingDelta(null)} />
+              <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+                <div>
+                  <h2 className="font-bold text-brand-charcoal">
+                    {pendingDelta > 0 ? 'Add' : 'Subtract'} {Math.abs(pendingDelta)} coins?
+                  </h2>
+                  <p className="text-sm text-brand-slate mt-1">
+                    {user.name}&apos;s balance will go from <strong>{balance}</strong> to{' '}
+                    <strong>{balance + pendingDelta}</strong>.
+                  </p>
+                  <p className="text-sm text-brand-slate mt-2">Reason: &ldquo;{adjustNote.trim()}&rdquo;</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setPendingDelta(null)}
+                    disabled={adjusting}
+                    className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-sm font-semibold text-brand-charcoal hover:bg-neutral-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmAdjust}
+                    disabled={adjusting}
+                    className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60 ${
+                      pendingDelta > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                    }`}
+                  >
+                    {adjusting ? 'Saving…' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="border-t border-neutral-100 pt-4">
             <p className="text-xs font-semibold text-brand-graphite uppercase tracking-wide mb-3">History</p>
@@ -212,9 +286,17 @@ export function CoinsLookupClient({ initialBalances }: CoinsLookupClientProps) {
             ) : (
               <div className="divide-y divide-neutral-100">
                 {transactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="text-brand-charcoal font-medium">{REASON_LABELS[tx.reason]}</p>
+                  <div key={tx.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <p className="text-brand-charcoal font-medium">
+                        {REASON_LABELS[tx.reason]}
+                        {tx.orderId && (
+                          <Link href={`/admin/orders/${tx.orderId}`} className="ml-2 text-xs font-semibold text-brand-primary hover:underline">
+                            Order {tx.orderId.slice(0, 8).toUpperCase()}
+                          </Link>
+                        )}
+                      </p>
+                      {tx.note && <p className="text-xs text-brand-graphite">&ldquo;{tx.note}&rdquo;</p>}
                       <p className="text-xs text-brand-slate">{formatDate(tx.createdAt)}</p>
                     </div>
                     <span className={`font-bold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>

@@ -10,8 +10,9 @@ type Ctx = { params: Promise<{ id: string }> };
 /**
  * DELETE /admin/api/orders/[id]
  *
- * Admin-only: permanently removes an order. Associated product reviews and
- * delivery feedback cascade-delete with it.
+ * Admin-only: permanently removes a CANCELLED order. Live and delivered orders
+ * are refused (409) - cancel first. Associated product reviews and delivery
+ * feedback cascade-delete with it.
  */
 export async function DELETE(_request: NextRequest, ctx: Ctx) {
   const auth = await requireRole('admin');
@@ -20,12 +21,24 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
 
   try {
     const { id } = await ctx.params;
-    const deleted = await adminDeleteOrder(id);
-    if (!deleted) {
+    const result = await adminDeleteOrder(id);
+    if (result === 'not_found') {
       logger.api('DELETE', '/admin/api/orders/[id]', 404, Date.now() - start);
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
+    if (result === 'not_cancelled') {
+      logger.api('DELETE', '/admin/api/orders/[id]', 409, Date.now() - start);
+      return NextResponse.json(
+        { success: false, error: 'Only cancelled orders can be deleted. Cancel the order first.' },
+        { status: 409 },
+      );
+    }
+    if (result === 'error') {
+      logger.api('DELETE', '/admin/api/orders/[id]', 500, Date.now() - start);
+      return NextResponse.json({ success: false, error: 'Failed to delete the order. Please try again.' }, { status: 500 });
+    }
 
+    logger.info('API', 'Admin deleted order', { orderId: id, adminUserId: auth.session.userId });
     logger.api('DELETE', '/admin/api/orders/[id]', 200, Date.now() - start);
     return NextResponse.json({ success: true });
   } catch (error) {

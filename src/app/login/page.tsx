@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { isStaffRoute } from '@/lib/staff-routes';
 import { AlertCircle, ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react';
 
 function AuthHero({ title }: { title: string }) {
@@ -35,7 +36,11 @@ function LoginForm() {
   const tc = useTranslations('common');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  // Only same-site paths - "//evil.com" or "https://..." would send the user off-site.
+  const redirectParam = searchParams.get('redirect');
+  const redirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+    ? redirectParam
+    : null;
   const { setCurrentUser } = useUser();
 
   const [email, setEmail] = useState('');
@@ -78,7 +83,14 @@ function LoginForm() {
       }
 
       setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone, role: data.role });
-      router.push(redirect as any);
+      // Admins sign in here too and land on the admin panel by default. A
+      // non-admin is never sent to a staff screen (it would just bounce back here).
+      const isAdmin = data.role === 'admin';
+      const target = redirect && (isAdmin || !isStaffRoute(redirect))
+        ? redirect
+        : isAdmin ? '/admin' : '/';
+      router.push(target as any);
+      router.refresh();
     } catch {
       setError(t('errors.genericLoginError'));
     } finally {

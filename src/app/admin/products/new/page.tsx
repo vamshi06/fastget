@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ImageUrlPreview } from '@/components/ImageUrlPreview';
 
 interface CategoryOption {
   id: string;
@@ -215,8 +216,8 @@ export default function NewProductPage() {
             Product Details
           </h2>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-1">
               <label htmlFor="name" className={labelCls}>
                 Product Name <span className="text-red-500">*</span>
               </label>
@@ -228,7 +229,7 @@ export default function NewProductPage() {
               />
             </div>
 
-            <div className="col-span-2 sm:col-span-1">
+            <div className="sm:col-span-1">
               <label htmlFor="brand" className={labelCls}>Brand</label>
               <input
                 type="text" id="brand" name="brand"
@@ -283,7 +284,7 @@ export default function NewProductPage() {
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
             Pricing
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="price" className={labelCls}>
                 Selling Price (₹) <span className="text-red-500">*</span>
@@ -313,7 +314,7 @@ export default function NewProductPage() {
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
             Flash Sale <span className="normal-case font-normal text-brand-steel">(optional)</span>
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="salePrice" className={labelCls}>Sale Price (₹)</label>
               <input
@@ -361,7 +362,7 @@ export default function NewProductPage() {
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
             Classification
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="categorySlug" className={labelCls}>
                 Category <span className="text-red-500">*</span>
@@ -414,7 +415,7 @@ export default function NewProductPage() {
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
             Specifications
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="size" className={labelCls}>Size</label>
               <input
@@ -453,7 +454,7 @@ export default function NewProductPage() {
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
             Inventory
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="sku" className={labelCls}>SKU</label>
               <input
@@ -464,13 +465,16 @@ export default function NewProductPage() {
               />
             </div>
             <div>
-              <label htmlFor="stockQuantity" className={labelCls}>Stock Qty</label>
+              <label htmlFor="stockQuantity" className={labelCls}>Stock Qty (manual)</label>
               <input
                 type="number" id="stockQuantity" name="stockQuantity"
                 value={formData.stockQuantity} onChange={handleChange}
                 min="0" step="1"
                 className={inputCls} disabled={loading}
               />
+              <p className="text-xs text-brand-steel mt-1">
+                Orders don&apos;t reduce this automatically - keep it updated by hand.
+              </p>
             </div>
             <div>
               <label htmlFor="moq" className={labelCls}>Min. Order Qty</label>
@@ -498,6 +502,7 @@ export default function NewProductPage() {
               placeholder="https://example.com/image.jpg"
               className={inputCls} disabled={loading}
             />
+            <ImageUrlPreview url={formData.imageUrl} />
           </div>
 
           <div>

@@ -16,7 +16,7 @@ export default async function AdminReviewsPage() {
       <div>
         <h1 className="text-2xl font-black text-brand-charcoal">Reviews & Feedback</h1>
         <p className="text-brand-slate text-sm">
-          {reviews.length} product review{reviews.length !== 1 ? 's' : ''} · {feedback.length} delivery rating{feedback.length !== 1 ? 's' : ''}
+          Showing the latest {reviews.length} product review{reviews.length !== 1 ? 's' : ''} and {feedback.length} delivery rating{feedback.length !== 1 ? 's' : ''}
         </p>
       </div>
 

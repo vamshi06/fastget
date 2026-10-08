@@ -1,109 +1,52 @@
-import { getRecentOrders, getOrdersByStatus } from '@/lib/db';
-import { Order, OrderStatus, PaymentMethod } from '@/types';
+import { searchOrdersForAdmin } from '@/lib/db';
+import { Order } from '@/types';
+import { orderCoinDiscount } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { requireRole } from '@/lib/auth';
+import { parseAdminOrderFilters } from '@/lib/admin-order-filters';
 
 // Force dynamic rendering to allow search params
 export const dynamic = 'force-dynamic';
 
-const ORDER_STATUSES: OrderStatus[] = [
-  'received',
-  'eta_assigned',
-  'out_for_delivery',
-  'delivered',
-  'cancelled',
-];
+// Upper bound on one export - large enough for any realistic date range.
+const MAX_EXPORT_ROWS = 50000;
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole('admin');
   if ('response' in auth) return auth.response;
   const start = Date.now();
   try {
-    // Get + validate filter parameters
-    const statusFilter = request.nextUrl.searchParams.get('status') || 'all';
-    if (statusFilter !== 'all' && !ORDER_STATUSES.includes(statusFilter as OrderStatus)) {
-      return NextResponse.json(
-        { error: `status must be "all" or one of: ${ORDER_STATUSES.join(', ')}.` },
-        { status: 400 },
-      );
+    // Same parser and same SQL query as the Orders page, so the file always
+    // contains exactly the orders the admin was looking at (dates in IST).
+    const parsed = parseAdminOrderFilters(request.nextUrl.searchParams);
+    if (!parsed.filters) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const paymentFilter = request.nextUrl.searchParams.get('payment') || 'all';
-    if (paymentFilter !== 'all' && paymentFilter !== 'cod' && paymentFilter !== 'razorpay') {
-      return NextResponse.json(
-        { error: 'payment must be "all", "cod", or "razorpay".' },
-        { status: 400 },
-      );
+    const filters = parsed.filters;
+
+    logger.info('API', 'GET /admin/api/orders/export', { ...filters, q: filters.q ? '[set]' : undefined });
+
+    const result = await searchOrdersForAdmin(filters, MAX_EXPORT_ROWS, 0);
+    if (!result) {
+      logger.api('GET', '/admin/api/orders/export', 500, Date.now() - start);
+      return NextResponse.json({ error: 'Failed to load orders for export' }, { status: 500 });
     }
-
-    const nameFilter = (request.nextUrl.searchParams.get('name') || '').slice(0, 100);
-
-    // Invalid dates would make every comparison false and silently export an
-    // empty file - reject them with a clear message instead.
-    let fromDate: Date | null = null;
-    const dateFromFilter = request.nextUrl.searchParams.get('dateFrom') || '';
-    if (dateFromFilter) {
-      fromDate = new Date(dateFromFilter);
-      if (Number.isNaN(fromDate.getTime())) {
-        return NextResponse.json({ error: 'dateFrom is not a valid date.' }, { status: 400 });
-      }
-    }
-
-    let toDate: Date | null = null;
-    const dateToFilter = request.nextUrl.searchParams.get('dateTo') || '';
-    if (dateToFilter) {
-      toDate = new Date(dateToFilter);
-      if (Number.isNaN(toDate.getTime())) {
-        return NextResponse.json({ error: 'dateTo is not a valid date.' }, { status: 400 });
-      }
-      toDate.setHours(23, 59, 59, 999);
-    }
-
-    logger.info('API', 'GET /admin/api/orders/export', { statusFilter, paymentFilter, nameFilter: nameFilter || undefined });
-
-    // Fetch orders from Neon database
-    let orders: Order[];
-
-    if (statusFilter !== 'all') {
-      orders = await getOrdersByStatus(statusFilter as OrderStatus);
-    } else {
-      orders = await getRecentOrders(10000);
-    }
-
-    // Apply filters
-    if (paymentFilter !== 'all') {
-      orders = orders.filter((order) => order.paymentMethod === (paymentFilter as PaymentMethod));
-    }
-
-    if (nameFilter) {
-      const searchTerm = nameFilter.toLowerCase();
-      orders = orders.filter((order) => {
-        const matchesName = order.customerName.toLowerCase().includes(searchTerm);
-        const matchesPhone = order.customerPhone.includes(searchTerm);
-        return matchesName || matchesPhone;
-      });
-    }
-
-    if (fromDate) {
-      orders = orders.filter((order) => new Date(order.createdAt) >= fromDate!);
-    }
-
-    if (toDate) {
-      orders = orders.filter((order) => new Date(order.createdAt) <= toDate!);
-    }
+    const orders = result.orders;
 
     // Generate CSV
     const csv = generateCSV(orders);
 
-    logger.info('Admin', 'Orders CSV exported', { count: orders.length, statusFilter });
+    logger.info('Admin', 'Orders CSV exported', { count: orders.length, status: filters.status ?? 'all' });
     logger.api('GET', '/admin/api/orders/export', 200, Date.now() - start);
 
-    // Return CSV with proper headers
-    return new NextResponse(csv, {
+    // Return CSV with proper headers. The BOM makes Excel read ₹ and Hindi text as UTF-8.
+    return new NextResponse(`﻿${csv}`, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv;charset=utf-8',
-        'Content-Disposition': `attachment; filename="orders-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="orders-${istDate(new Date().toISOString())}.csv"`,
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
@@ -113,11 +56,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** YYYY-MM-DD of an instant in India time (the server itself runs in UTC). */
+function istDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+}
+
+/** HH:MM (24h) of an instant in India time. */
+function istTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
+}
+
 function generateCSV(orders: Order[]): string {
   // CSV Headers
   const headers = [
     'Order ID',
-    'Created Date',
+    'Created Date (IST)',
+    'Created Time (IST)',
     'Customer Name',
     'Customer Phone',
     'Site Address',
@@ -128,6 +84,7 @@ function generateCSV(orders: Order[]): string {
     'Subtotal',
     'Convenience Fee',
     'Discount',
+    'Coins Used',
     'Total',
     'Payment Method',
     'Payment Status',
@@ -143,7 +100,8 @@ function generateCSV(orders: Order[]): string {
 
     return [
       escapeCSV(order.id),
-      escapeCSV(new Date(order.createdAt).toISOString().split('T')[0]),
+      escapeCSV(istDate(order.createdAt)),
+      escapeCSV(istTime(order.createdAt)),
       escapeCSV(order.customerName),
       escapeCSV(order.customerPhone),
       escapeCSV(order.siteAddress),
@@ -154,6 +112,7 @@ function generateCSV(orders: Order[]): string {
       order.subtotal.toFixed(2),
       order.convenienceFee.toFixed(2),
       order.discount.toFixed(2),
+      orderCoinDiscount(order).toFixed(2),
       order.total.toFixed(2),
       escapeCSV(order.paymentMethod),
       escapeCSV(
@@ -170,9 +129,12 @@ function generateCSV(orders: Order[]): string {
 
 function escapeCSV(value: string): string {
   if (!value) return '';
+  // Customer-entered text starting with = + - @ would run as a formula when
+  // the file is opened in Excel/Sheets - prefix it so it stays plain text.
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   // Escape quotes and wrap in quotes if contains comma, quote, or newline
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }

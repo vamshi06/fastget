@@ -20,11 +20,22 @@ import { sendTelegramMessage } from './telegram';
 import { sendEmail, getAppUrl } from './email';
 import { orderPlacedStaffEmailTemplate } from './email-templates';
 import { logger } from './logger';
+import { getAvailableStockByProductCodes } from './products';
+import { findStockProblems, stockProblemLabel } from './order-stock';
 
-function telegramText(order: Order, appUrl: string): string {
-  const itemLines = order.items.map((i) => `• ${i.name} ×${i.quantity}`).join('\n');
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function telegramText(order: Order, appUrl: string, stockWarnings: Map<string, string>): string {
+  const itemLines = order.items
+    .map((i) => `• ${i.name} ×${i.quantity}${stockWarnings.has(i.sku) ? ` ⚠ <b>${escapeHtml(stockWarnings.get(i.sku)!)}</b>` : ''}`)
+    .join('\n');
   return (
     `🛒 <b>New order placed</b>\n\n` +
+    (stockWarnings.size > 0
+      ? `⚠ <b>Stock check:</b> ${stockWarnings.size} item${stockWarnings.size !== 1 ? 's' : ''} without enough stock - check before confirming.\n\n`
+      : '') +
     `<b>₹${order.total.toLocaleString('en-IN')}</b> - ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} - ${order.paymentMethod.toUpperCase()}\n\n` +
     `<b>${order.customerName}</b>\n${order.customerPhone}\n${order.siteAddress}\n\n` +
     `${itemLines}\n\n` +
@@ -45,9 +56,16 @@ export async function notifyStaffOfNewOrder(order: Order): Promise<void> {
       return;
     }
 
+    // Flag items the recorded stock can't cover, so staff know before confirming.
+    const stock = await getAvailableStockByProductCodes(order.items.map((i) => i.sku));
+    const stockWarnings = new Map<string, string>();
+    findStockProblems(order.items, stock).forEach((problem, sku) => {
+      stockWarnings.set(sku, stockProblemLabel(problem));
+    });
+
     const appUrl = getAppUrl();
-    const tgText = telegramText(order, appUrl);
-    const emailTpl = orderPlacedStaffEmailTemplate(order, appUrl);
+    const tgText = telegramText(order, appUrl, stockWarnings);
+    const emailTpl = orderPlacedStaffEmailTemplate(order, appUrl, stockWarnings);
 
     const results = await Promise.allSettled(
       staff.flatMap((user) => {

@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ImageUrlPreview } from '@/components/ImageUrlPreview';
 
 const inputCls =
   'mt-1.5 w-full rounded-xl border border-neutral-200 bg-brand-fog px-4 py-2.5 text-sm text-brand-charcoal placeholder-brand-steel transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:bg-white disabled:opacity-50';
@@ -275,13 +276,13 @@ export default function EditProductPage() {
             Product Details
           </legend>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-1">
               <label className={labelCls}>Product Name <span className="text-red-500">*</span></label>
               <input type="text" name="name" value={formData.name} onChange={handleChange}
                 placeholder='e.g. CPVC Pipe (1")' className={inputCls} disabled={saving} />
             </div>
-            <div className="col-span-2 sm:col-span-1">
+            <div className="sm:col-span-1">
               <label className={labelCls}>Brand</label>
               <input type="text" name="brand" value={formData.brand} onChange={handleChange}
                 placeholder="e.g. Astral" className={inputCls} disabled={saving} />
@@ -358,7 +359,7 @@ export default function EditProductPage() {
           <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full">
             Pricing
           </legend>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Selling Price (₹) <span className="text-red-500">*</span></label>
               <input type="number" name="price" value={formData.price} onChange={handleChange}
@@ -416,14 +417,14 @@ export default function EditProductPage() {
             return null;
           })()}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-1">
               <label className={labelCls}>Sale Price (₹)</label>
               <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange}
                 placeholder="e.g. 1" min="0" step="0.01" className={inputCls} disabled={saving} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Sale Starts</label>
               <input type="datetime-local" name="saleStartsAt" value={formData.saleStartsAt} onChange={handleChange}
@@ -435,8 +436,8 @@ export default function EditProductPage() {
                 className={inputCls} disabled={saving} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-1">
               <label className={labelCls}>Minimum Order Value (₹)</label>
               <input type="number" name="saleMinOrder" value={formData.saleMinOrder} onChange={handleChange}
                 placeholder="Optional - e.g. 100" min="0" step="0.01" className={inputCls} disabled={saving} />
@@ -457,7 +458,7 @@ export default function EditProductPage() {
           <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full">
             Catalogue Info
           </legend>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className={labelCls}>Unit of Measure</label>
               <input type="text" name="uom" value={formData.uom} onChange={handleChange}
@@ -470,7 +471,7 @@ export default function EditProductPage() {
             </div>
             <div>
               <label className={labelCls}>
-                Stock Qty
+                Stock Qty (manual)
                 <span className={`ml-2 text-xs font-normal normal-case px-1.5 py-0.5 rounded-full ${
                   parseInt(formData.stockQuantity) > 10
                     ? 'bg-green-100 text-green-700'
@@ -487,6 +488,10 @@ export default function EditProductPage() {
               </label>
               <input type="number" name="stockQuantity" value={formData.stockQuantity}
                 onChange={handleChange} min="0" step="1" className={inputCls} disabled={saving} />
+              <p className="text-xs text-brand-steel mt-1">
+                Orders don&apos;t reduce this automatically - update it when your stock changes. At 0 the
+                product page shows it as out of stock.
+              </p>
               {reservedQuantity > 0 && (
                 <p className="text-xs text-brand-steel mt-1">
                   Total on hand. {reservedQuantity} reserved for open orders, so{' '}
@@ -500,6 +505,7 @@ export default function EditProductPage() {
             <label className={labelCls}>Image URL</label>
             <input type="url" name="imageUrl" value={formData.imageUrl} onChange={handleChange}
               placeholder="https://…" className={inputCls} disabled={saving} />
+            <ImageUrlPreview url={formData.imageUrl} />
           </div>
         </fieldset>
 
@@ -508,7 +514,7 @@ export default function EditProductPage() {
           <legend className="text-xs font-bold text-brand-slate uppercase tracking-widest pb-1 border-b border-neutral-100 w-full">
             Specifications
           </legend>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Size</label>
               <input type="text" name="size" value={formData.size} onChange={handleChange}

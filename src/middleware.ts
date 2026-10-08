@@ -19,10 +19,16 @@ export const config = {
 };
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
 
-  // The admin login page must stay public, otherwise no one could ever sign in.
-  if (pathname === '/admin/login') return NextResponse.next();
+  // Admins sign in on the common /login page (same as customers, works in the
+  // mobile app). The old /admin/login address forwards there for old bookmarks.
+  if (pathname === '/admin/login') {
+    const loginUrl = new URL('/login', request.url);
+    const next = request.nextUrl.searchParams.get('next');
+    loginUrl.searchParams.set('redirect', next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin');
+    return NextResponse.redirect(loginUrl);
+  }
 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? await verifySessionToken(token) : null;
@@ -38,8 +44,9 @@ export async function middleware(request: NextRequest) {
       res.headers.set('Cache-Control', 'no-store');
       return res;
     }
-    const loginUrl = new URL('/admin/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
+    // Back to the exact page (filters included) after signing in.
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname + search);
     const res = NextResponse.redirect(loginUrl);
     res.headers.set('Cache-Control', 'no-store');
     return res;

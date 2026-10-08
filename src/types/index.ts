@@ -99,6 +99,7 @@ export interface Order {
   total: number;
   paymentMethod: PaymentMethod;
   paymentStatus?: string | null;
+  razorpayPaymentId?: string; // set on captured online payments - needed to find it in Razorpay for a refund
   status: OrderStatus;
   eta?: string;
   statusToken: string;
@@ -249,5 +250,6 @@ export interface CoinTransaction {
   amount: number; // positive = credit, negative = debit
   reason: CoinTransactionReason;
   createdBy?: string; // admin user id, only set for admin_adjustment
+  note?: string; // admin's reason, only set for admin_adjustment (migration 023)
   createdAt: string;
 }
