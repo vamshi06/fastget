@@ -8,6 +8,10 @@ import {
   deleteProductFromCategoryTable,
   getProductTranslation,
   saveProductTranslation,
+  getAllCategories,
+  getCategoryBySlug,
+  moveProductToCategory,
+  CATEGORY_SLUG_TO_TABLE,
 } from '@/lib/products';
 import { getUnpooledConnection } from '@/lib/db';
 import { logger } from '@/lib/logger';
@@ -41,6 +45,11 @@ function parseIsoDate(value: unknown, field: string): string {
   return d.toISOString();
 }
 
+/** Paise → rupees without rounding (₹12.50 stays 12.5, not 13). */
+function paiseToRupees(paise: number | string): number {
+  return Number(paise) / 100;
+}
+
 type Ctx = { params: Promise<{ productCode: string }> };
 
 // ── GET /admin/api/products/[productCode] ─────────────────────────────────────
@@ -54,14 +63,19 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     if (!row) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
-    // Fetch current stock from inventory (product_variants.stock_quantity doesn't exist in prod)
+    // Fetch current stock from inventory (product_variants.stock_quantity doesn't exist in prod).
+    // Return the raw stock_quantity (not stock - reserved): PATCH writes this value
+    // straight back to inventory.stock_quantity, so showing the net figure would
+    // shrink stock by the reserved amount on every save.
     let stockQuantity = 0;
+    let reservedQuantity = 0;
     // Specifications shown on the product page come from product_variants.attributes
     let attributes: Record<string, string> = {};
     if (row.variant_id) {
       const sql = getUnpooledConnection();
       const invRows = await sql`
-        SELECT COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity,
+        SELECT COALESCE(inv.stock_quantity, 0)    AS stock_quantity,
+               COALESCE(inv.reserved_quantity, 0) AS reserved_quantity,
                COALESCE(pv.attributes, '{}') AS attributes
         FROM product_variants pv
         LEFT JOIN inventory inv ON inv.variant_id = pv.id
@@ -70,11 +84,24 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       `;
       const invRow = invRows[0] as any;
       stockQuantity = Number(invRow?.stock_quantity ?? 0);
+      reservedQuantity = Number(invRow?.reserved_quantity ?? 0);
       if (invRow && typeof invRow.attributes === 'object') attributes = invRow.attributes;
     }
-    const hindi = await getProductTranslation(productCode, 'hi');
+    const [hindi, allCategories] = await Promise.all([
+      getProductTranslation(productCode, 'hi'),
+      getAllCategories(),
+    ]);
+    // Categories the product can be moved to (one per category table), plus the
+    // one it currently lives in - matched by table since row.category_slug may be
+    // a legacy sub-category slug.
+    const categoryOptions = allCategories
+      .filter((c) => CATEGORY_SLUG_TO_TABLE[c.slug])
+      .map((c) => ({ slug: c.slug, name: c.name }));
+    const currentCategory =
+      categoryOptions.find((c) => CATEGORY_SLUG_TO_TABLE[c.slug] === row.source_table)?.slug ?? '';
 
-    // Convert paise → rupees for the form
+    // Convert paise → rupees for the form. Never round: the form sends every
+    // field back on save, so rounding here would silently change the stored price.
     return NextResponse.json({
       success: true,
       data: {
@@ -82,8 +109,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         name:          row.name,
         brand:         row.brand        ?? '',
         description:   row.description  ?? '',
-        price:         Math.round(row.price / 100),
-        mrpPrice:      row.mrp_price ? Math.round(row.mrp_price / 100) : '',
+        price:         paiseToRupees(row.price),
+        mrpPrice:      row.mrp_price ? paiseToRupees(row.mrp_price) : '',
         moq:           row.moq ?? 1,
         uom:           attributes.uom     ?? row.uom    ?? '',
         size:          attributes.size    ?? row.size   ?? '',
@@ -92,13 +119,16 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         imageUrl:     row.image_url    ?? '',
         status:        row.status       ?? 'active',
         categorySlug:  row.category_slug ?? '',
+        currentCategory,
+        categoryOptions,
         sourceTable:   row.source_table,
         productsId:    row.products_id  ?? null,
         stockQuantity,
-        salePrice:     row.sale_price ? Math.round(row.sale_price / 100) : '',
+        reservedQuantity,
+        salePrice:     row.sale_price ? paiseToRupees(row.sale_price) : '',
         saleStartsAt:  row.sale_starts_at ?? '',
         saleEndsAt:    row.sale_ends_at   ?? '',
-        saleMinOrder:  row.sale_min_order_paise ? Math.round(row.sale_min_order_paise / 100) : '',
+        saleMinOrder:  row.sale_min_order_paise ? paiseToRupees(row.sale_min_order_paise) : '',
         nameHi:        hindi?.name        ?? '',
         descriptionHi: hindi?.description ?? '',
         hiReviewed:    hindi?.reviewed    ?? false,
@@ -147,8 +177,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const imageUrl = imageUrlProvided ? (isBlank(body.imageUrl) ? null : httpUrl(body.imageUrl, 'image URL')) : undefined;
     const mrpProvided = 'mrpPrice' in body;
     const mrp = mrpProvided ? (isBlank(body.mrpPrice) ? undefined : requireNumber(body.mrpPrice, 'MRP', { min: 0 })) : undefined;
-    if (mrp !== undefined && price !== undefined && mrp < price) {
-      throw new ValidationError('MRP must be greater than or equal to price.');
+
+    // Moving to another category (optional). Only a slug that maps to a category table is accepted.
+    const newCategorySlug = isBlank(body.categorySlug)
+      ? undefined
+      : requireString(body.categorySlug, 'category', { max: 80 });
+    if (newCategorySlug !== undefined && !CATEGORY_SLUG_TO_TABLE[newCategorySlug]) {
+      throw new ValidationError('Unknown category.');
     }
 
     const priceInPaise = price !== undefined ? Math.round(price * 100) : undefined;
@@ -194,6 +229,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const row = await getProductRawRow(productCode);
     if (!row) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+    }
+
+    // Compare against the stored value for whichever of price/MRP isn't being changed.
+    const finalPrice = priceInPaise !== undefined ? priceInPaise : Number(row.price);
+    const finalMrp   = mrpProvided ? mrpInPaise : (row.mrp_price != null ? Number(row.mrp_price) : null);
+    if (finalMrp != null && finalMrp < finalPrice) {
+      throw new ValidationError('MRP must be greater than or equal to price.');
+    }
+
+    const moveCategory = newCategorySlug !== undefined
+      && CATEGORY_SLUG_TO_TABLE[newCategorySlug] !== row.source_table;
+    const targetCategory = moveCategory ? await getCategoryBySlug(newCategorySlug!) : null;
+    if (moveCategory && !targetCategory) {
+      throw new ValidationError('Unknown category.');
     }
 
     // A flash sale needs price + start + end together - either newly submitted
@@ -244,6 +293,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: 'Failed to update product' }, { status: 500 });
     }
 
+    // The catalog row is saved; the writes below keep the other tables in sync.
+    // Collect any that fail so the admin isn't told "Saved" while the product
+    // page still shows old values.
+    const failed: string[] = [];
+
     // Also update normalised products table if linked
     if (row.products_id) {
       const normUpdates: Parameters<typeof updateNormalisedProduct>[1] = {};
@@ -254,7 +308,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (uomProvided) normUpdates.uom = uom;
       if (imageUrlProvided) normUpdates.imageUrl = imageUrl;
       if (status !== undefined) normUpdates.status = status;
-      await updateNormalisedProduct(row.products_id, normUpdates);
+      if (!(await updateNormalisedProduct(row.products_id, normUpdates))) failed.push('product details');
     }
 
     // Update product_variants so the customer-facing product detail page reflects
@@ -272,23 +326,37 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (remarksProvided) attrUpdates.remarks = remarks ?? null;
       if (Object.keys(attrUpdates).length > 0) varUpdates.attributes = attrUpdates;
       if (Object.keys(varUpdates).length > 0) {
-        await updateVariantFields(row.variant_id, varUpdates);
+        if (!(await updateVariantFields(row.variant_id, varUpdates))) failed.push('price/MOQ/specifications');
       }
 
       // Update stock in inventory table (product_variants.stock_quantity doesn't exist in prod)
       if (stock !== undefined) {
-        await upsertInventoryStock(row.variant_id, stock);
+        if (!(await upsertInventoryStock(row.variant_id, stock))) failed.push('stock');
       }
     }
 
     if (hindiProvided) {
       const ok = await saveProductTranslation(productCode, 'hi', nameHi, descriptionHi, hiReviewed);
-      if (!ok) {
-        return NextResponse.json(
-          { success: false, error: 'Product saved, but the Hindi translation could not be saved.' },
-          { status: 500 },
-        );
-      }
+      if (!ok) failed.push('Hindi translation');
+    }
+
+    // Move last, after every update above has targeted the current table.
+    if (moveCategory && targetCategory) {
+      const moved = await moveProductToCategory(
+        row.source_table, productCode, newCategorySlug!, targetCategory.id, row.products_id ?? null,
+      );
+      if (!moved) failed.push('category change');
+    }
+
+    if (failed.length > 0) {
+      logger.error('API', `PATCH /admin/api/products/${productCode} - partial save`, { failed });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Some changes were saved, but these could not be: ${failed.join(', ')}. Please try saving again.`,
+        },
+        { status: 500 },
+      );
     }
 
     logger.info('API', `PATCH /admin/api/products/${productCode} - updated`);

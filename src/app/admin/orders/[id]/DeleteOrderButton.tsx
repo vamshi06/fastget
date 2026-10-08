@@ -39,7 +39,7 @@ export function DeleteOrderButton({ orderId }: { orderId: string }) {
       {open && (
         <ConfirmDeleteModal
           title="Delete order?"
-          message="This will permanently remove the order along with any associated reviews and delivery feedback. This cannot be undone."
+          message="This will permanently remove the order along with any associated reviews and delivery feedback. Coins the customer earned or redeemed on this order stay in their balance (adjust them from the Coins page if needed), and any referral reward recorded on it is removed. This cannot be undone."
           pending={deleting}
           onCancel={() => setOpen(false)}
           onConfirm={handleDelete}

@@ -1,8 +1,9 @@
 import {
   getOrCreateCategory,
-  createProduct,
-  createProductVariant,
-  insertProductIntoCategoryTable,
+  createProductWithCatalog,
+  findProductConflicts,
+  getProductsFromCategoryTables,
+  saveProductTranslation,
 } from '@/lib/products';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
@@ -28,6 +29,40 @@ function generateProductCode(categorySlug: string): string {
   const prefix = categorySlug.replace(/[_-]/g, '').toUpperCase().slice(0, 4);
   const suffix = Date.now().toString(36).toUpperCase().slice(-6);
   return `${prefix}-${suffix}`;
+}
+
+function isBlank(v: unknown): boolean {
+  return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+}
+
+/** Parse a date/time value into an ISO timestamp string, or throw. */
+function parseIsoDate(value: unknown, field: string): string {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    throw new ValidationError(`${field} must be a valid date/time.`);
+  }
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    throw new ValidationError(`${field} must be a valid date/time.`);
+  }
+  return d.toISOString();
+}
+
+// ── GET /admin/api/products ───────────────────────────────────────────────────
+// Admin product list. Unlike the public /api/products it includes inactive and
+// discontinued products, so they can still be found, edited and deleted.
+export async function GET(request: NextRequest) {
+  const auth = await requireRole('admin');
+  if ('response' in auth) return auth.response;
+  const category = request.nextUrl.searchParams.get('category') || undefined;
+  const { products, total } = await getProductsFromCategoryTables({
+    categorySlug: category,
+    limit: 500,
+    includeInactive: true,
+  });
+  return NextResponse.json(
+    { success: true, data: { products, total } },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -62,16 +97,55 @@ export async function POST(request: NextRequest) {
     const brand = optionalString(body.brand, 'brand', { max: 120 });
     const description = optionalString(body.description, 'description', { max: 2000 });
     const uom = optionalString(body.uom, 'unit of measure', { max: 32 });
-    const imageUrl =
-      body.imageUrl === undefined || body.imageUrl === null || String(body.imageUrl).trim() === ''
-        ? undefined
-        : httpUrl(body.imageUrl, 'image URL');
+    const size = optionalString(body.size, 'size', { max: 64 });
+    const colour = optionalString(body.colour, 'colour', { max: 64 });
+    const remarks = optionalString(body.remarks, 'remarks', { max: 500 });
+    const imageUrl = isBlank(body.imageUrl) ? undefined : httpUrl(body.imageUrl, 'image URL');
     const productCodeInput = optionalString(body.productCode, 'product code', {
       max: 64,
       pattern: SLUG_PATTERN,
       patternMsg: 'Product code has an invalid format.',
     });
     const skuInput = optionalString(body.sku, 'SKU', { max: 64 });
+
+    // ── Flash sale (optional; all three of price/start/end, or none) ──
+    const salePrice = isBlank(body.salePrice) ? undefined : requireNumber(body.salePrice, 'sale price', { min: 0.01 });
+    const saleStartsAt = isBlank(body.saleStartsAt) ? undefined : parseIsoDate(body.saleStartsAt, 'Sale start time');
+    const saleEndsAt = isBlank(body.saleEndsAt) ? undefined : parseIsoDate(body.saleEndsAt, 'Sale end time');
+    const anySale = salePrice !== undefined || saleStartsAt !== undefined || saleEndsAt !== undefined;
+    const allSale = salePrice !== undefined && saleStartsAt !== undefined && saleEndsAt !== undefined;
+    if (anySale && !allSale) {
+      throw new ValidationError('To run a flash sale, set the sale price, start time, and end time together.');
+    }
+    if (allSale && new Date(saleEndsAt!) <= new Date(saleStartsAt!)) {
+      throw new ValidationError('Sale end time must be after the start time.');
+    }
+    if (salePrice !== undefined && salePrice >= price) {
+      throw new ValidationError('Sale price must be less than the regular selling price.');
+    }
+    const saleMinOrder = allSale && !isBlank(body.saleMinOrder)
+      ? requireNumber(body.saleMinOrder, 'minimum order value', { min: 0.01 })
+      : undefined;
+
+    // ── Hindi (optional) ──────────────────────────────────────────
+    const nameHi = isBlank(body.nameHi) ? null : requireString(body.nameHi, 'Hindi name', { max: 200 });
+    const descriptionHi = nameHi && !isBlank(body.descriptionHi)
+      ? requireString(body.descriptionHi, 'Hindi description', { max: 2000 })
+      : null;
+
+    // product_code is the PK of every category table - must never be empty
+    const productCode = productCodeInput || generateProductCode(categorySlug);
+    const sku = skuInput || productCode;
+
+    // ── Reject duplicates up front (clear message instead of a DB error) ──
+    const conflicts = await findProductConflicts(productCode, sku);
+    if (conflicts.productCode || conflicts.sku) {
+      const msg = conflicts.productCode
+        ? `Product code "${productCode}" is already used by another product.`
+        : `SKU "${sku}" is already used by another product.`;
+      logger.api('POST', '/admin/api/products', 409, Date.now() - start);
+      return NextResponse.json({ success: false, error: msg }, { status: 409 });
+    }
 
     // ── Resolve category ──────────────────────────────────────────
     const categoryName =
@@ -86,81 +160,66 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Prices (rupees → paise) ───────────────────────────────────
-    const priceInPaise = Math.round(price * 100);
-    const mrpInPaise   = mrpPrice !== undefined ? Math.round(mrpPrice * 100) : undefined;
+    const toPaise = (rupees: number) => Math.round(rupees * 100);
+    const priceInPaise = toPaise(price);
 
-    // product_code is the PK of every category table - must never be empty
-    const productCode = productCodeInput || generateProductCode(categorySlug);
-
-    // ── Insert into products table ────────────────────────────────
-    const product = await createProduct(
-      name,
-      priceInPaise,
-      description,
-      category.id,
-      {
-        brand,
-        uom,
-        imageUrl,
-        productCode,
-        status,
-      }
-    );
-
-    if (!product) {
-      logger.error('API', 'POST /admin/api/products - product creation failed');
-      logger.api('POST', '/admin/api/products', 500, Date.now() - start);
-      return NextResponse.json({ success: false, error: 'Failed to create product in database' }, { status: 500 });
-    }
-
-    // ── Insert variant ────────────────────────────────────────────
-    const sku     = skuInput || productCode;
-    const variant = await createProductVariant(product.id, sku, stock, {}, undefined, mrpInPaise, moq);
-
-    if (!variant) {
-      logger.warn('Products', 'Variant creation failed, product was still created', { productId: product.id, sku });
-    }
-
-    // ── Insert into category-specific table (makes it visible in catalog/admin list) ──
-    const catalogInserted = await insertProductIntoCategoryTable(categorySlug, {
+    // ── Insert product + variant + inventory + category row atomically ──
+    const created = await createProductWithCatalog({
       productCode,
+      sku,
       name,
       brand,
       description,
-      price:       priceInPaise,
-      mrpPrice:    mrpInPaise,
+      price:        priceInPaise,
+      mrpPrice:     mrpPrice !== undefined ? toPaise(mrpPrice) : undefined,
       moq,
+      stock,
       uom,
+      size,
+      colour,
+      remarks,
       imageUrl,
       status,
-      variantId:   variant?.id,
-      productsId:  product.id,
+      categoryId:   category.id,
+      categorySlug,
+      salePrice:         salePrice !== undefined ? toPaise(salePrice) : undefined,
+      saleStartsAt,
+      saleEndsAt,
+      saleMinOrderPaise: saleMinOrder !== undefined ? toPaise(saleMinOrder) : undefined,
     });
 
-    if (!catalogInserted) {
-      logger.warn('Products', 'Category table insert failed; product exists in products table only', {
-        productId: product.id,
-        categorySlug,
-      });
+    if (!created) {
+      logger.api('POST', '/admin/api/products', 500, Date.now() - start);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create product. Nothing was saved - please try again.' },
+        { status: 500 },
+      );
     }
 
-    logger.info('Products', 'Product created via admin', { productId: product.id, productCode, sku });
+    // Translation lives in its own table; the product itself is already saved.
+    let warning: string | undefined;
+    if (nameHi) {
+      const ok = await saveProductTranslation(productCode, 'hi', nameHi, descriptionHi, true);
+      if (!ok) warning = 'Product created, but the Hindi translation could not be saved. Add it from the edit page.';
+    }
+
+    logger.info('Products', 'Product created via admin', { productId: created.productId, productCode, sku });
     logger.api('POST', '/admin/api/products', 201, Date.now() - start);
 
     return NextResponse.json(
       {
         success: true,
+        warning,
         data: {
-          id:          product.id,
+          id:         created.productId,
           productCode,
-          name:        product.name,
-          categoryId:  category.id,
-          price:       product.price,
-          sku:         variant?.sku,
-          inCatalog:   catalogInserted,
+          name,
+          categoryId: category.id,
+          price:      priceInPaise,
+          sku,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     if (error instanceof ValidationError) {

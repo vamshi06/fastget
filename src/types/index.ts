@@ -17,6 +17,7 @@ export interface Product {
   mrpPrice?: number;   // in rupees
   moq?: number;
   variantCount?: number;
+  status?: 'active' | 'inactive' | 'discontinued'; // populated for category-table rows (admin list)
   // Flash-sale fields - populated when a limited-time sale_price is active
   isFlashSale?: boolean;
   saleEndsAt?: string; // ISO timestamp

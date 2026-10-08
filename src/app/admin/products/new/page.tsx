@@ -47,7 +47,17 @@ export default function NewProductPage() {
     stockQuantity: '0',
     moq:           '1',
     status:        'active',
+    size:          '',
+    colour:        '',
+    remarks:       '',
+    salePrice:     '',
+    saleStartsAt:  '', // datetime-local value
+    saleEndsAt:    '',
+    saleMinOrder:  '',
+    nameHi:        '',
+    descriptionHi: '',
   });
+  const [warning, setWarning] = useState('');
 
   // Load categories from DB on mount
   useEffect(() => {
@@ -90,6 +100,28 @@ export default function NewProductPage() {
       setLoading(false);
       return;
     }
+    const fail = (msg: string) => { setError(msg); setLoading(false); };
+    if (formData.mrpPrice) {
+      const mrp = parseFloat(formData.mrpPrice);
+      if (isNaN(mrp) || mrp < price) return fail('MRP must be greater than or equal to the selling price');
+    }
+    const anySale = formData.salePrice || formData.saleStartsAt || formData.saleEndsAt;
+    const allSale = formData.salePrice && formData.saleStartsAt && formData.saleEndsAt;
+    if (anySale && !allSale) {
+      return fail('To run a flash sale, fill in sale price, start time, and end time together (or leave all three blank).');
+    }
+    if (allSale) {
+      const salePriceNum = parseFloat(formData.salePrice);
+      if (isNaN(salePriceNum) || salePriceNum <= 0) return fail('Sale price must be greater than 0');
+      if (salePriceNum >= price) return fail('Sale price must be less than the regular selling price');
+      if (new Date(formData.saleEndsAt) <= new Date(formData.saleStartsAt)) {
+        return fail('Sale end time must be after the start time');
+      }
+      if (formData.saleMinOrder) {
+        const minOrderNum = parseFloat(formData.saleMinOrder);
+        if (isNaN(minOrderNum) || minOrderNum <= 0) return fail('Minimum order value must be greater than 0');
+      }
+    }
 
     const selectedCategory = categories.find((c) => c.slug === formData.categorySlug);
 
@@ -109,6 +141,15 @@ export default function NewProductPage() {
         stockQuantity: parseInt(formData.stockQuantity) || 0,
         moq:           parseInt(formData.moq) || 1,
         status:        formData.status,
+        size:          formData.size.trim()        || undefined,
+        colour:        formData.colour.trim()      || undefined,
+        remarks:       formData.remarks.trim()     || undefined,
+        salePrice:     allSale ? parseFloat(formData.salePrice) : undefined,
+        saleStartsAt:  allSale ? new Date(formData.saleStartsAt).toISOString() : undefined,
+        saleEndsAt:    allSale ? new Date(formData.saleEndsAt).toISOString()   : undefined,
+        saleMinOrder:  allSale && formData.saleMinOrder ? parseFloat(formData.saleMinOrder) : undefined,
+        nameHi:        formData.nameHi.trim()        || undefined,
+        descriptionHi: formData.descriptionHi.trim() || undefined,
       };
 
       const response = await fetch('/admin/api/products', {
@@ -124,7 +165,13 @@ export default function NewProductPage() {
       }
 
       setSuccess(true);
-      setTimeout(() => router.push('/admin/products'), 1500);
+      if (data.warning) {
+        // Leave the message up instead of redirecting straight away
+        setWarning(data.warning);
+        setTimeout(() => router.push('/admin/products'), 5000);
+      } else {
+        setTimeout(() => router.push('/admin/products'), 1500);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -149,6 +196,7 @@ export default function NewProductPage() {
         <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-green-800 text-sm">
           <p className="font-semibold">Product created successfully!</p>
           <p>Redirecting to products list…</p>
+          {warning && <p className="mt-2 font-semibold text-yellow-800">{warning}</p>}
         </div>
       )}
 
@@ -202,6 +250,34 @@ export default function NewProductPage() {
           </div>
         </section>
 
+        {/* ── Hindi ───────────────────────────────────────────────── */}
+        <section className="card p-6 space-y-4">
+          <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
+            Hindi (हिंदी)
+          </h2>
+          <div>
+            <label htmlFor="nameHi" className={labelCls}>Hindi Name</label>
+            <input
+              type="text" id="nameHi" name="nameHi" lang="hi"
+              value={formData.nameHi} onChange={handleChange}
+              placeholder="e.g. सागौन लकड़ी का तख्ता"
+              className={inputCls} disabled={loading}
+            />
+            <p className="mt-1 text-xs text-brand-steel">
+              Optional - shown when the site is in Hindi. Keep brand names, sizes and model numbers as they are.
+              Leave blank to show the English name.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="descriptionHi" className={labelCls}>Hindi Description</label>
+            <textarea
+              id="descriptionHi" name="descriptionHi" lang="hi"
+              value={formData.descriptionHi} onChange={handleChange}
+              rows={3} className={`${inputCls} resize-none`} disabled={loading || !formData.nameHi.trim()}
+            />
+          </div>
+        </section>
+
         {/* ── Pricing ─────────────────────────────────────────────── */}
         <section className="card p-6 space-y-4">
           <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
@@ -230,6 +306,54 @@ export default function NewProductPage() {
               <p className="mt-1 text-xs text-brand-steel">Optional - shown as strikethrough price</p>
             </div>
           </div>
+        </section>
+
+        {/* ── Flash Sale ──────────────────────────────────────────── */}
+        <section className="card p-6 space-y-4">
+          <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
+            Flash Sale <span className="normal-case font-normal text-brand-steel">(optional)</span>
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="salePrice" className={labelCls}>Sale Price (₹)</label>
+              <input
+                type="number" id="salePrice" name="salePrice"
+                value={formData.salePrice} onChange={handleChange}
+                placeholder="e.g. 99" step="0.01" min="0"
+                className={inputCls} disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="saleMinOrder" className={labelCls}>Minimum Order Value (₹)</label>
+              <input
+                type="number" id="saleMinOrder" name="saleMinOrder"
+                value={formData.saleMinOrder} onChange={handleChange}
+                placeholder="Optional" step="0.01" min="0"
+                className={inputCls} disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="saleStartsAt" className={labelCls}>Sale Starts</label>
+              <input
+                type="datetime-local" id="saleStartsAt" name="saleStartsAt"
+                value={formData.saleStartsAt} onChange={handleChange}
+                className={inputCls} disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="saleEndsAt" className={labelCls}>Sale Ends</label>
+              <input
+                type="datetime-local" id="saleEndsAt" name="saleEndsAt"
+                value={formData.saleEndsAt} onChange={handleChange}
+                className={inputCls} disabled={loading}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-brand-steel">
+            Fill in sale price, start and end together, or leave all three blank for no sale.
+            The minimum order value is the amount of OTHER products (at regular prices) the cart must hold
+            before the sale price applies.
+          </p>
         </section>
 
         {/* ── Classification ──────────────────────────────────────── */}
@@ -283,6 +407,45 @@ export default function NewProductPage() {
               Stable identifier used in product URLs. Auto-generated from category + timestamp if left blank.
             </p>
           </div>
+        </section>
+
+        {/* ── Specifications ──────────────────────────────────────── */}
+        <section className="card p-6 space-y-4">
+          <h2 className="text-sm font-bold text-brand-graphite uppercase tracking-wide border-b border-neutral-100 pb-2">
+            Specifications
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="size" className={labelCls}>Size</label>
+              <input
+                type="text" id="size" name="size"
+                value={formData.size} onChange={handleChange}
+                placeholder="e.g. 1 Kg, 18mm, 8x4 ft"
+                className={inputCls} disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="colour" className={labelCls}>Colour / Finish</label>
+              <input
+                type="text" id="colour" name="colour"
+                value={formData.colour} onChange={handleChange}
+                placeholder="e.g. White, Natural"
+                className={inputCls} disabled={loading}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="remarks" className={labelCls}>Remarks</label>
+            <input
+              type="text" id="remarks" name="remarks"
+              value={formData.remarks} onChange={handleChange}
+              placeholder="Optional"
+              className={inputCls} disabled={loading}
+            />
+          </div>
+          <p className="text-xs text-brand-steel">
+            Shown in the Specifications box on the product page, together with Unit of Measure.
+          </p>
         </section>
 
         {/* ── Inventory ───────────────────────────────────────────── */}
@@ -357,7 +520,7 @@ export default function NewProductPage() {
             Cancel
           </Link>
           <button
-            type="submit" disabled={loading || categories.length === 0}
+            type="submit" disabled={loading || success || categories.length === 0}
             className="btn-primary flex-1 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating…' : 'Create Product'}

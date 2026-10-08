@@ -24,6 +24,7 @@ interface Product {
   stockStatus: 'in_stock' | 'low' | 'out';
   stockQuantity?: number;
   isFlashSale?: boolean;
+  status?: 'active' | 'inactive' | 'discontinued';
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -67,13 +68,14 @@ export default function ProductsPage() {
       .finally(() => setLoadingCats(false));
   }, []);
 
-  // Fetch products for the active tab - always fresh, no caching
+  // Fetch products for the active tab - always fresh, no caching. Uses the
+  // admin endpoint so inactive/discontinued products are listed too.
   const loadProducts = useCallback((slug: string) => {
     setLoadingProds(true);
     const url =
       slug === 'all'
-        ? '/api/products?limit=500'
-        : `/api/products?category=${slug}&limit=500`;
+        ? '/admin/api/products'
+        : `/admin/api/products?category=${encodeURIComponent(slug)}`;
     fetch(url, { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
@@ -227,6 +229,13 @@ export default function ProductsPage() {
                       {product.isFlashSale && (
                         <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
                           🔥 SALE
+                        </span>
+                      )}
+                      {product.status && product.status !== 'active' && (
+                        <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 uppercase ${
+                          product.status === 'inactive' ? 'bg-yellow-100 text-yellow-700' : 'bg-neutral-200 text-brand-graphite'
+                        }`}>
+                          {product.status}
                         </span>
                       )}
                     </p>

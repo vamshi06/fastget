@@ -61,6 +61,13 @@ export default function EditProductPage() {
   // Hindi fields as loaded - PATCH only sends them when they change
   const [loadedHindi, setLoadedHindi] = useState<HindiFields>({ nameHi: '', descriptionHi: '', hiReviewed: false });
   const [categorySlug, setCategorySlug] = useState('');
+  // Category table the product lives in; changing it moves the product.
+  const [categoryOptions, setCategoryOptions] = useState<{ slug: string; name: string }[]>([]);
+  const [loadedCategory, setLoadedCategory] = useState('');
+  const [category, setCategory] = useState('');
+  // Units held by unfinished orders - shown so admins know stock below is the
+  // total on hand, not what's still available to sell.
+  const [reservedQuantity, setReservedQuantity] = useState(0);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
@@ -102,6 +109,10 @@ export default function EditProductPage() {
           hiReviewed:    Boolean(d.hiReviewed),
         });
         setCategorySlug(d.categorySlug ?? '');
+        setCategoryOptions(Array.isArray(d.categoryOptions) ? d.categoryOptions : []);
+        setLoadedCategory(d.currentCategory ?? '');
+        setCategory(d.currentCategory ?? '');
+        setReservedQuantity(Number(d.reservedQuantity) || 0);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -127,6 +138,10 @@ export default function EditProductPage() {
     if (!formData.name.trim()) { setError('Product name is required'); return; }
     const price = parseFloat(formData.price);
     if (isNaN(price) || price <= 0) { setError('Price must be greater than 0'); return; }
+    if (formData.mrpPrice) {
+      const mrp = parseFloat(formData.mrpPrice);
+      if (isNaN(mrp) || mrp < price) { setError('MRP must be greater than or equal to the selling price'); return; }
+    }
 
     const anySale = formData.salePrice || formData.saleStartsAt || formData.saleEndsAt;
     const allSale = formData.salePrice && formData.saleStartsAt && formData.saleEndsAt;
@@ -169,6 +184,8 @@ export default function EditProductPage() {
         saleEndsAt:    formData.saleEndsAt   ? new Date(formData.saleEndsAt).toISOString()   : null,
         saleMinOrder:  allSale && formData.saleMinOrder ? parseFloat(formData.saleMinOrder) : null,
       };
+
+      if (category && category !== loadedCategory) payload.categorySlug = category;
 
       const hindiChanged =
         formData.nameHi.trim()        !== loadedHindi.nameHi ||
@@ -277,6 +294,24 @@ export default function EditProductPage() {
               rows={3} placeholder="Product features and specifications…"
               className={`${inputCls} resize-none`} disabled={saving} />
           </div>
+
+          {categoryOptions.length > 0 && (
+            <div>
+              <label className={labelCls}>Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)}
+                className={inputCls} disabled={saving}>
+                {!category && <option value="">Select category…</option>}
+                {categoryOptions.map((c) => (
+                  <option key={c.slug} value={c.slug}>{c.name}</option>
+                ))}
+              </select>
+              {category !== loadedCategory && loadedCategory && (
+                <p className="text-xs text-yellow-700 mt-1">
+                  Saving will move this product to the new category.
+                </p>
+              )}
+            </div>
+          )}
         </fieldset>
 
         {/* ── Hindi ───────────────────────────────────── */}
@@ -452,6 +487,12 @@ export default function EditProductPage() {
               </label>
               <input type="number" name="stockQuantity" value={formData.stockQuantity}
                 onChange={handleChange} min="0" step="1" className={inputCls} disabled={saving} />
+              {reservedQuantity > 0 && (
+                <p className="text-xs text-brand-steel mt-1">
+                  Total on hand. {reservedQuantity} reserved for open orders, so{' '}
+                  {Math.max(0, (parseInt(formData.stockQuantity) || 0) - reservedQuantity)} available to sell.
+                </p>
+              )}
             </div>
           </div>
 

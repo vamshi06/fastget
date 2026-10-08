@@ -104,6 +104,8 @@ export interface CatalogParams {
   minPrice?:     number; // in rupees (inclusive)
   maxPrice?:     number; // in rupees (inclusive)
   locale?:       Locale; // non-default locale → translated names, English fallback
+  /** Admin only: include inactive/discontinued rows (storefront never sets this). */
+  includeInactive?: boolean;
 }
 
 export interface CatalogResult {
@@ -200,6 +202,21 @@ const VALID_CATEGORY_TABLES = new Set([
   'products_catalog_view',
 ]);
 
+const CATEGORY_TABLES = [
+  'carpentry', 'paints_and_polish', 'plumbing', 'civil_materials',
+  'electrical', 'flooring_and_ceilings', 'glass_and_aluminium', 'tools_and_machines',
+] as const;
+
+/** Columns every category table shares - explicit so UNIONs don't depend on column order. */
+const CATEGORY_TABLE_COLUMNS = `product_code, name, brand, description, price, mrp_price, moq, uom,
+  size, colour, remarks, image_url, status, category_slug, variant_id, products_id,
+  sale_price, sale_starts_at, sale_ends_at, sale_min_order_paise`;
+
+/** Every category table's rows regardless of status (the view only has active ones). */
+const ALL_CATEGORY_ROWS_SQL = `(${CATEGORY_TABLES
+  .map((t) => `SELECT ${CATEGORY_TABLE_COLUMNS} FROM ${t}`)
+  .join(' UNION ALL ')}) all_category_rows`;
+
 // ── Category-table row → Product mapper ──────────────────────────────────────
 
 /**
@@ -251,6 +268,7 @@ function categoryTableRowToProduct(row: any): Product {
     variantId:    row.variant_id || undefined,
     moq:          Number(row.moq) || 1,
     variantCount: 1,
+    status:       row.status || undefined,
     isFlashSale:  saleActive || undefined,
     saleEndsAt:   saleActive ? new Date(row.sale_ends_at).toISOString() : undefined,
     saleOriginalPriceRupees: saleActive ? Math.round(priceVal / 100) : undefined,
@@ -270,7 +288,7 @@ export async function getProductsFromCategoryTables(
   params: CatalogParams = {},
 ): Promise<CatalogResult> {
   const sqlClient = getUnpooledClient();
-  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale } = params;
+  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale, includeInactive } = params;
   const translate = wantsTranslation(locale);
 
   try {
@@ -285,22 +303,29 @@ export async function getProductsFromCategoryTables(
       return { products: [], total: 0 };
     }
 
+    // The view is active-only, so admin's "all categories" listing reads the raw tables instead.
+    const fromExpr = includeInactive && tableName === 'products_catalog_view'
+      ? ALL_CATEGORY_ROWS_SQL
+      : tableName;
+
     // When translating, wrap the table so the translated name/description ride
     // along as extra columns and the WHERE/ORDER clauses below stay unqualified.
     // The locale is always bound as $1.
     const source = translate
       ? `(SELECT c.*, t.name AS name_i18n, t.description AS description_i18n
-            FROM ${tableName} c
+            FROM ${fromExpr} c
             LEFT JOIN product_translations t
               ON t.product_code = c.product_code AND t.locale = $1) src`
-      : tableName;
+      : fromExpr;
 
     // Price filter (and optionally search) as WHERE args - split out so the
     // fuzzy fallback below can re-run price/category filters without the
     // exact-substring search clause.
     const buildFilters = (includeSearch: boolean) => {
       const args: unknown[] = translate ? [locale] : [];
-      const clauses: string[] = ['TRUE'];
+      // Category tables hold every status; the storefront must only see active
+      // products (the view already filters, the raw tables don't).
+      const clauses: string[] = [includeInactive ? 'TRUE' : `status = 'active'`];
 
       if (includeSearch && search?.trim()) {
         const pat = `%${search.trim()}%`;
@@ -1196,11 +1221,12 @@ export async function updateVariantFields(
     if (sets.length === 0) return true;
 
     vals.push(variantId);
-    const result = await sql.query(
-      `UPDATE product_variants SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING id`,
+    // false only on a DB error - a stale variant_id (no row) isn't something a retry fixes
+    await sql.query(
+      `UPDATE product_variants SET ${sets.join(', ')} WHERE id = $${vals.length}`,
       vals as any[],
-    ) as any[];
-    return result.length > 0;
+    );
+    return true;
   } catch (error) {
     logger.error('Products', 'updateVariantFields failed', {
       error: error instanceof Error ? error.message : String(error),
@@ -1429,11 +1455,12 @@ export async function updateNormalisedProduct(
     if (vals.length === 0) return true;
 
     vals.push(productId);
-    const result = await sql.query(
-      `UPDATE products SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING id`,
+    // false only on a DB error - a stale products_id (no row) isn't something a retry fixes
+    await sql.query(
+      `UPDATE products SET ${sets.join(', ')} WHERE id = $${vals.length}`,
       vals as any[],
-    ) as any[];
-    return result.length > 0;
+    );
+    return true;
   } catch (error) {
     logger.error('Products', 'updateNormalisedProduct failed', {
       error: error instanceof Error ? error.message : String(error),
@@ -1442,9 +1469,16 @@ export async function updateNormalisedProduct(
   }
 }
 
+/** True when product_translations exists (migration 021 has run). */
+async function hasTranslationsTable(sqlClient: ReturnType<typeof getUnpooledClient>): Promise<boolean> {
+  const rows = await sqlClient.query(`SELECT to_regclass('product_translations') IS NOT NULL AS ok`) as any[];
+  return Boolean(rows[0]?.ok);
+}
+
 /**
- * Hard-delete a product and all associated data:
- * inventory row → product_variants row → category table row → products row.
+ * Hard-delete a product and all associated data in one transaction:
+ * inventory row → category table row → product_variants row → products row → translations.
+ * Either everything is removed or nothing is.
  */
 export async function deleteProductFromCategoryTable(
   tableName: string,
@@ -1452,28 +1486,23 @@ export async function deleteProductFromCategoryTable(
   variantId: string | null,
   productsId: string | null,
 ): Promise<boolean> {
-  if (!VALID_CATEGORY_TABLES.has(tableName)) {
+  if (!VALID_CATEGORY_TABLES.has(tableName) || tableName === 'products_catalog_view') {
     logger.warn('Products', `deleteProductFromCategoryTable: invalid table "${tableName}"`);
     return false;
   }
   const sqlClient = getUnpooledClient();
   try {
-    if (variantId) {
-      await sqlClient.query('DELETE FROM inventory WHERE variant_id = $1', [variantId]);
-    }
-    await sqlClient.query(`DELETE FROM ${tableName} WHERE product_code = $1`, [productCode]);
-    if (variantId) {
-      await sqlClient.query('DELETE FROM product_variants WHERE id = $1', [variantId]);
-    }
-    if (productsId) {
-      await sqlClient.query('DELETE FROM products WHERE id = $1', [productsId]);
-    }
-    try {
-      await sqlClient.query('DELETE FROM product_translations WHERE product_code = $1', [productCode]);
-    } catch (error) {
-      // Table may not exist yet (migration 021) - nothing to clean up then
-      if (!isMissingTranslationsTable(error)) throw error;
-    }
+    const withTranslations = await hasTranslationsTable(sqlClient);
+    const queries = [
+      ...(variantId ? [sqlClient.query('DELETE FROM inventory WHERE variant_id = $1', [variantId])] : []),
+      sqlClient.query(`DELETE FROM ${tableName} WHERE product_code = $1`, [productCode]),
+      ...(variantId ? [sqlClient.query('DELETE FROM product_variants WHERE id = $1', [variantId])] : []),
+      ...(productsId ? [sqlClient.query('DELETE FROM products WHERE id = $1', [productsId])] : []),
+      ...(withTranslations
+        ? [sqlClient.query('DELETE FROM product_translations WHERE product_code = $1', [productCode])]
+        : []),
+    ];
+    await sqlClient.transaction(queries);
     return true;
   } catch (error) {
     logger.error('Products', `deleteProductFromCategoryTable "${tableName}" failed`, {
@@ -1564,6 +1593,167 @@ export async function insertProductIntoCategoryTable(
     return true;
   } catch (error) {
     logger.error('Products', `Failed to insert into category table "${tableName}"`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
+ * Which identifiers of a new product are already in use. product_code is the
+ * PK of each category table (but not unique across the 8 of them) and is
+ * unique on products; sku is unique on product_variants.
+ */
+export async function findProductConflicts(
+  productCode: string,
+  sku: string,
+): Promise<{ productCode: boolean; sku: boolean }> {
+  const sqlClient = getUnpooledClient();
+  const inTables = CATEGORY_TABLES
+    .map((t) => `SELECT 1 FROM ${t} WHERE product_code = $1`)
+    .join(' UNION ALL ');
+  const rows = await sqlClient.query(
+    `SELECT
+       EXISTS (${inTables} UNION ALL SELECT 1 FROM products WHERE product_code = $1) AS code_taken,
+       EXISTS (SELECT 1 FROM product_variants WHERE sku = $2) AS sku_taken`,
+    [productCode, sku],
+  ) as any[];
+  return { productCode: Boolean(rows[0]?.code_taken), sku: Boolean(rows[0]?.sku_taken) };
+}
+
+export interface NewProductInput {
+  productCode:  string;
+  sku:          string;
+  name:         string;
+  brand?:       string;
+  description?: string;
+  price:        number;   // paise
+  mrpPrice?:    number;   // paise
+  moq:          number;
+  stock:        number;
+  uom?:         string;
+  size?:        string;
+  colour?:      string;
+  remarks?:     string;
+  imageUrl?:    string;
+  status:       'active' | 'inactive' | 'discontinued';
+  categoryId:   string;
+  categorySlug: string;
+  salePrice?:         number; // paise
+  saleStartsAt?:      string; // ISO
+  saleEndsAt?:        string; // ISO
+  saleMinOrderPaise?: number;
+}
+
+/**
+ * Create a product everywhere it needs to exist - products, product_variants,
+ * inventory and its category table - in one transaction, so a failure part-way
+ * never leaves an orphan the admin list can't show. Returns null on failure.
+ */
+export async function createProductWithCatalog(
+  data: NewProductInput,
+): Promise<{ productId: string; variantId: string } | null> {
+  const tableName = CATEGORY_SLUG_TO_TABLE[data.categorySlug] ?? null;
+  if (!tableName || !VALID_CATEGORY_TABLES.has(tableName) || tableName === 'products_catalog_view') {
+    logger.warn('Products', `createProductWithCatalog: unknown slug "${data.categorySlug}"`);
+    return null;
+  }
+
+  // IDs are generated here because transaction() takes all statements up front.
+  const productId = crypto.randomUUID();
+  const variantId = crypto.randomUUID();
+
+  // Same keys the edit form writes, so the product page's Specifications box matches.
+  const attributes: Record<string, string> = {};
+  if (data.uom)     attributes.uom     = data.uom;
+  if (data.size)    attributes.size    = data.size;
+  if (data.colour)  attributes.colour  = data.colour;
+  if (data.remarks) attributes.remarks = data.remarks;
+
+  const sqlClient = getClient();
+  try {
+    await sqlClient.transaction([
+      sqlClient.query(
+        `INSERT INTO products (id, name, description, category_id, price, status, brand, uom, image_url, product_code)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [productId, data.name, data.description ?? null, data.categoryId, data.price, data.status,
+         data.brand ?? null, data.uom ?? null, data.imageUrl ?? null, data.productCode],
+      ),
+      sqlClient.query(
+        `INSERT INTO product_variants (id, product_id, sku, attributes, price_override, mrp_price, moq)
+         VALUES ($1, $2, $3, $4, NULL, $5, $6)`,
+        [variantId, productId, data.sku, JSON.stringify(attributes), data.mrpPrice ?? null, data.moq],
+      ),
+      sqlClient.query(
+        `INSERT INTO inventory (variant_id, stock_quantity, reserved_quantity) VALUES ($1, $2, 0)`,
+        [variantId, data.stock],
+      ),
+      sqlClient.query(
+        `INSERT INTO ${tableName}
+           (product_code, name, brand, description, price, mrp_price, moq, uom, size, colour, remarks,
+            image_url, status, category_slug, variant_id, products_id,
+            sale_price, sale_starts_at, sale_ends_at, sale_min_order_paise)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+        [data.productCode, data.name, data.brand ?? null, data.description ?? null, data.price,
+         data.mrpPrice ?? null, data.moq, data.uom ?? null, data.size ?? null, data.colour ?? null,
+         data.remarks ?? null, data.imageUrl ?? null, data.status, data.categorySlug, variantId, productId,
+         data.salePrice ?? null, data.saleStartsAt ?? null, data.saleEndsAt ?? null,
+         data.saleMinOrderPaise ?? null],
+      ),
+    ]);
+    return { productId, variantId };
+  } catch (error) {
+    logger.error('Products', 'createProductWithCatalog failed', {
+      productCode: data.productCode,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Move a product's catalog row to another category table and repoint
+ * products.category_id, in one transaction. No-op when already in that table.
+ */
+export async function moveProductToCategory(
+  fromTable: string,
+  productCode: string,
+  toSlug: string,
+  categoryId: string,
+  productsId: string | null,
+): Promise<boolean> {
+  const toTable = CATEGORY_SLUG_TO_TABLE[toSlug] ?? null;
+  const isTable = (t: string | null) => !!t && VALID_CATEGORY_TABLES.has(t) && t !== 'products_catalog_view';
+  if (!isTable(fromTable) || !isTable(toTable)) {
+    logger.warn('Products', `moveProductToCategory: invalid table "${fromTable}" → "${toTable}"`);
+    return false;
+  }
+  if (fromTable === toTable) return true;
+
+  // Copy every shared column except category_slug, which takes the new slug.
+  const copyCols = CATEGORY_TABLE_COLUMNS.replace(/\s+/g, ' ')
+    .split(',').map((c) => c.trim()).filter((c) => c !== 'category_slug').join(', ');
+
+  const sqlClient = getClient();
+  try {
+    await sqlClient.transaction([
+      sqlClient.query(
+        `INSERT INTO ${toTable} (${copyCols}, category_slug, created_at, updated_at)
+         SELECT ${copyCols}, $2, created_at, NOW() FROM ${fromTable} WHERE product_code = $1`,
+        [productCode, toSlug],
+      ),
+      sqlClient.query(`DELETE FROM ${fromTable} WHERE product_code = $1`, [productCode]),
+      ...(productsId
+        ? [sqlClient.query(
+            'UPDATE products SET category_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [categoryId, productsId],
+          )]
+        : []),
+    ]);
+    return true;
+  } catch (error) {
+    logger.error('Products', 'moveProductToCategory failed', {
+      productCode, fromTable, toTable,
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
