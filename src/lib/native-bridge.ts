@@ -22,7 +22,22 @@ type NativeMessage =
       cta: string;
     }
   | { type: 'SHARE_TEXT'; text: string }
-  | { type: 'DOWNLOAD_PDF'; url: string };
+  | { type: 'DOWNLOAD_PDF'; url: string }
+  // Signed in: ask the app for its push token (it may show Android's
+  // notification permission prompt). It answers with a `fastget:push-token` event.
+  | { type: 'PUSH_REGISTER' };
+
+// This device's Expo push token, once the app has handed it over. Sent with
+// logout so the device stops getting the signed-out user's notifications.
+let pushToken: string | null = null;
+
+export function getPushToken(): string | null {
+  return pushToken;
+}
+
+export function setPushToken(token: string | null) {
+  pushToken = token;
+}
 
 export function isNativeApp(): boolean {
   return typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;

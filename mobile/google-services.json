@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383554003886",
+    "project_id": "fastget-aaad5",
+    "storage_bucket": "fastget-aaad5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383554003886:android:4c7e4150dcc2b1f3a61e3f",
+        "android_client_info": {
+          "package_name": "in.fastget.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTjfwXDbN6QwWtT-DqiCSeKFo-OrTHTzw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

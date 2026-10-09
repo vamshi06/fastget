@@ -132,5 +132,24 @@
   "moreItems": "{count, plural, one {+# more item} other {+# more items}}",
   "total": "Total",
   "viewOrderDetails": "View Order Details",
-  "trackOrder": "Track Order"
+  "trackOrder": "Track Order",
+  "push": {
+    "eta_assigned": {
+      "title": "Order confirmed ✅",
+      "body": "Your order of {total} is confirmed. Estimated delivery: {eta}",
+      "bodyNoEta": "Your order of {total} is confirmed. We'll deliver it soon."
+    },
+    "out_for_delivery": {
+      "title": "Out for delivery 🚚",
+      "body": "Your order of {total} is on the way to your site."
+    },
+    "delivered": {
+      "title": "Order delivered 🎉",
+      "body": "Your order of {total} has been delivered. Thank you for ordering with FastGet!"
+    },
+    "cancelled": {
+      "title": "Order cancelled",
+      "body": "Your order of {total} has been cancelled. Tap to see details."
+    }
+  }
 }

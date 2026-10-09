@@ -26,6 +26,7 @@
         "backgroundColor": "#F5A623"
       },
       "package": "in.fastget.app",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -59,6 +60,13 @@
     "plugins": [
       "expo-asset",
       "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "color": "#F5A623",
+          "defaultChannel": "orders"
+        }
+      ],
       [
         "expo-splash-screen",
         {

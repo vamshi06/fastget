@@ -3,6 +3,8 @@ import { Animated, BackHandler, Easing, Keyboard, Linking, Platform, Share, Styl
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../shell/theme';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
+import { getPushToken, pathFromResponse } from '../notifications';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
@@ -142,6 +144,33 @@ export default function WebViewScreen() {
     return () => sub.remove();
   }, []);
 
+  // Tapped push notification -> open the screen it points at (the order page).
+  // Cold start: load that page directly. App already running: navigate in
+  // the site. Deduped by id, as both paths can report the launching tap.
+  const shellReadyRef = useRef(false);
+  shellReadyRef.current = shellReady;
+  useEffect(() => {
+    let lastHandled: string | null = null;
+    const open = (response: Notifications.NotificationResponse | null, coldStart: boolean) => {
+      const target = pathFromResponse(response);
+      const id = response?.notification.request.identifier ?? null;
+      if (!target || id === lastHandled) return;
+      lastHandled = id;
+      if (!coldStart && shellReadyRef.current) {
+        pendingDirection.current = 'forward';
+        webViewRef.current?.injectJavaScript(
+          `window.dispatchEvent(new CustomEvent('fastget:navigate', { detail: { path: ${JSON.stringify(target)} } })); true;`,
+        );
+      } else {
+        setWebViewSource({ uri: `${APP_URL}${target}` });
+      }
+    };
+
+    Notifications.getLastNotificationResponseAsync().then((r) => open(r, true)).catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => open(r, false));
+    return () => sub.remove();
+  }, []);
+
   // The tab bar would ride up on top of the keyboard - hide it while typing.
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -268,6 +297,15 @@ export default function WebViewScreen() {
         // Opens the PDF URL via the OS (only our own-origin URLs):
         // Android → Download Manager saves the file to Downloads
         if (isOwnOriginUrl(msg.url)) Linking.openURL(msg.url);
+        break;
+      case 'PUSH_REGISTER':
+        // Signed in on the site - hand it this install's push token to
+        // register (may show Android's notification permission prompt).
+        getPushToken().then((token) => {
+          if (token) {
+            inject(`window.dispatchEvent(new CustomEvent('fastget:push-token', { detail: { token: ${JSON.stringify(token)} } }))`);
+          }
+        });
         break;
       case 'SHARE_TEXT':
         // Referral "Share with friends" - the WebView has no

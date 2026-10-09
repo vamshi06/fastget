@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { getPushToken, setPushToken } from '@/lib/native-bridge';
 
 interface CurrentUser {
   id: string;
@@ -91,7 +92,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('fastget_currentUser');
     // Clear the server session cookie too - otherwise the next /api/auth/me
     // reconcile would re-hydrate the user from the still-valid cookie.
-    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    void fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pushToken: getPushToken() }),
+    }).catch(() => {});
+    setPushToken(null);
   }, []);
 
   const handleDeleteAccount = useCallback(async (userId: string, password: string): Promise<boolean> => {

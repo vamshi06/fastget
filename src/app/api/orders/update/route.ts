@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateOrderStatus } from '@/lib/db';
+import { getOrderById, updateOrderStatus } from '@/lib/db';
+import { notifyCustomerOfStatusChange } from '@/lib/push';
 import { requireRole } from '@/lib/auth';
 import { OrderStatus } from '@/types';
 import { logger } from '@/lib/logger';
@@ -61,6 +62,17 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Orders', 'Order status updated', { orderId: result.orderId, newStatus: status });
+
+    // Push to the customer's app. Best-effort (never throws); the status and
+    // ETA are applied over the re-read in case it comes from a stale replica.
+    const updatedOrder = await getOrderById(orderId);
+    if (updatedOrder) {
+      await notifyCustomerOfStatusChange(
+        { ...updatedOrder, status: status as OrderStatus, eta: eta || updatedOrder.eta },
+        status as OrderStatus,
+      );
+    }
+
     logger.api('POST', '/api/orders/update', 200, Date.now() - start);
 
     // Return updated data directly - avoids re-fetching from potentially stale replica.

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X } from 'lucide-react';
 import { BackOfficeSidebarNav } from '@/components/BackOfficeSidebarNav';
 import { useUser } from '@/components/UserContext';
+import { getPushToken, setPushToken } from '@/lib/native-bridge';
 
 interface BackOfficeShellProps {
   panelName: string; // "Admin Panel" / "Agent Panel"
@@ -33,7 +34,12 @@ export function BackOfficeShell({ panelName, logoHref, children }: BackOfficeShe
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pushToken: getPushToken() }),
+      });
+      setPushToken(null);
     } finally {
       // Also clear the store's signed-in state (header, account page).
       setCurrentUser(null);

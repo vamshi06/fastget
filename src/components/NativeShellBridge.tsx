@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { formatCurrency } from '@/lib/utils';
-import { getPageTitle, isNativeApp, postToNative } from '@/lib/native-bridge';
+import { getPageTitle, isNativeApp, postToNative, setPushToken } from '@/lib/native-bridge';
 import { getRouteKind, SHELL_COOKIE, SHELL_VERSION } from '@/lib/shell-routes';
 
 /**
@@ -99,6 +99,27 @@ export function NativeShellBridge() {
       cta: t('shellCart.viewCart'),
     });
   }, [itemCount, total, isLoaded, firstOrder, locale, t]);
+
+  // Push notifications: once signed in, ask the app for its push token and
+  // register it against this account (order status pushes, src/lib/push.ts).
+  // App builds without push ignore PUSH_REGISTER, so nothing happens there.
+  const userId = currentUser?.id;
+  useEffect(() => {
+    if (!userId || !isNativeApp()) return;
+    const onToken = (e: Event) => {
+      const token = (e as CustomEvent<{ token?: unknown }>).detail?.token;
+      if (typeof token !== 'string') return;
+      setPushToken(token);
+      fetch('/api/push/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, locale }),
+      }).catch(() => {});
+    };
+    window.addEventListener('fastget:push-token', onToken);
+    postToNative({ type: 'PUSH_REGISTER' });
+    return () => window.removeEventListener('fastget:push-token', onToken);
+  }, [userId, locale]);
 
   useEffect(() => {
     if (!isNativeApp()) return;
