@@ -17,6 +17,8 @@
   "lowStock": "सीमित स्टॉक",
   "inStock": "स्टॉक में उपलब्ध",
   "quantity": "मात्रा",
+  "decreaseQuantity": "मात्रा घटाएं",
+  "increaseQuantity": "मात्रा बढ़ाएं",
   "total": "कुल",
   "adding": "जोड़ा जा रहा है…",
   "updating": "अपडेट हो रहा है…",

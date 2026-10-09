@@ -8,6 +8,7 @@ import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
+import { haptic } from '@/lib/native-bridge';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
 import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift } from 'lucide-react';
 import Link from 'next/link';
@@ -329,6 +330,7 @@ function CheckoutPageContent() {
       });
       const data = await res.json();
       if (res.ok && data.statusToken) {
+        haptic('success');
         await persistAddressIfRequested();
         clearCart();
         router.push(`/order/${data.statusToken}`);
@@ -423,6 +425,7 @@ function CheckoutPageContent() {
             });
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.statusToken) {
+              haptic('success');
               await persistAddressIfRequested();
               clearCart();
               router.push(`/order/${verifyData.statusToken}`);
@@ -463,9 +466,9 @@ function CheckoutPageContent() {
   const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all duration-200';
 
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
+    <div className="min-h-screen bg-brand-fog pt-4 pb-8 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-4 md:mb-8">
           <Link href="/cart" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">{t('breadcrumbCart')}</Link>
           <ChevronRight className="w-4 h-4 text-brand-steel" />
           <span className="text-brand-charcoal font-medium text-sm">{t('pageTitle')}</span>
@@ -827,10 +830,13 @@ function CheckoutPageContent() {
                 </div>
               </div>
 
+              {/* Phones: pinned to the bottom of the screen while the form is
+                  in view (sticky footer of the card, bleeding over its p-6). */}
+              <div className="max-md:sticky max-md:bottom-0 max-md:z-30 max-md:-mx-6 max-md:-mb-6 max-md:px-4 max-md:pt-3 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-md:bg-white max-md:border-t max-md:border-neutral-200 max-md:rounded-b-2xl max-md:shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full py-3 max-md:h-12 max-md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting
                   ? paymentMethod === 'cod'
@@ -845,6 +851,7 @@ function CheckoutPageContent() {
                     : t('proceedToPay')}
                 {!isSubmitting && <ChevronRight className="w-5 h-5" />}
               </button>
+              </div>
             </form>
           </div>
 

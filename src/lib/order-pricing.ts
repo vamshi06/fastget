@@ -88,6 +88,22 @@ export async function priceOrderFromCatalog(
 
   const pricing = await getTrustedPricingInfo(normalised.map((i) => i.code));
 
+  // Minimum order quantity - enforced here too, not just in the cart UI, so a
+  // stale cart or a hand-crafted request can't order below it. Summed per
+  // product so duplicate cart lines are judged together.
+  const qtyByCode = new Map<string, number>();
+  for (const i of normalised) qtyByCode.set(i.code, (qtyByCode.get(i.code) ?? 0) + i.quantity);
+  for (const i of normalised) {
+    const info = pricing.get(i.code);
+    if (info && (qtyByCode.get(i.code) ?? 0) < info.moq) {
+      return {
+        ok: false,
+        status: 400,
+        error: `Minimum order for ${info.name || i.name} is ${info.moq}. Please update your cart.`,
+      };
+    }
+  }
+
   // Pass 1: each line's ORIGINAL (pre-discount) contribution, plus their sum.
   // A flash sale's minimum-order threshold is checked against the OTHER items
   // in the cart - not the sale item's own price - so "min order ₹100" means

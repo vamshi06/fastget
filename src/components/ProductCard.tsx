@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Product } from '@/types';
-import { useCart } from './CartContext';
+import { useCart, getMinOrderQty } from './CartContext';
 import { useToast } from './ToastContext';
 import { useWishlist } from './WishlistContext';
 import { formatCurrency } from '@/lib/utils';
+import { haptic } from '@/lib/native-bridge';
 import { Plus, Minus, Package, Loader2, Tag, Heart } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +39,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
 
   const cartItem = state.items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
+  const minQty = getMinOrderQty(product);
 
   const hasMrp   = product.mrpPrice && product.mrpPrice > product.price;
   const discount = hasMrp
@@ -46,11 +48,18 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   const savings  = hasMrp ? product.mrpPrice! - product.price : 0;
 
   const handleIncrement = () => {
+    haptic('light');
     if (quantity === 0) {
       setIsAdding(true);
       try {
-        addItem(product, 1);
-        showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
+        addItem(product, minQty); // the cart also enforces this
+        showToast(
+          minQty > 1
+            ? tc('addedToCartMin', { qty: minQty, name: product.name })
+            : tc('addedToCart', { name: product.name }),
+          'success',
+          { label: tc('viewCart'), href: '/cart' },
+        );
       } catch {
         showToast(t('couldNotAddItem'), 'error');
       } finally {
@@ -62,14 +71,16 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   };
 
   const handleDecrement = () => {
-    if (quantity > 1) {
+    haptic('light');
+    // At the minimum, minus removes the line (with undo) rather than going below it.
+    if (quantity > minQty) {
       updateQuantity(product.id, quantity - 1);
     } else {
       try {
         removeItem(product.id);
         showToast(t('removedFromCart', { name: product.name }), 'success', {
           label: t('undo'),
-          onClick: () => addItem(product, 1),
+          onClick: () => addItem(product, quantity),
         });
       } catch {
         showToast(t('couldNotRemoveItem'), 'error');
@@ -80,7 +91,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   /* ── Compact (Zepto-style) ────────────────────────────────────────────── */
   if (compact) {
     return (
-      <Link href={`/product/${product.id}`}>
+      <Link href={`/product/${product.id}`} className="pressable block">
         <div className="product-card h-full flex flex-col">
 
           {/* Square image with overlaid cart control */}
@@ -102,20 +113,20 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
             <button
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
-              className="absolute top-1.5 left-1.5 z-10 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
+              className="absolute top-1.5 left-1.5 z-10 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 active:scale-90 transition-transform"
             >
-              <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
+              <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
             </button>
 
             {discount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+              <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
                 {t('offBadge', { discount })}
               </span>
             )}
 
             {product.stockStatus === 'out' && (
               <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                <span className="text-[9px] font-semibold text-neutral-500">{tc('outOfStock')}</span>
+                <span className="text-xs font-semibold text-neutral-500">{tc('outOfStock')}</span>
               </div>
             )}
 
@@ -126,17 +137,18 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
                   <button
                     onClick={handleIncrement}
                     disabled={isAdding}
-                    className="w-7 h-7 bg-white border border-neutral-200 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary transition-colors"
+                    aria-label={t('addToCart')}
+                    className="pressable w-9 h-9 bg-white border border-brand-primary/40 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary"
                   >
                     {isAdding
-                      ? <Loader2 className="w-3.5 h-3.5 text-brand-primary animate-spin" />
-                      : <Plus className="w-4 h-4 text-brand-primary" />}
+                      ? <Loader2 className="w-4 h-4 text-brand-primary animate-spin" />
+                      : <Plus className="w-5 h-5 text-brand-primary" />}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1 bg-brand-primary rounded-xl px-1.5 py-1">
-                    <button onClick={handleDecrement} className="text-white"><Minus className="w-3 h-3" /></button>
-                    <span className="text-white text-[11px] font-bold min-w-[14px] text-center">{quantity}</span>
-                    <button onClick={handleIncrement} className="text-white"><Plus className="w-3 h-3" /></button>
+                  <div className="flex items-center bg-brand-primary rounded-xl shadow-sm">
+                    <button onClick={handleDecrement} aria-label={t('decreaseQuantity')} className="w-8 h-9 flex items-center justify-center text-white"><Minus className="w-3.5 h-3.5" /></button>
+                    <span className="text-white text-sm font-bold min-w-[16px] text-center">{quantity}</span>
+                    <button onClick={handleIncrement} aria-label={t('increaseQuantity')} className="w-8 h-9 flex items-center justify-center text-white"><Plus className="w-3.5 h-3.5" /></button>
                   </div>
                 )}
               </div>
@@ -144,18 +156,20 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
           </div>
 
           {/* Content */}
-          <div className="px-2 pt-1.5 pb-2 flex flex-col flex-grow">
-            <div className="flex items-baseline gap-1 flex-wrap">
-              <span className="text-sm font-black text-brand-charcoal">{formatCurrency(product.price)}</span>
-              {hasMrp && <span className="text-[10px] text-neutral-400 line-through">{formatCurrency(product.mrpPrice!)}</span>}
-            </div>
-            {savings > 0 && (
-              <p className="text-[9px] font-bold text-green-600 mb-0.5">{t('savingsOff', { amount: savings.toLocaleString('en-IN') })}</p>
-            )}
-            <p className="text-[10px] font-medium text-brand-charcoal line-clamp-2 leading-tight mb-0.5 flex-grow">
+          <div className="px-2.5 pt-2 pb-2.5 flex flex-col flex-grow">
+            <p className="text-[13px] font-medium text-brand-charcoal line-clamp-2 leading-snug min-h-[2.5em]">
               {product.name}
             </p>
-            <p className="text-[9px] text-neutral-400">{product.unit}</p>
+            <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+              {minQty > 1 ? t('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
+            </p>
+            <div className="flex items-baseline gap-1 flex-wrap mt-auto pt-1.5">
+              <span className="text-[15px] font-black text-brand-charcoal">{formatCurrency(product.price)}</span>
+              {hasMrp && <span className="text-[11px] text-neutral-400 line-through">{formatCurrency(product.mrpPrice!)}</span>}
+            </div>
+            {savings > 0 && (
+              <p className="text-[11px] font-bold text-green-600">{t('savingsOff', { amount: savings.toLocaleString('en-IN') })}</p>
+            )}
           </div>
 
         </div>

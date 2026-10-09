@@ -17,6 +17,8 @@
   "lowStock": "Low Stock",
   "inStock": "In Stock",
   "quantity": "Quantity",
+  "decreaseQuantity": "Decrease quantity",
+  "increaseQuantity": "Increase quantity",
   "total": "Total",
   "adding": "Adding…",
   "updating": "Updating…",

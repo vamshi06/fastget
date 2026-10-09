@@ -9,6 +9,15 @@ import { cn } from '@/lib/utils';
 import { useCart } from '@/components/CartContext';
 import { isStaffRoute } from '@/lib/staff-routes';
 
+// Task screens with their own pinned action bar at the bottom (Add to cart /
+// Checkout / Place order). The tab bar steps aside there, as in native
+// shopping apps; Back returns to the tabbed screens.
+const FLOW_ROUTE_PREFIXES = ['/product/', '/cart', '/checkout'];
+
+export function isFlowRoute(pathname: string | null): boolean {
+  return !!pathname && FLOW_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 const SIDE_TAB_DEFS = [
   { href: '/',           labelKey: 'home',     Icon: Home          },
   { href: '/categories', labelKey: 'category', Icon: LayoutGrid    },
@@ -47,7 +56,7 @@ function useKeyboardOpen() {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const isKeyboardOpen = useKeyboardOpen();
-  const isHiddenRoute = isStaffRoute(pathname);
+  const isHiddenRoute = isStaffRoute(pathname) || isFlowRoute(pathname);
   const isVisible = !isHiddenRoute && !isKeyboardOpen;
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
@@ -105,14 +114,14 @@ export function MobileBottomNav() {
               key={href}
               href={href as any}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
+                'pressable flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
                 isActive ? 'text-brand-primary' : 'text-brand-steel'
               )}
             >
               <Icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
               <span
                 className={cn(
-                  'text-[10px]',
+                  'text-[11px]',
                   isActive ? 'font-semibold text-brand-primary' : 'font-medium text-brand-steel'
                 )}
               >
@@ -126,7 +135,7 @@ export function MobileBottomNav() {
         <div className="flex-1 flex flex-col items-center justify-end pb-2 relative">
           <Link
             href={'/cart' as any}
-            className="flex flex-col items-center gap-0.5 -translate-y-3"
+            className="pressable flex flex-col items-center gap-0.5 -translate-y-3"
           >
             <span className="relative">
               <span
@@ -160,14 +169,14 @@ export function MobileBottomNav() {
               key={href}
               href={href as any}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
+                'pressable flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
                 isActive ? 'text-brand-primary' : 'text-brand-steel'
               )}
             >
               <Icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
               <span
                 className={cn(
-                  'text-[10px]',
+                  'text-[11px]',
                   isActive ? 'font-semibold text-brand-primary' : 'font-medium text-brand-steel'
                 )}
               >

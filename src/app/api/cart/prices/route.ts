@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       isFlashSale: boolean;
       saleOriginalPriceRupees?: number;
       saleMinOrderRupees?: number;
+      moq: number;
     }> = {};
 
     // Same paise → rupee rounding as order-pricing.priceOrderFromCatalog.
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
         saleMinOrderRupees: saleActive && info.minOrderPaise != null
           ? Math.round(info.minOrderPaise / 100)
           : undefined,
+        moq: info.moq,
       };
     });
 

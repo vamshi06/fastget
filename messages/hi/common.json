@@ -8,6 +8,7 @@
   "loading": "लोड हो रहा है…",
   "viewCart": "कार्ट देखें",
   "addedToCart": "{name} जोड़ा गया",
+  "addedToCartMin": "{qty} × {name} जोड़ा गया (न्यूनतम ऑर्डर)",
   "outOfStock": "स्टॉक में नहीं",
   "check": "जांचें",
   "selectArea": "क्षेत्र चुनें",

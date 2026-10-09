@@ -18,7 +18,7 @@ export default async function Home() {
       <HeroSection />
 
       {/* 4. Product-heavy feed */}
-      <div className="page-container py-6 md:py-8 space-y-8 md:space-y-12">
+      <div className="page-container py-5 md:py-8 space-y-7 md:space-y-12">
 
         {/* Flash sales - only rendered while at least one sale is running */}
         {flashSales.length > 0 && <FlashSaleCarousel sales={flashSales} />}

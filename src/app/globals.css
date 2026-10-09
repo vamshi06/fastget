@@ -54,6 +54,37 @@
   html {
     scroll-behavior: smooth;
     overflow-x: clip;
+    /* No grey flash on tap - press feedback comes from .pressable / active: */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Drops the double-tap-zoom delay on controls; pinch-zoom still works. */
+  a, button, input, select, textarea, label, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* ── Inside the mobile app only (class set in layout.tsx) ── */
+  /* No rubber-band scroll chaining past the page edges. */
+  html.in-app,
+  html.in-app body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Long-press on UI chrome shouldn't select text or pop the browser's
+     "open link / copy" menu. Content text and inputs stay selectable. */
+  html.in-app :is(a, button, nav, header, label, [role="button"]) {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  html.in-app img {
+    -webkit-touch-callout: none;
+  }
+
+  /* Website-only chrome (e.g. the promo AnnouncementBar). CSS rather than JS
+     so it never flashes in before hydration. */
+  html.in-app .web-only {
+    display: none !important;
   }
 
   body {
@@ -167,12 +198,17 @@
            transition-all duration-200;
   }
 
+  /* ── Press feedback (touch) ───────────────────────────────── */
+  .pressable {
+    @apply transition-transform duration-100 ease-out active:scale-[0.97];
+  }
+
   /* ── Section Header ───────────────────────────────────────── */
   .section-header {
-    @apply flex items-center justify-between mb-6;
+    @apply flex items-center justify-between mb-3 md:mb-6;
   }
   .section-title {
-    @apply text-xl font-bold text-brand-charcoal tracking-tight;
+    @apply text-lg md:text-xl font-bold text-brand-charcoal tracking-tight;
   }
 
   /* ── Delivery Badge ───────────────────────────────────────── */

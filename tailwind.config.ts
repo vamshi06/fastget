@@ -1,6 +1,11 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  // hover: styles only on devices that can actually hover, so a tap on a
+  // phone doesn't leave a button stuck in its hover colour.
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -61,6 +66,8 @@ const config: Config = {
       },
       animation: {
         'fade-in':    'fade-in 0.4s ease-out',
+        'screen-in':  'fade-in 0.18s ease-out',
+        'sheet-up':   'sheet-up 0.22s cubic-bezier(0.32, 0.72, 0, 1)',
         'slide-up':   'slide-up 0.3s ease-out',
         'slide-right':'slide-right 0.4s ease-out',
         'shimmer':    'shimmer 1.5s infinite',
@@ -70,6 +77,7 @@ const config: Config = {
       keyframes: {
         'fade-in':    { '0%': { opacity: '0' },                                               '100%': { opacity: '1' } },
         'slide-up':   { '0%': { transform: 'translateY(20px)', opacity: '0' },                '100%': { transform: 'translateY(0)', opacity: '1' } },
+        'sheet-up':   { '0%': { transform: 'translateY(100%)' },                              '100%': { transform: 'translateY(0)' } },
         'slide-right':{ '0%': { transform: 'translateX(-12px)', opacity: '0' },               '100%': { transform: 'translateX(0)', opacity: '1' } },
         'shimmer':    { '0%': { backgroundPosition: '-200% 0' },                              '100%': { backgroundPosition: '200% 0' } },
         'pulse-glow': { '0%, 100%': { boxShadow: '0 0 0 0 rgba(245, 166, 35, 0.4)' },        '50%': { boxShadow: '0 0 0 8px rgba(245, 166, 35, 0)' } },

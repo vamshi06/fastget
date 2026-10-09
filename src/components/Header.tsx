@@ -56,6 +56,7 @@ import {
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { MobileSearchOverlay } from "./MobileSearchOverlay";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -162,6 +163,10 @@ export function Header() {
   const itemCount = getItemCount();
 
   const [scrolled, setScrolled] = useState(false);
+  // Mobile: tuck the location/logo row away while scrolling down so only the
+  // search bar stays pinned; bring it back on any scroll up.
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPolicies, setShowPolicies] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -173,10 +178,21 @@ export function Header() {
   const suggestionsAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 10);
+      // Small dead-zone so tiny finger jitter doesn't flicker the header.
+      if (y > lastY + 6 && y > 80) setCollapsed(true);
+      else if (y < lastY - 6 || y <= 80) setCollapsed(false);
+      if (Math.abs(y - lastY) > 6) lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Never leave the header tucked away on a freshly opened screen.
+  useEffect(() => setCollapsed(false), [pathname]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -282,6 +298,9 @@ export function Header() {
       className={cn(
         "navbar transition-all duration-200",
         scrolled && "shadow-md",
+        // 57px = the mobile top row (h-14 + 1px border). Transform doesn't
+        // affect layout, so content below never jumps.
+        collapsed && !showSuggestions && "max-md:-translate-y-[57px]",
       )}
     >
       {/* ── Mobile Header Row ── */}
@@ -365,32 +384,17 @@ export function Header() {
             "hidden",
         )}
       >
-        <form onSubmit={handleSearch} className="relative" data-search-container>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-steel pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t("searchPlaceholderMobile")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => {
-              if (!pathname.startsWith("/catalog")) router.push("/catalog" as any);
-              if (suggestions.length > 0) setShowSuggestions(true);
-            }}
-            className="w-full pl-9 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-charcoal
-                       placeholder:text-brand-steel focus:outline-none focus:ring-2 focus:ring-brand-primary/25
-                       focus:border-brand-primary focus:bg-white transition-all"
-          />
-          {showSuggestions && (
-            <SearchSuggestions
-              results={suggestions}
-              loading={suggestionsLoading}
-              query={searchQuery.trim()}
-              onSelect={handleSelectSuggestion}
-              onViewAll={() => goToSearchResults(searchQuery)}
-            />
-          )}
-        </form>
+        {/* Looks like a field, opens the full-screen search */}
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          className="pressable w-full flex items-center gap-2 pl-3 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-steel text-left"
+        >
+          <Search className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{t("searchPlaceholderMobile")}</span>
+        </button>
       </div>
+      <MobileSearchOverlay open={mobileSearchOpen} onClose={() => setMobileSearchOpen(false)} />
 
       {/* ── Desktop Main Nav Row ── */}
       <div className="hidden md:block w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">

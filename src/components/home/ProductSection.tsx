@@ -17,15 +17,15 @@ interface ProductSectionProps {
   accentColor?: string;
 }
 
+// Same footprint as HomeProductCard so nothing shifts when products arrive.
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-28 bg-white rounded-2xl border border-neutral-100 overflow-hidden">
-      <div className="skeleton h-16 w-full" />
-      <div className="p-1.5 space-y-1.5">
-        <div className="skeleton h-3 w-full rounded" />
-        <div className="skeleton h-3 w-3/4 rounded" />
-        <div className="skeleton h-3 w-1/2 rounded" />
-        <div className="skeleton h-6 w-full rounded-xl mt-1" />
+    <div className="flex-shrink-0 w-[38vw] max-w-[160px] sm:w-[160px] bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+      <div className="skeleton aspect-square w-full rounded-none" />
+      <div className="p-2.5 space-y-2">
+        <div className="skeleton h-3.5 w-full rounded" />
+        <div className="skeleton h-3.5 w-3/4 rounded" />
+        <div className="skeleton h-4 w-1/2 rounded" />
       </div>
     </div>
   );
@@ -107,7 +107,9 @@ export function ProductSection({
 
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto hide-scrollbar pb-1"
+          // Phones: row bleeds to the screen edges (cards slide off-screen like
+          // a native carousel) and snaps card-by-card.
+          className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 -mx-4 px-4 scroll-px-4 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:scroll-px-0 sm:snap-none"
         >
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)

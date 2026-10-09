@@ -37,6 +37,29 @@ interface LivePrice {
   isFlashSale: boolean;
   saleOriginalPriceRupees?: number;
   saleMinOrderRupees?: number;
+  moq?: number;
+}
+
+/**
+ * Fewest units of a product that can be ordered. The cart never holds fewer:
+ * adding starts at this many, and going below it removes the line. Mirrors
+ * the server check in order-pricing.priceOrderFromCatalog.
+ */
+export function getMinOrderQty(product: Product): number {
+  return product.moq && product.moq > 1 ? Math.floor(product.moq) : 1;
+}
+
+// Raises any line below its product's minimum up to that minimum - for carts
+// restored from storage/the account, or saved before MOQ was enforced.
+function clampToMinQty(items: CartItem[]): CartItem[] {
+  let changed = false;
+  const next = items.map(item => {
+    const min = getMinOrderQty(item.product);
+    if (item.quantity >= min) return item;
+    changed = true;
+    return { ...item, quantity: min };
+  });
+  return changed ? next : items;
 }
 
 const CartContext = createContext<
@@ -99,11 +122,16 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         return { ...state, items: newItems };
       }
 
+      // A new line starts at the product's minimum, whatever the caller asked
+      // for (e.g. a card's "+" adds 1).
       return {
         ...state,
         items: [
           ...state.items,
-          { product: action.payload.product, quantity: action.payload.quantity },
+          {
+            product: action.payload.product,
+            quantity: Math.max(action.payload.quantity, getMinOrderQty(action.payload.product)),
+          },
         ],
       };
     }
@@ -114,8 +142,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         items: state.items.filter(item => item.product.id !== action.payload.productId),
       };
     
-    case 'UPDATE_QUANTITY':
-      if (action.payload.quantity <= 0) {
+    case 'UPDATE_QUANTITY': {
+      // Dropping below the minimum removes the line - it can't be ordered.
+      const target = state.items.find(item => item.product.id === action.payload.productId);
+      const min = target ? getMinOrderQty(target.product) : 1;
+      if (action.payload.quantity < min) {
         return {
           ...state,
           items: state.items.filter(item => item.product.id !== action.payload.productId),
@@ -129,9 +160,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             : item
         ),
       };
+    }
 
     case 'REPLACE_CART':
-      return action.payload;
+      return { ...action.payload, items: clampToMinQty(action.payload.items) };
 
     // Combines the cart saved on the account with whatever is already in this
     // browser's cart (e.g. items added before logging in), summing quantities
@@ -149,7 +181,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           merged.push(serverItem);
         }
       }
-      return { ...state, items: merged };
+      return { ...state, items: clampToMinQty(merged) };
     }
 
     // Overwrites each item's stored price fields with the catalog's current
@@ -161,25 +193,29 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         const live = action.payload.prices[item.product.id];
         if (!live) return item;
         const p = item.product;
+        // Older servers don't send moq - keep the stored one in that case.
+        const moq = typeof live.moq === 'number' ? live.moq : p.moq;
         if (
           p.price === live.price &&
           Boolean(p.isFlashSale) === live.isFlashSale &&
           p.saleOriginalPriceRupees === live.saleOriginalPriceRupees &&
-          p.saleMinOrderRupees === live.saleMinOrderRupees
+          p.saleMinOrderRupees === live.saleMinOrderRupees &&
+          p.moq === moq &&
+          item.quantity >= getMinOrderQty(p)
         ) {
           return item;
         }
         changed = true;
-        return {
-          ...item,
-          product: {
-            ...p,
-            price: live.price,
-            isFlashSale: live.isFlashSale || undefined,
-            saleOriginalPriceRupees: live.saleOriginalPriceRupees,
-            saleMinOrderRupees: live.saleMinOrderRupees,
-          },
+        const product = {
+          ...p,
+          price: live.price,
+          isFlashSale: live.isFlashSale || undefined,
+          saleOriginalPriceRupees: live.saleOriginalPriceRupees,
+          saleMinOrderRupees: live.saleMinOrderRupees,
+          moq,
         };
+        // The catalog's MOQ may be higher than when this was added.
+        return { ...item, product, quantity: Math.max(item.quantity, getMinOrderQty(product)) };
       });
       return changed ? { ...state, items } : state;
     }

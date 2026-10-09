@@ -96,8 +96,11 @@ export function HeroSection() {
   };
 
   return (
+    // Mobile: an inset rounded promo card (app-style banner). Desktop: the
+    // full-bleed hero, unchanged.
+    <div className="px-4 pt-3 md:p-0">
     <section
-      className="relative overflow-hidden text-white"
+      className="relative overflow-hidden text-white rounded-2xl md:rounded-none"
       style={{ background: 'linear-gradient(140deg, #111113 0%, #1E1E21 55%, #111113 100%)' }}
     >
       {/* Blueprint grid */}
@@ -121,7 +124,7 @@ export function HeroSection() {
         }}
       />
 
-      <div className="page-container relative z-10 py-7 md:py-10">
+      <div className="relative z-10 px-4 py-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 md:py-10">
 
         {/* Scrollable, snap-paged track - auto-advances but the user can swipe/drag too */}
         <div
@@ -140,12 +143,12 @@ export function HeroSection() {
               className="snap-start shrink-0 w-full"
               aria-hidden={i === slides.length}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-[1.04] tracking-tight mb-4">
+              <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-[1.08] md:leading-[1.04] tracking-tight mb-2 md:mb-4">
                 {slide.title}
                 <br />
                 <span className="text-orange-gradient">{slide.highlight}</span>
               </h1>
-              <p className="text-neutral-400 text-sm md:text-base leading-relaxed max-w-md mb-7">
+              <p className="text-neutral-400 text-xs md:text-base leading-relaxed max-w-md mb-4 md:mb-7 line-clamp-2 md:line-clamp-none">
                 {slide.description}
               </p>
             </div>
@@ -170,5 +173,6 @@ export function HeroSection() {
 
       </div>
     </section>
+    </div>
   );
 }

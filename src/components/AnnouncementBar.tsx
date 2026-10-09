@@ -27,7 +27,7 @@ export function AnnouncementBar() {
   const next = () => setCurrent((p) => (p + 1) % messages.length);
 
   return (
-    <div className="w-full bg-brand-primary text-white text-center py-2.5 px-4 text-xs font-semibold relative overflow-hidden select-none">
+    <div className="web-only w-full bg-brand-primary text-white text-center py-2.5 px-4 text-xs font-semibold relative overflow-hidden select-none">
       <div className="flex items-center justify-center gap-3">
         <button
           onClick={prev}

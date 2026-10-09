@@ -4,8 +4,9 @@ import { Plus, Minus, Package, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useCart } from '@/components/CartContext';
+import { useCart, getMinOrderQty } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
+import { haptic } from '@/lib/native-bridge';
 import { Product } from '@/types';
 
 interface HomeProductCardProps {
@@ -17,9 +18,11 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   const { showToast } = useToast();
   const t = useTranslations('home');
   const tc = useTranslations('common');
+  const tp = useTranslations('product');
 
   const cartItem = state.items.find(i => i.product.id === product.id);
   const qty = cartItem?.quantity ?? 0;
+  const minQty = getMinOrderQty(product);
   const inStock = product.stockStatus !== 'out';
 
   const hasMrp = product.mrpPrice && product.mrpPrice > product.price;
@@ -31,26 +34,36 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product, 1);
-    showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
+    addItem(product, minQty); // the cart also enforces this
+    haptic('light');
+    showToast(
+      minQty > 1
+        ? tc('addedToCartMin', { qty: minQty, name: product.name })
+        : tc('addedToCart', { name: product.name }),
+      'success',
+      { label: tc('viewCart'), href: '/cart' },
+    );
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     updateQuantity(product.id, qty + 1);
+    haptic('light');
   };
 
   const handleDecrease = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     updateQuantity(product.id, qty - 1);
+    haptic('light');
   };
 
   return (
+    // ~2.5 cards visible on a phone so the row clearly scrolls sideways.
     <Link
       href={`/product/${product.id}`}
-      className="flex-shrink-0 w-[118px] bg-white rounded-2xl border border-neutral-100 overflow-hidden"
+      className="pressable snap-start flex-shrink-0 w-[38vw] max-w-[160px] sm:w-[160px] bg-white rounded-2xl border border-neutral-100 overflow-hidden flex flex-col"
       style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
     >
       {/* Square image area */}
@@ -60,7 +73,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
             src={product.imageUrl}
             alt={product.name}
             fill
-            sizes="118px"
+            sizes="160px"
             className="object-contain p-2"
             loading="lazy"
           />
@@ -72,12 +85,12 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
 
         {/* Flash-sale badge takes priority over the regular discount badge */}
         {product.isFlashSale ? (
-          <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none animate-pulse">
-            <Zap className="w-2 h-2 fill-current" />
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-red-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none animate-pulse">
+            <Zap className="w-2.5 h-2.5 fill-current" />
             {t('dealLabel', { price: product.price })}
           </div>
         ) : discountPct >= 3 && (
-          <div className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+          <div className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
             {t('offLabel', { pct: discountPct })}
           </div>
         )}
@@ -85,7 +98,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
         {/* Out of stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-            <span className="text-[9px] font-semibold text-neutral-500">{tc('outOfStock')}</span>
+            <span className="text-xs font-semibold text-neutral-500">{tc('outOfStock')}</span>
           </div>
         )}
 
@@ -95,18 +108,19 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
             {qty === 0 ? (
               <button
                 onClick={handleAdd}
-                className="w-7 h-7 bg-white border border-neutral-200 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
+                aria-label={tp('addToCart')}
+                className="pressable w-9 h-9 bg-white border border-brand-primary/40 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary"
               >
-                <Plus className="w-4 h-4 text-brand-primary" />
+                <Plus className="w-5 h-5 text-brand-primary" />
               </button>
             ) : (
-              <div className="flex items-center gap-1 bg-brand-primary rounded-xl px-1.5 py-1">
-                <button onClick={handleDecrease} className="text-white">
-                  <Minus className="w-3 h-3" />
+              <div className="flex items-center bg-brand-primary rounded-xl shadow-sm">
+                <button onClick={handleDecrease} className="w-8 h-9 flex items-center justify-center text-white">
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-white text-[11px] font-bold min-w-[14px] text-center">{qty}</span>
-                <button onClick={handleIncrease} className="text-white">
-                  <Plus className="w-3 h-3" />
+                <span className="text-white text-sm font-bold min-w-[16px] text-center">{qty}</span>
+                <button onClick={handleIncrease} className="w-8 h-9 flex items-center justify-center text-white">
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -115,14 +129,24 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
       </div>
 
       {/* Content */}
-      <div className="px-2 pt-1.5 pb-2">
+      <div className="px-2.5 pt-2 pb-2.5 flex-1">
+        {/* Name first, two lines reserved so prices line up across the row */}
+        <p className="text-[13px] font-medium text-brand-charcoal line-clamp-2 leading-snug min-h-[2.5em]">
+          {product.name}
+        </p>
+
+        {/* Unit */}
+        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+          {minQty > 1 ? tp('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
+        </p>
+
         {/* Price row */}
-        <div className="flex items-baseline gap-1 flex-wrap">
-          <span className="text-sm font-black text-brand-charcoal">
+        <div className="flex items-baseline gap-1 flex-wrap mt-1.5">
+          <span className="text-[15px] font-black text-brand-charcoal">
             ₹{product.price.toLocaleString('en-IN')}
           </span>
           {hasMrp && (
-            <span className="text-[10px] text-neutral-400 line-through">
+            <span className="text-[11px] text-neutral-400 line-through">
               ₹{product.mrpPrice!.toLocaleString('en-IN')}
             </span>
           )}
@@ -130,18 +154,10 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
 
         {/* Savings */}
         {savings > 0 && (
-          <p className="text-[9px] font-bold text-green-600 mb-0.5">
+          <p className="text-[11px] font-bold text-green-600">
             {t('amountOffLabel', { amount: savings.toLocaleString('en-IN') })}
           </p>
         )}
-
-        {/* Name */}
-        <p className="text-[10px] font-medium text-brand-charcoal line-clamp-2 leading-tight mb-0.5">
-          {product.name}
-        </p>
-
-        {/* Unit */}
-        <p className="text-[9px] text-neutral-400">{product.unit}</p>
       </div>
     </Link>
   );

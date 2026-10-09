@@ -42,16 +42,24 @@ export const metadata: Metadata = {
 // --bottom-nav-space's env(safe-area-inset-bottom) term is always 0 and
 // MobileBottomNav sits underneath the gesture/nav bar.
 export const viewport: Viewport = {
-  themeColor: '#f97316',
+  themeColor: '#F5A623',
   viewportFit: 'cover',
 };
+
+// Runs before first paint so app-only styles (html.in-app in globals.css)
+// apply without a flash. react-native-webview defines ReactNativeWebView
+// before page scripts run on both Android and iOS.
+const IN_APP_SCRIPT = `if (window.ReactNativeWebView) document.documentElement.classList.add('in-app');`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: IN_APP_SCRIPT }} />
+      </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <UserProvider>

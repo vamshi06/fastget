@@ -17,11 +17,8 @@ const CATEGORY_SLUGS = [
 
 function CategoryTile({ slug, name }: { slug: string; name: string }) {
   return (
-    <Link href={`/catalog?category=${slug}`} className="flex flex-col items-center gap-2 group">
-      <div
-        className="w-full aspect-square rounded-2xl overflow-hidden relative"
-        style={{ backgroundColor: '#dbeafe' }}
-      >
+    <Link href={`/catalog?category=${slug}`} className="pressable flex flex-col items-center gap-1.5 group">
+      <div className="w-full aspect-square rounded-2xl overflow-hidden relative bg-primary-50">
         {/* Placeholder shown until real image is added */}
         <div className="absolute inset-0 flex items-end justify-center pb-2 pointer-events-none">
           {/* <span className="text-[9px] text-neutral-400 text-center leading-tight px-1">{name}</span> */}
@@ -39,7 +36,7 @@ function CategoryTile({ slug, name }: { slug: string; name: string }) {
           }}
         />
       </div>
-      <span className="text-[10px] sm:text-xs font-medium text-brand-charcoal text-center leading-tight px-0.5">
+      <span className="text-[11px] sm:text-xs font-medium text-brand-charcoal text-center leading-tight px-0.5 line-clamp-2">
         {name}
       </span>
     </Link>
@@ -53,7 +50,7 @@ export function CategoryStrip() {
 
   return (
     <section>
-      <div className="section-header mb-4">
+      <div className="section-header">
         <div>
           <h2 className="section-title">{t('shopByCategory')}</h2>
           <div className="speed-accent mt-1.5" />
@@ -67,7 +64,7 @@ export function CategoryStrip() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-x-3 gap-y-4">
         {CATEGORY_SLUGS.map((slug) => (
           <CategoryTile key={slug} slug={slug} name={tCategories(`${slug}.full`)} />
         ))}

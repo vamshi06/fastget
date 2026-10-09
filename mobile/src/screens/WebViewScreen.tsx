@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Linking, Platform, Share, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
@@ -50,12 +51,32 @@ function isOwnOriginUrl(url: unknown): url is string {
   return typeof url === 'string' && url.startsWith(`${APP_URL}/`);
 }
 
+// Sent by the site's haptic() helper (src/lib/native-bridge.ts).
+// Uses Android's own View.performHapticFeedback (not the raw vibrator), so it
+// matches system UI feel and respects the user's "touch feedback" setting.
+// CONFIRM / REJECT only exist on Android 11+ (API 30); older versions fall
+// back to the long-press pattern so success/error still feel distinct.
+const HAS_CONFIRM_REJECT = Platform.OS === 'android' && (Platform.Version as number) >= 30;
+
+function playHaptic(style: unknown) {
+  const { AndroidHaptics } = Haptics;
+  const type =
+    style === 'success' ? (HAS_CONFIRM_REJECT ? AndroidHaptics.Confirm : AndroidHaptics.Long_Press)
+    : style === 'error' ? (HAS_CONFIRM_REJECT ? AndroidHaptics.Reject : AndroidHaptics.Long_Press)
+    : style === 'medium' ? AndroidHaptics.Long_Press
+    : AndroidHaptics.Virtual_Key;
+  Haptics.performAndroidHapticsAsync(type).catch(() => {});
+}
+
 export default function WebViewScreen() {
   const webViewRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [webViewSource, setWebViewSource] = useState({ uri: APP_URL });
+  // Set while the page has a sheet open that Back should close (the site
+  // sends BACK_INTERCEPT - see useNativeBackHandler in native-bridge.ts).
+  const backInterceptRef = useRef(false);
 
   useEffect(() => {
     const handleDeepLink = (rawUrl: string) => {
@@ -73,6 +94,13 @@ export default function WebViewScreen() {
     if (Platform.OS !== 'android') return;
 
     const onBackPress = () => {
+      if (backInterceptRef.current) {
+        // Let the page close its open sheet instead of leaving the screen.
+        webViewRef.current?.injectJavaScript(
+          "window.dispatchEvent(new Event('fastget:back')); true;",
+        );
+        return true;
+      }
       if (canGoBack) {
         webViewRef.current?.goBack();
         return true; // consumed - prevent app exit
@@ -167,7 +195,10 @@ export default function WebViewScreen() {
             userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
             injectedJavaScript={injectedJavaScript}
             javaScriptCanOpenWindowsAutomatically={false}
-            onLoadStart={() => setHasError(false)}
+            onLoadStart={() => {
+              setHasError(false);
+              backInterceptRef.current = false; // full page load: no sheet open
+            }}
             onLoadEnd={() => setInitialLoading(false)}
             onError={() => {
               setHasError(true);
@@ -185,7 +216,11 @@ export default function WebViewScreen() {
             onMessage={(event) => {
               try {
                 const msg = JSON.parse(event.nativeEvent.data);
-                if (msg.type === 'DOWNLOAD_PDF' && isOwnOriginUrl(msg.url)) {
+                if (msg.type === 'HAPTIC') {
+                  playHaptic(msg.style);
+                } else if (msg.type === 'BACK_INTERCEPT') {
+                  backInterceptRef.current = msg.active === true;
+                } else if (msg.type === 'DOWNLOAD_PDF' && isOwnOriginUrl(msg.url)) {
                   // Opens the PDF URL via the OS (only our own-origin URLs):
                   // Android → Download Manager saves the file to Downloads
                   // iOS → Safari opens it as a PDF with share/print options
@@ -203,6 +238,11 @@ export default function WebViewScreen() {
             allowsBackForwardNavigationGestures
             // Pull-to-refresh inside the WebView
             pullToRefreshEnabled
+            // Android: no blue edge-glow when scrolling past the top/bottom
+            overScrollMode="never"
+            // Hide the WebView's own scrollbars, like a native list
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
             // Allow cookies & session storage to persist across reloads
             sharedCookiesEnabled
           />
@@ -219,9 +259,11 @@ export default function WebViewScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Fills the status-bar strip above the WebView - white to match the site's
+  // header so the top of the app reads as one surface (dark icons, App.tsx).
   container: {
     flex: 1,
-    backgroundColor: '#1a56db',
+    backgroundColor: '#FFFFFF',
   },
   webViewContainer: {
     flex: 1,

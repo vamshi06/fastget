@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCart, getOriginalUnitPrice, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
+import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductReviews } from '@/components/ProductReviews';
+import { ProductDetailSkeleton } from '@/components/Skeletons';
+import { haptic } from '@/lib/native-bridge';
 import { Product } from '@/types';
 import {
   ArrowLeft, Plus, Minus, ShoppingCart,
@@ -85,7 +87,9 @@ export default function ProductDetailPage() {
   // Keep local quantity in sync with cart, respecting the variant's MOQ
   const cartItem     = product ? state.items.find((i) => i.product.id === product.id) : undefined;
   const cartQuantity = cartItem?.quantity ?? 0;
-  const moq           = selectedVariant?.moq && selectedVariant.moq > 0 ? selectedVariant.moq : 1;
+  const moq           = selectedVariant?.moq && selectedVariant.moq > 0
+    ? selectedVariant.moq
+    : (product ? getMinOrderQty(product) : 1);
   useEffect(() => { setQuantity(cartQuantity > 0 ? cartQuantity : moq); }, [cartQuantity, moq]);
 
   // Effective price comes from the selected variant
@@ -111,8 +115,10 @@ export default function ProductDetailPage() {
         variantId: selectedVariant?.id ?? product.variantId,
         sku:       selectedVariant?.sku ?? product.sku,
         unit:      selectedVariant?.attributes?.uom ?? product.unit,
+        moq,       // the selected variant's minimum, so the cart enforces it too
       };
       const safeQuantity = Math.max(moq, quantity);
+      haptic('success');
       if (cartQuantity === 0) {
         addItem(cartProduct, safeQuantity);
         showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
@@ -144,12 +150,7 @@ export default function ProductDetailPage() {
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="min-h-screen bg-brand-fog flex items-center justify-center gap-3 text-brand-slate">
-        <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
-        {t('loadingProduct')}
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   // ── Error / Not Found ─────────────────────────────────────────────────────
@@ -174,11 +175,12 @@ export default function ProductDetailPage() {
   const variants = product.variants ?? [];
 
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
+    // pb-32 on phones keeps the last content clear of the pinned action bar.
+    <div className="min-h-screen bg-brand-fog pt-4 pb-32 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Breadcrumb */}
-        <div className="mb-8 flex items-center gap-2 text-sm flex-wrap">
+        {/* Breadcrumb - desktop only; on phones Back does this job */}
+        <div className="mb-8 hidden md:flex items-center gap-2 text-sm flex-wrap">
           <Link href="/catalog" className="text-brand-primary hover:text-brand-dark flex items-center gap-1 font-medium">
             <ArrowLeft className="w-4 h-4" />
             {t('catalogBreadcrumb')}
@@ -199,18 +201,20 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Product Section */}
-        <div className="grid lg:grid-cols-2 gap-10 mb-16">
+        <div className="grid lg:grid-cols-2 gap-6 md:gap-10 mb-10 md:mb-16">
 
           {/* Image */}
           <div
-            className="card p-6 flex items-center justify-center min-h-[300px]"
+            className="card p-3 md:p-6 flex items-center justify-center md:min-h-[300px]"
             style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
           >
             {product.imageUrl ? (
+              // Phones: square and contained, so the whole product shows
+              // without pushing the price below the fold.
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-full h-[400px] sm:h-[500px] object-cover rounded-xl"
+                className="w-full aspect-square md:aspect-auto md:h-[500px] object-contain md:object-cover rounded-xl"
                 loading="lazy"
               />
             ) : (
@@ -219,16 +223,16 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Info */}
-          <div className="space-y-6">
+          <div className="space-y-5 md:space-y-6">
 
             {/* Brand + title */}
             <div>
               {product.brand && (
-                <p className="text-sm font-semibold text-brand-primary uppercase tracking-wider mb-1">
+                <p className="text-xs md:text-sm font-semibold text-brand-primary uppercase tracking-wider mb-1">
                   {product.brand}
                 </p>
               )}
-              <h1 className="text-3xl font-black text-brand-charcoal mb-1">{product.name}</h1>
+              <h1 className="text-xl md:text-3xl font-black text-brand-charcoal leading-snug mb-1">{product.name}</h1>
               {product.sku && (
                 <p className="text-xs text-brand-steel">{t('sku', { sku: selectedVariant?.sku ?? product.sku })}</p>
               )}
@@ -236,7 +240,7 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="flex items-end gap-3 flex-wrap">
-              <span className="text-3xl font-black text-brand-primary">
+              <span className="text-2xl md:text-3xl font-black text-brand-primary">
                 {formatCurrency(effectivePrice)}
               </span>
               {hasMrp && (
@@ -343,8 +347,8 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Purchase Controls */}
-            <div className="border-t border-neutral-100 pt-5 space-y-4">
+            {/* Purchase Controls - desktop; phones get the pinned bar below */}
+            <div className="hidden md:block border-t border-neutral-100 pt-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-brand-graphite mb-3 uppercase tracking-wide">
                   {t('quantity')}
@@ -439,13 +443,87 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div>
-            <h2 className="text-2xl font-black text-brand-charcoal mb-6">{t('relatedProducts')}</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <h2 className="text-lg md:text-2xl font-black text-brand-charcoal mb-3 md:mb-6">{t('relatedProducts')}</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ── Pinned action bar (phones) ── */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-neutral-200 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {product.stockStatus === 'out' ? (
+          <button
+            disabled
+            className="w-full h-12 bg-neutral-100 text-neutral-400 rounded-xl font-semibold"
+          >
+            {tc('outOfStock')}
+          </button>
+        ) : (
+          <>
+            {cartQuantity > 0 && (
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="text-brand-slate">{t('inCart', { count: cartQuantity })}</span>
+                <button onClick={handleRemoveFromCart} className="text-red-600 font-semibold px-1">
+                  {t('remove')}
+                </button>
+              </div>
+            )}
+            {product.isFlashSale && quantity > saleQty && (
+              <p className="text-[11px] text-amber-700 font-medium mb-2">
+                {t('flashBreakdown', {
+                  saleQty,
+                  saleUnit: formatCurrency(effectivePrice),
+                  regularQty: quantity - saleQty,
+                  regularUnit: formatCurrency(getOriginalUnitPrice(product)),
+                })}
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center h-12 rounded-xl border border-neutral-200 bg-white">
+                <button
+                  onClick={() => { setQuantity(Math.max(moq, quantity - 1)); haptic('light'); }}
+                  disabled={quantity <= moq}
+                  aria-label={t('decreaseQuantity')}
+                  className="w-11 h-full flex items-center justify-center text-brand-charcoal disabled:opacity-30"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="min-w-[2rem] text-center font-bold text-brand-charcoal">{quantity}</span>
+                <button
+                  onClick={() => { setQuantity(quantity + 1); haptic('light'); }}
+                  aria-label={t('increaseQuantity')}
+                  className="w-11 h-full flex items-center justify-center text-brand-primary"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              {cartQuantity > 0 && quantity === cartQuantity ? (
+                <Link href="/cart" className="btn-primary flex-1 h-12 text-base">
+                  <ShoppingCart className="w-5 h-5" />
+                  {tc('viewCart')}
+                </Link>
+              ) : (
+                <button
+                  onClick={handleCartAction}
+                  disabled={isAdding}
+                  className="btn-primary flex-1 h-12 text-base disabled:opacity-75"
+                >
+                  {isAdding ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      {cartQuantity === 0 ? t('addToCart') : t('updateCart')}
+                      <span className="opacity-80">· {formatCurrency(lineTotal)}</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

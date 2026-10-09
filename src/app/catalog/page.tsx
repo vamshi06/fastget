@@ -17,6 +17,8 @@ import {
   Package, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, X, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsPhone, useLockBodyScroll } from '@/lib/use-back-to-close';
+import { useNativeBackHandler } from '@/lib/native-bridge';
 
 // ── DB category definitions ────────────────────────────────────────────────────
 
@@ -96,6 +98,11 @@ function CatalogPageContent() {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchQuery,    setSearchQuery]    = useState(initialQuery);
   const [showFilters,    setShowFilters]    = useState(false);
+  const isPhone = useIsPhone();
+  // On phones the filter panel is a bottom sheet; keep the list behind it still.
+  useLockBodyScroll(showFilters && isPhone);
+  // Android app: hardware Back closes the sheet rather than leaving the catalog.
+  useNativeBackHandler(showFilters, () => setShowFilters(false));
   const [currentPage,    setCurrentPage]    = useState(initialPage);
 
   // Price display state (updates on every slider drag) vs active filter state
@@ -236,10 +243,10 @@ function CatalogPageContent() {
     <div className="min-h-screen bg-brand-fog">
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
 
-        {/* Toolbar */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+        {/* Toolbar - one row on phones: result count left, Filters right */}
+        <div className="flex items-center justify-between gap-3 mb-4 md:mb-8">
           <div>
             {loading ? (
               <p className="text-[15px] text-brand-slate">{t('loadingProducts')}</p>
@@ -264,7 +271,7 @@ function CatalogPageContent() {
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="h-11 px-5 bg-white border border-neutral-200 rounded-xl text-[14px] font-medium text-brand-charcoal hover:border-brand-primary hover:bg-primary-50 transition-all flex items-center gap-2 shadow-sm"
+            className="pressable shrink-0 h-10 md:h-11 px-4 md:px-5 bg-white border border-neutral-200 rounded-xl text-[14px] font-medium text-brand-charcoal hover:border-brand-primary hover:bg-primary-50 flex items-center gap-2 shadow-sm"
           >
             <SlidersHorizontal className="w-4 h-4 text-brand-primary" />
             {t('filters')}
@@ -275,9 +282,19 @@ function CatalogPageContent() {
           </button>
         </div>
 
-        {/* Filter panel */}
+        {/* Filter panel - inline on larger screens, a bottom sheet on phones */}
         {showFilters && (
-          <div className="mb-10 bg-white border border-neutral-100 rounded-3xl overflow-hidden shadow-sm">
+          <div className="max-md:fixed max-md:inset-0 max-md:z-[60] max-md:flex max-md:items-end">
+          <div
+            className="md:hidden absolute inset-0 bg-black/50 animate-screen-in"
+            onClick={() => setShowFilters(false)}
+          />
+          <div className="relative w-full mb-10 bg-white border border-neutral-100 rounded-3xl overflow-hidden shadow-sm max-md:mb-0 max-md:max-h-[85vh] max-md:overflow-y-auto max-md:overscroll-contain max-md:rounded-b-none max-md:border-0 max-md:animate-sheet-up motion-reduce:animate-none">
+
+            {/* Drag-handle affordance (phones) */}
+            <div className="md:hidden flex justify-center pt-2.5 -mb-1">
+              <span className="w-10 h-1 rounded-full bg-neutral-300" />
+            </div>
 
             <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between bg-gradient-to-r from-primary-50 to-white">
               <div>
@@ -399,7 +416,7 @@ function CatalogPageContent() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-neutral-100 bg-primary-50/40 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-neutral-100 bg-primary-50/40 flex items-center justify-between max-md:sticky max-md:bottom-0 max-md:bg-white max-md:pb-[max(1rem,env(safe-area-inset-bottom))]">
               <p className="text-[13px] text-brand-slate">
                 {loading ? tc('loading') : t('productsFoundCount', { count: total })}
               </p>
@@ -407,6 +424,7 @@ function CatalogPageContent() {
                 {t('resetFilters')}
               </button>
             </div>
+          </div>
           </div>
         )}
 

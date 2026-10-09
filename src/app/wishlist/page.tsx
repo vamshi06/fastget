@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Heart, ShoppingBag, ArrowRight, Trash2, LogIn } from 'lucide-react';
 import { useWishlist } from '@/components/WishlistContext';
-import { useCart } from '@/components/CartContext';
+import { useCart, getMinOrderQty } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { ProductCard } from '@/components/ProductCard';
@@ -24,7 +24,7 @@ export default function WishlistPage() {
   const handleAddAllToCart = () => {
     wishlistItems.forEach(product => {
       if (product.stockStatus !== 'out') {
-        addItem(product, 1);
+        addItem(product, getMinOrderQty(product));
       }
     });
     showToast(t('allItemsAddedToCart'), 'success', {

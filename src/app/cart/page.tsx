@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useCart, getOriginalUnitPrice, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
+import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { CartItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { haptic } from '@/lib/native-bridge';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2, Tag, Coins } from 'lucide-react';
 
 export default function CartPage() {
@@ -35,6 +36,7 @@ export default function CartPage() {
   const { showToast } = useToast();
   const t = useTranslations('cart');
   const tc = useTranslations('common');
+  const tp = useTranslations('product');
 
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
@@ -82,7 +84,8 @@ export default function CartPage() {
   };
 
   const handleDecrement = (item: CartItem) => {
-    if (item.quantity <= 1) {
+    // At the minimum order quantity, minus removes the line (with undo).
+    if (item.quantity <= getMinOrderQty(item.product)) {
       handleRemove(item);
     } else {
       updateQuantity(item.product.id, item.quantity - 1);
@@ -123,13 +126,14 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
+    // pb-32 on phones keeps the summary clear of the pinned checkout bar.
+    <div className="min-h-screen bg-brand-fog pt-4 pb-32 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-black text-brand-charcoal mb-8">{t('pageTitle')}</h1>
+        <h1 className="text-xl md:text-2xl font-black text-brand-charcoal mb-4 md:mb-8">{t('pageTitle')}</h1>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-5 md:gap-8">
           {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4 min-w-0">
+          <div className="lg:col-span-2 space-y-3 md:space-y-4 min-w-0">
             {state.items.map((item) => (
               <div key={item.product.id} className="card p-4 flex gap-4 min-w-0 overflow-hidden">
                 {/* Product image */}
@@ -151,6 +155,11 @@ export default function CartPage() {
                     {formatCurrency(getEffectiveUnitPrice(item.product))}{' '}
                     <span className="text-brand-steel font-normal">/ {item.product.unit}</span>
                   </p>
+                  {getMinOrderQty(item.product) > 1 && (
+                    <p className="text-[11px] text-brand-slate mt-0.5">
+                      {tp('minOrder', { moq: getMinOrderQty(item.product), unit: item.product.unit })}
+                    </p>
+                  )}
                   {item.product.isFlashSale && !isFlashSaleEligible(item.product) && (
                     <p className="text-[11px] text-amber-600 font-medium mt-1">
                       {t('flashSaleUnlockHint', {
@@ -204,16 +213,16 @@ export default function CartPage() {
 
                   <div className="flex items-center gap-2 p-1 bg-primary-50 rounded-xl border border-primary-200">
                     <button
-                      onClick={() => handleDecrement(item)}
+                      onClick={() => { haptic('light'); handleDecrement(item); }}
                       disabled={removingId === item.product.id}
-                      className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center hover:border-brand-primary hover:text-brand-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-8 h-8 rounded-lg bg-white border border-neutral-200 flex items-center justify-center hover:border-brand-primary hover:text-brand-primary active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
                     <span className="w-7 text-center text-sm font-bold text-brand-charcoal">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-brand-primary hover:bg-brand-dark flex items-center justify-center transition-all"
+                      onClick={() => { haptic('light'); updateQuantity(item.product.id, item.quantity + 1); }}
+                      className="w-8 h-8 rounded-lg bg-brand-primary hover:bg-brand-dark flex items-center justify-center active:scale-95 transition-all"
                     >
                       <Plus className="w-3 h-3 text-white" />
                     </button>
@@ -328,19 +337,35 @@ export default function CartPage() {
 
               <Link
                 href="/checkout"
-                className="btn-primary w-full py-3 justify-center"
+                className="hidden md:flex btn-primary w-full py-3 justify-center"
               >
                 {t('proceedToCheckout')}
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
-              <p className="text-center text-xs text-brand-steel mt-4">
+              <p className="text-center text-xs text-brand-steel md:mt-4">
                 {t('payOnDeliveryNote')}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Pinned checkout bar (phones) ── */}
+      {state.items.length > 0 && (
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-neutral-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <Link href="/checkout" className="btn-primary w-full h-12 text-base justify-between px-4">
+          <span className="flex flex-col items-start leading-tight">
+            <span className="text-[11px] font-medium opacity-85">{t('total')}</span>
+            <span className="font-black">{formatCurrency(getTotal() - firstOrderDiscount - coinDiscount)}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            {t('proceedToCheckout')}
+            <ArrowRight className="w-4 h-4" />
+          </span>
+        </Link>
+      </div>
+      )}
     </div>
   );
 }

@@ -536,6 +536,7 @@ export interface TrustedPriceInfo {
   salePaise: number | null;
   saleActive: boolean;
   minOrderPaise: number | null;
+  moq: number; // minimum units per order (always >= 1)
 }
 
 /**
@@ -564,7 +565,7 @@ export async function getTrustedPricingInfo(
   const sql = getUnpooledClient();
   try {
     const rows = (await sql.query(
-      `SELECT product_code, name, brand, price, sale_price, sale_min_order_paise,
+      `SELECT product_code, name, brand, price, sale_price, sale_min_order_paise, moq,
               (sale_price IS NOT NULL AND NOW() BETWEEN sale_starts_at AND sale_ends_at) AS sale_active
          FROM products_catalog_view
         WHERE product_code = ANY($1::text[])`,
@@ -577,6 +578,7 @@ export async function getTrustedPricingInfo(
         salePaise: r.sale_price != null ? Number(r.sale_price) : null,
         saleActive: Boolean(r.sale_active),
         minOrderPaise: r.sale_min_order_paise != null ? Number(r.sale_min_order_paise) : null,
+        moq: Math.max(1, Number(r.moq) || 1),
       });
     }
 
@@ -594,6 +596,7 @@ export async function getTrustedPricingInfo(
           out.set(code, {
             name: englishDisplayName(r),
             originalPaise: Number(r.price), salePaise: null, saleActive: false, minOrderPaise: null,
+            moq: 1, // legacy products table has no MOQ
           });
         }
       }

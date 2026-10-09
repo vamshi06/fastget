@@ -8,6 +8,7 @@
   "loading": "Loading…",
   "viewCart": "View Cart",
   "addedToCart": "{name} added",
+  "addedToCartMin": "{qty} × {name} added (minimum order)",
   "outOfStock": "Out of Stock",
   "check": "Check",
   "selectArea": "Select area",
