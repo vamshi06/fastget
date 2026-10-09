@@ -137,6 +137,39 @@ function orderStatusMessage(order: Order, status: OrderStatus, locale: string): 
 }
 
 /**
+ * New-order push to every admin/agent device (same recipients as the
+ * Telegram + email alerts in order-notifications.ts). Staff copy is English,
+ * like those alerts. Tapping opens the order in the admin panel.
+ * Never throws.
+ */
+export async function notifyStaffOfNewOrderPush(order: Order, stockWarningCount: number): Promise<void> {
+  if (!databaseUrl) return;
+  try {
+    const sql = getClient();
+    const rows = await sql`
+      SELECT pt.token FROM push_tokens pt
+      JOIN users u ON u.id = pt.user_id
+      WHERE u.role IN ('admin', 'agent')
+    `;
+    if (rows.length === 0) return;
+
+    const title = stockWarningCount > 0 ? `🛒 New order - ⚠ check stock` : `🛒 New order placed`;
+    const body =
+      `${formatCurrency(order.total)} · ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} · ` +
+      `${order.paymentMethod.toUpperCase()} · ${order.customerName}`;
+    await sendToExpo(
+      rows.map((row) => ({ to: row.token as string, title, body, data: { url: `/admin/orders/${order.id}` } })),
+    );
+    logger.info('Push', 'Staff pushed new order', { orderId: order.id, devices: rows.length });
+  } catch (error) {
+    logger.error('Push', 'notifyStaffOfNewOrderPush failed', {
+      orderId: order.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
  * Tell the order's customer their order moved to `status`, on every device
  * they've signed into the app on. Guest orders (no userId) get nothing.
  * Never throws - call after the status update has already succeeded.

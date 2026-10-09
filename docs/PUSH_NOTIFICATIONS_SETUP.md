@@ -13,6 +13,12 @@ when their order status changes:
 Tapping a notification opens that order's page in the app. Text is in English or
 Hindi, following the language the customer had selected in the app.
 
+**Staff:** every phone where an admin or agent is signed in to the app (and allowed
+notifications) also gets a **"🛒 New order placed"** push when any order comes in
+(₹total · Urgent/Scheduled · COD/RAZORPAY · customer name; the title says "⚠ check stock"
+when stock is short). Tapping opens the order in the admin panel. This is sent alongside
+the existing Telegram + email alerts (`src/lib/order-notifications.ts`), not instead of them.
+
 ## How it works
 
 ```

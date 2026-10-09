@@ -3,7 +3,7 @@
  *
  * Fired from both order-creation paths (COD in /api/orders, Razorpay in
  * /api/payment/verify-payment) once the order is durably saved. Notifies
- * every admin/agent user on two channels:
+ * every admin/agent user on two channels (plus an app push, src/lib/push.ts):
  *   - Telegram (primary): instant, arrives like any phone notification,
  *     independent of whether the FastGet app is open. Requires the staff
  *     member to have linked their chat ID via My Profile.
@@ -17,6 +17,7 @@
 import { Order } from '@/types';
 import { getStaffForOrderNotifications } from './users';
 import { sendTelegramMessage } from './telegram';
+import { notifyStaffOfNewOrderPush } from './push';
 import { sendEmail, getAppUrl } from './email';
 import { orderPlacedStaffEmailTemplate } from './email-templates';
 import { logger } from './logger';
@@ -67,20 +68,24 @@ export async function notifyStaffOfNewOrder(order: Order): Promise<void> {
     const tgText = telegramText(order, appUrl, stockWarnings);
     const emailTpl = orderPlacedStaffEmailTemplate(order, appUrl, stockWarnings);
 
-    const results = await Promise.allSettled(
-      staff.flatMap((user) => {
-        const sends: Promise<boolean>[] = [];
-        if (user.telegramChatId) {
-          sends.push(sendTelegramMessage({ chatId: user.telegramChatId, text: tgText }));
-        }
-        if (user.email) {
-          sends.push(
-            sendEmail({ to: user.email, subject: emailTpl.subject, html: emailTpl.html, text: emailTpl.text }),
-          );
-        }
-        return sends;
-      }),
-    );
+    const [results] = await Promise.all([
+      Promise.allSettled(
+        staff.flatMap((user) => {
+          const sends: Promise<boolean>[] = [];
+          if (user.telegramChatId) {
+            sends.push(sendTelegramMessage({ chatId: user.telegramChatId, text: tgText }));
+          }
+          if (user.email) {
+            sends.push(
+              sendEmail({ to: user.email, subject: emailTpl.subject, html: emailTpl.html, text: emailTpl.text }),
+            );
+          }
+          return sends;
+        }),
+      ),
+      // App push to every staff phone signed in to the app (never throws).
+      notifyStaffOfNewOrderPush(order, stockWarnings.size),
+    ]);
 
     const failed = results.filter((r) => r.status === 'rejected' || r.value === false).length;
     logger.info('OrderNotify', 'Staff notified of new order', {
