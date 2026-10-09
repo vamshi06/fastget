@@ -9,7 +9,7 @@ export default async function TermsPage() {
   const emailTag = {
     email: (chunks: React.ReactNode) => (
       <a
-        href="mailto:sukhmeet.bedi@elemantra.in"
+        href="mailto:support@elemantra.in"
         className="text-brand-primary font-medium"
       >
         {chunks}

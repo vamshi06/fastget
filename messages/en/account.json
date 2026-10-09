@@ -18,7 +18,13 @@
     "shippingPolicy": "Shipping Policy",
     "refundPolicy": "Refund Policy",
     "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service"
+    "termsOfService": "Terms of Service",
+    "language": "Language",
+    "editProfile": "Edit profile",
+    "orders": "Orders",
+    "coins": "Coins",
+    "wishlist": "Wishlist",
+    "settings": "Settings & help"
   },
   "deleteAccount": {
     "label": "Delete Account",

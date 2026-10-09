@@ -560,7 +560,7 @@ CREATE TABLE orders (
 ## 🚀 RECOMMENDED NEXT STEPS
 
 ### Immediate (Before Production)
-1. ✅ Deploy to Vercel (`vercel --prod`)
+1. ✅ Deploy to Railway (push to the deploy branch)
 2. ✅ Place 2-3 test orders in production
 3. ✅ Verify orders appear in Neon console
 4. ✅ Verify customer can track orders

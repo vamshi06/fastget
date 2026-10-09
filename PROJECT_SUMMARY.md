@@ -246,7 +246,7 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 
 ### 4.2 Backend (API Layer)
 
-All backend logic runs as **Next.js API Route Handlers** (serverless functions when deployed to Vercel).
+All backend logic runs as **Next.js API Route Handlers** (served by the Next.js server, `next start`, on Railway).
 
 | Route Group | Purpose |
 |-------------|---------|
@@ -356,10 +356,10 @@ wishlists
 
 | Aspect | Detail |
 |--------|--------|
-| **Hosting** | Vercel (auto-scaling serverless) |
+| **Hosting** | Railway (Nixpacks build, `next start` - see `railway.toml`) |
 | **Database** | Neon Postgres (serverless, AWS ap-southeast-1) |
-| **Environment** | `.env.local` (dev), Vercel Environment Variables (prod) |
-| **Build** | `next build` → Vercel auto-deploys on push |
+| **Environment** | `.env.local` (dev), Railway service Variables (prod) |
+| **Build** | `next build` → Railway deploys on push |
 | **TypeCheck** | `npm run typecheck` |
 | **Lint** | `npm run lint` (ESLint) |
 
@@ -484,12 +484,12 @@ The orange `#F5A623` theme runs throughout: primary buttons, icons, the logo, an
 - **Requirement:** `GOOGLE_SHEETS_API_KEY` environment variable
 - **Status:** Not a runtime dependency. Used by admin staff to populate the product catalog in bulk.
 
-### 6.4 Vercel (Deployment)
+### 6.4 Railway (Deployment)
 
-- **CLI:** `vercel` npm package installed for deployment commands
-- **Auto-deploy:** Likely configured on `git push` to main branch
-- **Serverless:** All API routes become individual serverless functions
-- **Environment:** Vercel Dashboard manages production environment variables
+- **Config:** `railway.toml` - Nixpacks build, `next start -p $PORT`
+- **Auto-deploy:** on `git push` to the connected branch
+- **Server:** one long-running Next.js server (API routes run inside it)
+- **Environment:** Railway dashboard → service → Variables manages production environment variables
 
 ---
 
@@ -559,7 +559,7 @@ Based on git commit history and code inspection:
 | **Single AGENT_PIN** | One global PIN for all agents - if leaked, any order can be updated by anyone | Implement per-agent credentials or rotate PIN regularly |
 | **No Inventory Sync** | Inventory table tracks stock but no automated decrement on order placement | Add inventory reservation on order create and rollback on cancel |
 | **Hardcoded 10% Convenience Fee** | Fee is hardcoded in `CartContext` - changing it requires a code deploy | Move to environment variable or DB config |
-| **No Rate Limiting on APIs** | Auth and order APIs have no rate limiting - vulnerable to brute-force and spam | Add rate limiting via Vercel Edge Config or middleware |
+| **No Rate Limiting on APIs** | Auth and order APIs have no rate limiting - vulnerable to brute-force and spam | Add rate limiting via middleware or a database-backed limiter |
 | **Product Catalog Dual-Source Complexity** | Category-specific tables + normalized products table - two sources of truth can diverge | Document which source is authoritative per category; add admin tools to sync them |
 | **No Order Cancellation by Customer** | Customers cannot cancel their own orders | Add a cancellation window (e.g., 5 minutes post-order) with automatic status check |
 
@@ -572,7 +572,7 @@ Based on git commit history and code inspection:
 | **No Analytics** | No Google Analytics, Mixpanel, or similar - no funnel visibility | Add analytics before launch to understand user behavior |
 | **No Multi-currency / Multi-language** | INR only, English only | Acceptable for MVP; document for future |
 | **localStorage Cart Limit** | Very large carts could theoretically approach localStorage limits | Not a near-term concern for construction materials (low item count per order) |
-| **Image Hosting** | Product image URLs are stored as strings - no image CDN or fallback | Host images on Vercel or Cloudinary; add fallback image on broken URLs |
+| **Image Hosting** | Product image URLs are stored as strings - no image CDN or fallback | Host images on a CDN such as Cloudinary; add fallback image on broken URLs |
 
 ---
 
@@ -582,7 +582,7 @@ Based on git commit history and code inspection:
 
 | Task | Description | Owner |
 |------|-------------|-------|
-| **Switch to Razorpay Live Keys** | Replace test credentials with production merchant keys in Vercel env vars | Ops/Business |
+| **Switch to Razorpay Live Keys** | Replace test credentials with production merchant keys in Railway variables | Ops/Business |
 | **Admin Authentication Hardening** | Verify `/admin/*` routes are protected server-side; add login page for admin | Dev |
 | **Order Tracking Real-Time Updates** | Add polling or SSE on `/order/[token]` so customers see status changes without refresh | Dev |
 | **AGENT_PIN Rotation Policy** | Document and implement a process for PIN rotation and per-agent accountability | Ops |
@@ -700,7 +700,7 @@ To add a new column to an existing table, write a migration function in [src/lib
 
 #### 12. Environment Variable Naming
 
-Neon Postgres connection strings can be named `DATABASE_URL` or `fastget_DATABASE_URL`. The latter is how Vercel prefixes environment variables when using Vercel Postgres / Neon integration. The DB client handles both. Always use `DATABASE_URL` in `.env.local`.
+Neon Postgres connection strings can be named `DATABASE_URL` or `fastget_DATABASE_URL`. The latter is the project-prefixed name the Neon integration originally created. The DB client handles both. Always use `DATABASE_URL` in `.env.local`.
 
 #### 13. Product Brand Stripping
 

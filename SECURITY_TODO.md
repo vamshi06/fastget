@@ -14,8 +14,8 @@ Counts at audit time: **6 Critical · 6 High · 7 Medium · 4 Low**
 - [x] **C1 · Remove env files from the working tree** - untracked both `.before-neon-test-db` files (local copies kept on disk). Commit `b541948`.
 - [x] **C1 · Fix [.gitignore](.gitignore)** - now `.env*` with `!.env.example` allowlist. Commit `b541948`.
 - [x] **C1 · Scrub the hardcoded Apps Script URL** in [test_apps_script.sh](test_apps_script.sh) - now reads `$GOOGLE_SCRIPT_URL`. Commit `b541948`.
-- [x] **C1 · Rotate every committed secret** - user confirmed rotation done (Neon DB password, Apps Script secret/salt, Vercel token check, Razorpay keys). Leaked git-history values are now dead.
-  - [ ] *Follow-up:* update new values in [.env.local](.env.local) + Vercel env, then redeploy & verify `npm run dev` connects (do this yourself; don't paste new secrets here)
+- [x] **C1 · Rotate every committed secret** - user confirmed rotation done (Neon DB password, Apps Script secret/salt, hosting token check, Razorpay keys). Leaked git-history values are now dead.
+  - [ ] *Follow-up:* update new values in [.env.local](.env.local) + Railway variables, then redeploy & verify `npm run dev` connects (do this yourself; don't paste new secrets here)
 - [ ] **C1 · Scrub the secrets from git history.** ⏳ *Needs your go-ahead - rewrites shared history on `origin/intern` and requires a coordinated force-push (every collaborator must re-clone/reset).* `git filter-repo` is the tool; do this only after rotation so leaked values are already dead.
   ```bash
   git filter-repo --path .env.local.before-neon-test-db \
@@ -86,7 +86,7 @@ Counts at audit time: **6 Critical · 6 High · 7 Medium · 4 Low**
   - Runtime-verified: 6 login attempts → 401, 7th → 429 with `Retry-After`.
 - [x] **H4 · Lock down `/api/init-db`** - already admin-gated in C2; now also stops returning `error.message`. Commit `a9f8230`. Runtime-verified: no/customer session → 401.
 - [~] **H5 · Dependency hygiene** - safe subset done (commit `57ea43a`).
-  - [x] Move `vercel` CLI to `devDependencies` - **production-only audit 36 → 3 vulns** (was the source of most high vulns).
+  - [x] Remove the unused deployment CLI from production dependencies - **production-only audit 36 → 3 vulns** (was the source of most high vulns).
   - [x] Next.js already on latest 14.2.x (14.2.35) - no in-range patch; 15.x major jump out of scope.
   - [ ] *Remaining (declined breaking-change pass):* `npm audit fix` for `form-data` (plain, low-risk); `next`/bundled `postcss` need the Next 15 major upgrade.
   - [ ] Add `npm audit --omit=dev` to CI
@@ -129,6 +129,6 @@ Counts at audit time: **6 Critical · 6 High · 7 Medium · 4 Low**
 
 ## Cross-cutting refactors (reduce future risk)
 - [ ] One `requireSession()` / `requireRole()` used everywhere (server-derived identity)
-- [ ] One rate limiter (e.g. `@upstash/ratelimit` + Vercel KV)
+- [ ] One rate limiter (e.g. `@upstash/ratelimit` + Redis)
 - [ ] One error responder that never leaks internals in prod
 - [ ] One headers config at the edge

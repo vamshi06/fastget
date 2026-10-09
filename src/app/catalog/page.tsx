@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsPhone, useLockBodyScroll } from '@/lib/use-back-to-close';
-import { useNativeBackHandler } from '@/lib/native-bridge';
+import { useNativeBackHandler, useNativeTitle } from '@/lib/native-bridge';
+import { getSubcategoryTiles } from '@/lib/category-tiles';
+import { ProductCardSkeleton } from '@/components/Skeletons';
 
 // ── DB category definitions ────────────────────────────────────────────────────
 
@@ -56,21 +58,8 @@ function paginationRange(current: number, total: number): (number | '...')[] {
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 
-function SkeletonCard() {
-  return (
-    <div className="product-card h-[340px] flex flex-col overflow-hidden animate-pulse">
-      <div className="h-40 bg-neutral-200 flex-shrink-0" />
-      <div className="p-4 flex flex-col gap-2 flex-grow">
-        <div className="h-3 w-16 bg-neutral-200 rounded" />
-        <div className="h-4 w-3/4 bg-neutral-200 rounded" />
-        <div className="h-3 w-full bg-neutral-100 rounded" />
-        <div className="h-3 w-2/3 bg-neutral-100 rounded" />
-        <div className="mt-auto h-5 w-1/3 bg-neutral-200 rounded" />
-        <div className="h-9 bg-neutral-200 rounded-xl" />
-      </div>
-    </div>
-  );
-}
+// Same shape as the compact ProductCard the grid renders.
+const SkeletonCard = ProductCardSkeleton;
 
 // ── Main catalog content ──────────────────────────────────────────────────────
 
@@ -104,6 +93,10 @@ function CatalogPageContent() {
   // Android app: hardware Back closes the sheet rather than leaving the catalog.
   useNativeBackHandler(showFilters, () => setShowFilters(false));
   const [currentPage,    setCurrentPage]    = useState(initialPage);
+  // Phones scroll endlessly instead of paging: further pages are appended as
+  // the user nears the end. loadedPage = last page appended so far.
+  const [loadedPage,     setLoadedPage]     = useState(initialPage);
+  const [loadingMore,    setLoadingMore]    = useState(false);
 
   // Price display state (updates on every slider drag) vs active filter state
   // (updates on mouseup - triggers API refetch)
@@ -113,12 +106,28 @@ function CatalogPageContent() {
   const [activeMax, setActiveMax] = useState(initialMaxPrice);
 
   const abortRef = useRef<AbortController | null>(null);
+  const moreAbortRef = useRef<AbortController | null>(null);
+
+  const apiParams = useCallback((cat: string, q: string, page: number, minP: number, maxP: number) => {
+    const params = new URLSearchParams({
+      limit:  String(PAGE_SIZE),
+      offset: String((page - 1) * PAGE_SIZE),
+      lang:   locale,
+    });
+    if (cat)              params.set('category',  cat);
+    if (q)                params.set('q',         q);
+    if (minP > 0)         params.set('min_price', String(minP));
+    if (maxP < MAX_PRICE) params.set('max_price', String(maxP));
+    return params;
+  }, [locale]);
 
   // ── Fetch from API ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async (
     cat: string, q: string, page: number, minP: number, maxP: number,
   ) => {
     if (abortRef.current) abortRef.current.abort();
+    moreAbortRef.current?.abort(); // a filter change supersedes any "load more"
+    setLoadingMore(false);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
@@ -126,16 +135,7 @@ function CatalogPageContent() {
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        limit:  String(PAGE_SIZE),
-        offset: String((page - 1) * PAGE_SIZE),
-        lang:   locale,
-      });
-      if (cat)              params.set('category',  cat);
-      if (q)                params.set('q',         q);
-      if (minP > 0)         params.set('min_price', String(minP));
-      if (maxP < MAX_PRICE) params.set('max_price', String(maxP));
-
+      const params = apiParams(cat, q, page, minP, maxP);
       const res  = await fetch(`/api/products?${params}`, { signal: ctrl.signal });
       const json = await res.json();
 
@@ -144,13 +144,48 @@ function CatalogPageContent() {
       setProducts(json.data.products as Product[]);
       setTotal(json.data.total);
       setTotalPages(Math.max(1, Math.ceil(json.data.total / PAGE_SIZE)));
+      setLoadedPage(page);
       setLoading(false);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       setError(t('errorLoadingProducts'));
       setLoading(false);
     }
-  }, [t, locale]);
+  }, [t, apiParams]);
+
+  // Phones: append the next page (endless scroll). Desktop keeps pagination.
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || loadedPage >= totalPages) return;
+    const ctrl = new AbortController();
+    moreAbortRef.current = ctrl;
+    setLoadingMore(true);
+    try {
+      const next = loadedPage + 1;
+      const res = await fetch(`/api/products?${apiParams(activeCategory, searchQuery, next, activeMin, activeMax)}`, { signal: ctrl.signal });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Unknown error');
+      setProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...(json.data.products as Product[]).filter((p) => !seen.has(p.id))];
+      });
+      setLoadedPage(next);
+      setLoadingMore(false);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') setLoadingMore(false);
+    }
+  }, [loading, loadingMore, loadedPage, totalPages, apiParams, activeCategory, searchQuery, activeMin, activeMax]);
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!isPhone || !el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) loadMore(); },
+      { rootMargin: '600px 0px' }, // start well before the end, so it feels endless
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isPhone, loadMore]);
 
   // Refetch whenever filter state (or the language) changes
   useEffect(() => {
@@ -200,6 +235,15 @@ function CatalogPageContent() {
     router.replace(buildUrl(slug, '', 1, activeMin, activeMax), { scroll: false });
   };
 
+  // Sub-category chip: same category, narrowed by the chip's keyword ('' = all).
+  const handleSubFilter = (keyword: string) => {
+    if (keyword === searchQuery) return;
+    setSearchQuery(keyword);
+    setCurrentPage(1);
+    window.scrollTo({ top: 0 });
+    router.replace(buildUrl(activeCategory, keyword, 1, activeMin, activeMax), { scroll: false });
+  };
+
   const goToPage = (page: number) => {
     if (page < 1 || page > totalPages || page === currentPage) return;
     setCurrentPage(page);
@@ -238,6 +282,17 @@ function CatalogPageContent() {
   const rangeStart       = total > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd         = Math.min(currentPage * PAGE_SIZE, total);
 
+  // Sub-category chips for the active category (from the Categories page tiles).
+  const subTiles        = activeCategory ? getSubcategoryTiles(activeCategory) : [];
+  const activeSubTile   = subTiles.find((tile) => tile.keyword === searchQuery);
+
+  // App top bar: the sub-category, search or category being browsed.
+  useNativeTitle(
+    activeSubTile ? t(`categoryTiles.${activeSubTile.tileKey}`)
+      : searchQuery ? `“${searchQuery}”`
+      : activeCategoryName,
+  );
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-brand-fog">
@@ -246,26 +301,25 @@ function CatalogPageContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
 
         {/* Toolbar - one row on phones: result count left, Filters right */}
-        <div className="flex items-center justify-between gap-3 mb-4 md:mb-8">
-          <div>
+        <div className="flex items-center justify-between gap-3 mb-3 md:mb-6">
+          <div className="min-w-0 text-[13px] md:text-[15px] text-brand-slate">
             {loading ? (
-              <p className="text-[15px] text-brand-slate">{t('loadingProducts')}</p>
+              <p>{t('loadingProducts')}</p>
             ) : error ? (
-              <p className="text-[15px] text-red-600">{error}</p>
-            ) : searchQuery ? (
-              <p className="text-[15px] text-brand-slate">
-                {t('resultsFor', { count: total, query: searchQuery })}
-              </p>
+              <p className="text-red-600">{error}</p>
+            ) : searchQuery && !activeSubTile ? (
+              <p>{t('resultsFor', { count: total, query: searchQuery })}</p>
             ) : activeCategoryName ? (
-              <p className="text-[15px] text-brand-slate">
-                {total > 0
-                  ? t('showingRange', { start: rangeStart, end: rangeEnd, total, category: activeCategoryName })
-                  : t('noProductsInCategory', { category: activeCategoryName })}
+              <p>
+                {total === 0
+                  ? t('noProductsInCategory', { category: activeCategoryName })
+                  // Page ranges mean nothing with endless scroll on phones.
+                  : isPhone
+                    ? t('productsFoundCount', { count: total })
+                    : t('showingRange', { start: rangeStart, end: rangeEnd, total, category: activeCategoryName })}
               </p>
             ) : (
-              <p className="text-[15px] text-brand-slate">
-                {total > 0 ? t('productsAvailable', { count: total }) : t('noProductsFound')}
-              </p>
+              <p>{total > 0 ? t('productsAvailable', { count: total }) : t('noProductsFound')}</p>
             )}
           </div>
 
@@ -281,6 +335,48 @@ function CatalogPageContent() {
             <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
         </div>
+
+        {/* Quick chips: sub-categories inside a category, or the categories
+            themselves when browsing everything. Scrolls sideways on phones. */}
+        {(subTiles.length > 0 || (!activeCategory && !searchQuery)) && (
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 mb-4 md:mx-0 md:px-0 md:flex-wrap md:mb-6">
+            {(subTiles.length > 0
+              ? [
+                  { key: 'all', label: t('chipAll'), active: !searchQuery, onClick: () => handleSubFilter('') },
+                  ...subTiles.map((tile) => ({
+                    key: tile.keyword,
+                    label: t(`categoryTiles.${tile.tileKey}`),
+                    active: searchQuery === tile.keyword,
+                    onClick: () => handleSubFilter(tile.keyword),
+                  })),
+                ]
+              : [
+                  { key: 'all', label: t('allProducts'), active: true, onClick: () => {} },
+                  ...DB_CATEGORIES.map((cat) => ({
+                    key: cat.slug,
+                    label: tCategories(`${cat.slug}.full`),
+                    active: false,
+                    onClick: () => handleCategoryChange(cat.slug),
+                  })),
+                ]
+            ).map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onClick}
+                aria-pressed={chip.active}
+                className={cn(
+                  'pressable shrink-0 h-9 px-4 rounded-full text-[13px] font-semibold border transition-colors',
+                  chip.active
+                    ? 'bg-brand-charcoal text-white border-brand-charcoal'
+                    : 'bg-white text-brand-graphite border-neutral-200 hover:border-brand-primary',
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Filter panel - inline on larger screens, a bottom sheet on phones */}
         {showFilters && (
@@ -444,7 +540,7 @@ function CatalogPageContent() {
         {/* Loading skeletons */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: isPhone ? 6 : PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
@@ -454,6 +550,14 @@ function CatalogPageContent() {
             {products.map((product) => (
               <ProductCard key={product.id} product={product} compact />
             ))}
+          </div>
+        )}
+
+        {/* Phones: endless scroll - this marker loads the next page as it nears view */}
+        {isPhone && !loading && !error && loadedPage < totalPages && (
+          <div ref={sentinelRef} className="py-6 flex items-center justify-center gap-2 text-sm text-brand-slate">
+            {loadingMore && <Loader2 className="w-4 h-4 animate-spin text-brand-primary" />}
+            {loadingMore ? t('loadingMore') : null}
           </div>
         )}
 
@@ -469,9 +573,9 @@ function CatalogPageContent() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination - larger screens only; phones scroll endlessly */}
         {!loading && !error && totalPages > 1 && (
-          <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="mt-10 max-md:hidden flex flex-col items-center gap-3">
 
             <div className="flex items-center justify-center w-full gap-2">
 

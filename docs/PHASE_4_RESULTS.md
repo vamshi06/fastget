@@ -140,7 +140,7 @@ None - all tests pass cleanly.
 
 **Phase 5: Cleanup & Cutover**
 1. Remove deprecated Google Apps Script code
-2. Clean up environment variables in Vercel
+2. Clean up environment variables in Railway
 3. Verify no fallback to Apps Script
 4. Create ops documentation for Neon queries
 5. Final verification in production

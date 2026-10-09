@@ -1,5 +1,8 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { HeroSection } from '@/components/home/HeroSection';
+import { TrustStrip } from '@/components/home/TrustStrip';
+import { BannerCarousel } from '@/components/home/BannerCarousel';
+import { getLiveBanners } from '@/lib/banners';
 import { CategoryStrip } from '@/components/home/CategoryStrip';
 import { ProductSection } from '@/components/home/ProductSection';
 import { FlashSaleCarousel } from '@/components/home/FlashSaleCarousel';
@@ -8,14 +11,19 @@ import { isLocale } from '@/i18n/config';
 
 export default async function Home() {
   const locale = await getLocale();
-  const flashSales = await getActiveFlashSales(isLocale(locale) ? locale : undefined);
+  const [flashSales, banners] = await Promise.all([
+    getActiveFlashSales(isLocale(locale) ? locale : undefined),
+    getLiveBanners(),
+  ]);
   const t = await getTranslations('home');
 
   return (
     <div className="min-h-screen bg-brand-fog">
 
-      {/* 1. Hero banner */}
-      <HeroSection />
+      <TrustStrip />
+
+      {/* 1. Hero: admin-managed image banners, or the built-in text hero */}
+      {banners.length > 0 ? <BannerCarousel banners={banners} /> : <HeroSection />}
 
       {/* 4. Product-heavy feed */}
       <div className="page-container py-5 md:py-8 space-y-7 md:space-y-12">

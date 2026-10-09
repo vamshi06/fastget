@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes, randomInt } from 'crypto';
 import { User, UserAddress, AddressType, UserRole } from '@/types';
 import { logger } from '@/lib/logger';
+import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 
 /**
  * User management CRUD operations
@@ -283,6 +284,51 @@ export async function getUserByPhone(phone: string): Promise<User | null> {
     logger.error('Users', 'Failed to get user by phone', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
+}
+
+// ── Phone login (migration 025, off until NEXT_PUBLIC_PHONE_LOGIN_ENABLED) ──
+
+/**
+ * Every account on a number (last 10 digits). Phone login refuses to pick one
+ * when there are several - only possible before migration 025's unique index.
+ */
+export async function getUsersByPhone(phone10: string): Promise<User[]> {
+  const sql = getUnpooledClient();
+  const rows = await sql`
+    SELECT * FROM users
+    WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = ${phone10}
+    LIMIT 5
+  `;
+  return rows.map((r) => dbUserToUser(r as DbUser));
+}
+
+/**
+ * New customer from phone signup: the number is already verified by OTP; no
+ * password yet. Email is required but stored unverified - setting a password
+ * later through "Forgot password" verifies it (their email-login fallback).
+ */
+export async function createPhoneUser(phone10: string, name: string, email: string): Promise<User | null> {
+  const sql = getClient();
+  try {
+    const rows = await sql`
+      INSERT INTO users (name, email, phone, role, password_hash, email_verified, phone_verified, phone_verified_at)
+      VALUES (${name}, ${email}, ${phone10}, 'customer', NULL, false, true, NOW())
+      RETURNING *
+    `;
+    return rows[0] ? dbUserToUser(rows[0] as DbUser) : null;
+  } catch (error) {
+    logger.error('Users', 'Failed to create phone user', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+/** Record that an existing account's number was just proven by OTP. */
+export async function markPhoneVerified(userId: string): Promise<void> {
+  const sql = getClient();
+  await sql`
+    UPDATE users SET phone_verified = true, phone_verified_at = COALESCE(phone_verified_at, NOW()), updated_at = NOW()
+    WHERE id = ${userId}
+  `;
 }
 
 /**
@@ -946,11 +992,17 @@ export async function resetUserPasswordByToken(
   const sql = getClient();
   try {
     const passwordHash = await hashPassword(newPassword);
+    // With phone login on, the emailed reset code also proves the email is
+    // theirs - phone-signup customers' emails start unverified, and email
+    // login would otherwise block them right after setting a password.
+    const verifyEmail = PHONE_LOGIN_ENABLED;
     const result = await sql`
       UPDATE users
       SET password_hash = ${passwordHash},
           reset_password_token = NULL,
           reset_password_token_expiry = NULL,
+          email_verified = CASE WHEN ${verifyEmail} THEN true ELSE email_verified END,
+          email_verified_at = CASE WHEN ${verifyEmail} AND email_verified_at IS NULL THEN NOW() ELSE email_verified_at END,
           updated_at = NOW()
       WHERE reset_password_token = ${token}
         AND reset_password_token_expiry > NOW()

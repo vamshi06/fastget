@@ -87,6 +87,38 @@
     display: none !important;
   }
 
+  /* ── Auth screens on phones (see AuthHero.tsx): a plain white page under
+     a simple header, not a card overlapping a photo. top-aligned so the
+     form doesn't float mid-screen (the old Signup gap). ── */
+  @media (max-width: 767px) {
+    .auth-panel {
+      margin-top: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #FFFFFF !important;
+      justify-content: flex-start !important;
+      padding-top: 1.25rem !important;
+    }
+  }
+
+  /* ── Native shell (app draws its own tab bar + top bar; see
+     src/lib/shell-routes.ts). !important beats the inline var that
+     MobileBottomNav sets on <html>. ── */
+  /* --shell-overlay: room the app asks for under the page while its floating
+     cart pill is showing (set by WebViewScreen), so it never covers the last
+     row of content. */
+  html.native-shell {
+    --bottom-nav-space: var(--shell-overlay, 0px) !important;
+  }
+  html.native-shell .web-bottom-nav,
+  html.native-shell .native-title-dup {
+    display: none !important;
+  }
+  /* Sub-pages get the native top bar (back + title) instead of the header. */
+  html.native-shell[data-route-kind="sub"] .site-header {
+    display: none !important;
+  }
+
   body {
     @apply bg-brand-fog text-brand-charcoal font-sans antialiased;
     max-width: 100%;

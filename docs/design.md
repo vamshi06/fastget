@@ -161,7 +161,7 @@ Fastget should be distributed as a public web service first, with mobile-friendl
 
 ### Build and deployment:
 
-- Static/web app frontend deployed to a simple host such as Vercel, Netlify, or equivalent
+- Static/web app frontend deployed to a simple host such as Railway
 - Checkout submits to Google Forms or Google Sheets for MVP ops
 - Delivery-agent status can begin as an authenticated lightweight internal page or protected form that updates the order record
 - Later migration path: replace Google Forms with a proper order database, admin dashboard, inventory/serviceability engine, and driver app

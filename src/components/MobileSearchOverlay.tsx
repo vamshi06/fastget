@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { ArrowLeft, Clock, Search, X, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useBackToClose, useLockBodyScroll } from '@/lib/use-back-to-close';
+import { useNativeBackHandler } from '@/lib/native-bridge';
 import { Product } from '@/types';
 
 const MIN_CHARS = 2;
@@ -63,6 +64,9 @@ export function MobileSearchOverlay({ open, onClose }: { open: boolean; onClose:
 
   const { close, release } = useBackToClose(open, onClose);
   useLockBodyScroll(open);
+  // In the app, Back on a top-level tab exits/returns home natively rather
+  // than walking WebView history, so claim Back explicitly while open.
+  useNativeBackHandler(open, close);
 
   useEffect(() => {
     if (!open) return;

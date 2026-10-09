@@ -53,4 +53,4 @@ All orders are stored in Neon Postgres. The database layer lives in `src/lib/db.
 - **Database:** PostgreSQL 17.8 on AWS ap-southeast-1
 - **Schema:** `orders` table with 17 columns
 - **Connection:** @neondatabase/serverless SDK
-- **Environment:** `fastget_DATABASE_URL` in .env.local and Vercel
+- **Environment:** `fastget_DATABASE_URL` in .env.local and Railway (service Variables)

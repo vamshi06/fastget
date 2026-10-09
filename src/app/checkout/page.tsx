@@ -6,11 +6,12 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { haptic } from '@/lib/native-bridge';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift } from 'lucide-react';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
@@ -206,70 +207,18 @@ function CheckoutPageContent() {
 
   if (isLoaded && !currentUser) {
     const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
+    // Same light sign-in card as Account / Orders (no full-screen photo).
     return (
-      <div className="relative flex-1 flex flex-col overflow-hidden">
-        {/* Background photo */}
-        <Image
-          src="/construction-background.jpg"
-          alt=""
-          fill
-          priority
-          className="object-cover"
+      <div className="min-h-screen bg-brand-fog">
+        <SignInPrompt
+          Icon={ShoppingBag}
+          title={t('guestTitle')}
+          subtitle={t('guestSubtitle')}
+          redirect="/checkout"
+          badge={itemCount > 0 ? (<><Package className="w-3.5 h-3.5" />{t('itemsInCartBadge', { count: itemCount })}</>) : undefined}
+          benefits={[t('benefitUrgentDelivery'), t('benefitTrackOrder'), t('benefitSecureAccount')]}
+          footnote={t('cartSavedNote')}
         />
-        {/* Dark gradient overlay for text contrast */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col flex-1 justify-between px-6 pt-10 pb-6">
-          <div className="text-center">
-            {itemCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 mb-4">
-                <Package className="w-3.5 h-3.5" />
-                {t('itemsInCartBadge', { count: itemCount })}
-              </span>
-            )}
-            <h1 className="text-3xl font-black text-white tracking-tight">{t('guestTitle')}</h1>
-            <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-              {t('guestSubtitle')}
-            </p>
-          </div>
-
-          {/* Benefits */}
-          <div className="space-y-1">
-            {[
-              { icon: Zap, text: t('benefitUrgentDelivery') },
-              { icon: ClipboardList, text: t('benefitTrackOrder') },
-              { icon: ShieldCheck, text: t('benefitSecureAccount') },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
-                <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4.5 h-4.5 text-white" />
-                </div>
-                <span className="text-sm font-medium text-white">{text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* CTAs */}
-          <div className="space-y-3">
-            <Link
-              href="/login?redirect=/checkout"
-              className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
-            >
-              {t('logInCta')}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/signup?redirect=/checkout"
-              className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
-            >
-              {t('signUpCta')}
-            </Link>
-            <p className="text-center text-xs text-white/70 pt-1">
-              {t('cartSavedNote')}
-            </p>
-          </div>
-        </div>
       </div>
     );
   }
@@ -468,13 +417,14 @@ function CheckoutPageContent() {
   return (
     <div className="min-h-screen bg-brand-fog pt-4 pb-8 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 mb-4 md:mb-8">
+        {/* native-title-dup: the app's top bar already has back + title */}
+        <div className="native-title-dup flex items-center gap-2 mb-4 md:mb-8">
           <Link href="/cart" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">{t('breadcrumbCart')}</Link>
           <ChevronRight className="w-4 h-4 text-brand-steel" />
           <span className="text-brand-charcoal font-medium text-sm">{t('pageTitle')}</span>
         </div>
 
-        <h1 className="text-2xl font-black text-brand-charcoal mb-8">{t('pageTitle')}</h1>
+        <h1 className="native-title-dup text-xl md:text-2xl font-black text-brand-charcoal mb-4 md:mb-8">{t('pageTitle')}</h1>
 
         {error && (
           <div ref={errorRef} className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">

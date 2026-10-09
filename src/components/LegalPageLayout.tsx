@@ -7,22 +7,24 @@ export function LegalPageLayout({
   children,
 }: {
   title: string;
-  updatedAt: string;
+  /** Policies show when they last changed; omit for non-policy pages (Support). */
+  updatedAt?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-brand-fog py-8">
+    <div className="min-h-screen bg-brand-fog py-4 md:py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4 md:mb-6">
+          {/* native-title-dup: the app's top bar already has back + title */}
           <Link
             href={'/account' as any}
-            className="p-2 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white transition-colors"
+            className="native-title-dup p-2 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-brand-charcoal">{title}</h1>
-            <p className="text-xs text-brand-steel mt-0.5">Last updated {updatedAt}</p>
+            <h1 className="native-title-dup text-2xl font-black text-brand-charcoal">{title}</h1>
+            {updatedAt && <p className="text-xs text-brand-steel mt-0.5">Last updated {updatedAt}</p>}
           </div>
         </div>
 

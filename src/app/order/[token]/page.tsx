@@ -200,13 +200,15 @@ export default function OrderStatusPage() {
       <div id="page-content" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
+          {/* native-title-dup: the app's top bar has its own back arrow */}
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal font-medium text-sm transition-colors"
+            className="native-title-dup inline-flex items-center gap-1 text-brand-slate hover:text-brand-charcoal font-medium text-sm transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             {t('backToHome')}
           </Link>
+          <span className="hidden [html.native-shell_&]:block" />
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -485,7 +487,7 @@ export default function OrderStatusPage() {
                 {t('needHelpMessage')}
               </p>
               <a
-                href="tel:+918847777020"
+                href="tel:+917045737058"
                 className="btn-primary w-full py-2.5 text-sm"
               >
                 <Phone className="w-4 h-4" />

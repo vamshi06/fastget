@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { formatCurrency } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
 import type { ReferrerReferral, ReferralPayoutStatus } from '@/lib/db';
-import { Gift, Copy, Check, Share2, ChevronRight, LogIn } from 'lucide-react';
+import { Gift, Copy, Check, Share2, ChevronRight } from 'lucide-react';
 
 interface ReferralInfo {
   code: string;
@@ -56,17 +57,8 @@ export default function ReferPage() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-brand-fog px-6 py-16 text-center">
-        <Gift className="w-12 h-12 text-brand-primary mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-brand-charcoal">{t('menu.referAndEarn')}</h1>
-        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto">{t('referral.guestSubtitle')}</p>
-        <Link
-          href={'/login?redirect=/refer' as any}
-          className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white font-bold rounded-2xl hover:bg-brand-dark transition-colors"
-        >
-          <LogIn className="w-5 h-5" />
-          {tc('login')}
-        </Link>
+      <div className="min-h-screen bg-brand-fog">
+        <SignInPrompt Icon={Gift} title={t('menu.referAndEarn')} subtitle={t('referral.guestSubtitle')} redirect="/refer" />
       </div>
     );
   }
@@ -109,7 +101,8 @@ export default function ReferPage() {
 
   return (
     <div className="min-h-screen bg-brand-fog pb-8">
-      <div className="flex items-center gap-2 px-4 pt-6 pb-2">
+      {/* native-title-dup: the app's top bar has back + title */}
+      <div className="native-title-dup flex items-center gap-2 px-4 pt-6 pb-2">
         <Link href="/account" className="text-brand-primary hover:text-brand-dark transition-colors font-medium text-sm">{t('coins.breadcrumbAccount')}</Link>
         <ChevronRight className="w-4 h-4 text-brand-steel" />
         <span className="text-brand-charcoal font-medium text-sm">{t('menu.referAndEarn')}</span>

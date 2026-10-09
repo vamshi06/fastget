@@ -66,7 +66,7 @@ export default async function PrivacyPolicyPage() {
             deleteAccount: (chunks) => <strong>{chunks}</strong>,
             email: (chunks) => (
               <a
-                href="mailto:sukhmeet.bedi@elemantra.in"
+                href="mailto:support@elemantra.in"
                 className="text-brand-primary font-medium"
               >
                 {chunks}
@@ -94,7 +94,7 @@ export default async function PrivacyPolicyPage() {
           {t.rich("s11.body", {
             email: (chunks) => (
               <a
-                href="mailto:sukhmeet.bedi@elemantra.in"
+                href="mailto:support@elemantra.in"
                 className="text-brand-primary font-medium"
               >
                 {chunks}

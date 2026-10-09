@@ -6,10 +6,10 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
-import { ProductCard } from '@/components/ProductCard';
+import { HomeProductCard } from '@/components/home/HomeProductCard';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductDetailSkeleton } from '@/components/Skeletons';
-import { haptic } from '@/lib/native-bridge';
+import { haptic, useNativeTitle } from '@/lib/native-bridge';
 import { Product } from '@/types';
 import {
   ArrowLeft, Plus, Minus, ShoppingCart,
@@ -50,6 +50,9 @@ export default function ProductDetailPage() {
   const [quantity,          setQuantity]          = useState(1);
   const [isAdding,          setIsAdding]          = useState(false);
 
+  // App top bar shows the product name once it's loaded.
+  useNativeTitle(product?.name);
+
   // ── Fetch product from API ────────────────────────────────────────────────
   useEffect(() => {
     if (!productId) return;
@@ -72,12 +75,12 @@ export default function ProductDetailPage() {
   // ── Fetch related products when category is known ─────────────────────────
   useEffect(() => {
     if (!product?.category) return;
-    fetch(`/api/products?category=${product.category}&limit=5&lang=${locale}`)
+    fetch(`/api/products?category=${product.category}&limit=9&lang=${locale}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
           setRelatedProducts(
-            (json.data.products as Product[]).filter((p) => p.id !== productId).slice(0, 4),
+            (json.data.products as Product[]).filter((p) => p.id !== productId).slice(0, 8),
           );
         }
       })
@@ -443,10 +446,11 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div>
-            <h2 className="text-lg md:text-2xl font-black text-brand-charcoal mb-3 md:mb-6">{t('relatedProducts')}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+            <h2 className="section-title mb-3 md:mb-6">{t('relatedProducts')}</h2>
+            {/* Same compact card + sideways row as the home screen */}
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 -mx-4 px-4 scroll-px-4 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:scroll-px-0 sm:snap-none">
               {relatedProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <HomeProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>

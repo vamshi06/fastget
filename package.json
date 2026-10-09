@@ -11,7 +11,9 @@
     "sync-schema": "tsx --env-file-if-exists=.env.local scripts/sync-schema.ts",
     "import-sheet": "tsx --env-file-if-exists=.env.local scripts/import-sheet.ts",
     "translate-products": "tsx --env-file-if-exists=.env.local scripts/translate-products.ts",
-    "import-translations": "tsx --env-file-if-exists=.env.local scripts/translate-products.ts --import scripts/data/product-translations-hi.json"
+    "import-translations": "tsx --env-file-if-exists=.env.local scripts/translate-products.ts --import scripts/data/product-translations-hi.json",
+    "check-phone-login": "tsx --env-file-if-exists=.env.local scripts/check-phone-login.ts",
+    "check-phone-login:railway": "tsx scripts/check-phone-login.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -40,7 +42,6 @@
     "tailwindcss": "^3.4.0",
     "tsx": "^4.22.2",
     "typescript": "^5",
-    "vercel": "^52.0.0",
     "zod": "^3.25.76"
   }
 }

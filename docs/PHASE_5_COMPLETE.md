@@ -43,9 +43,9 @@ git commit -m "Remove deprecated Google Sheets integration"
 ### 2. Environment Variables ✅
 - ✅ Verified `fastget_DATABASE_URL` is the only database variable needed
 - ✅ No Google Sheets environment variables found
-- ✅ Neon credentials secured in Vercel environment
+- ✅ Neon credentials secured in the production environment
 
-**Vercel Environment Status:**
+**Production Environment Status:**
 - `fastget_DATABASE_URL` → Set in dev/preview/production ✅
 - `AGENT_PIN` → Set to "1234" (dev/test only) ✅
 - No orphaned Google Sheets variables ✅
@@ -127,7 +127,7 @@ git commit -m "Remove deprecated Google Sheets integration"
 |-----------|--------|---------|
 | `google-apps-script/` | Kept (reference) | Historical archive, not deployed |
 | `src/lib/sheets.ts` | Removed (unused) | No imports found anywhere |
-| Google Sheets env vars | N/A | Never were set in Vercel |
+| Google Sheets env vars | N/A | Never were set in production |
 | Order data in Sheets | Archived | Migrated to Neon |
 
 ---
@@ -149,16 +149,16 @@ git commit -m "Remove deprecated Google Sheets integration"
    git commit -m "Remove orphaned Google Sheets integration file"
    ```
 
-3. **Verify Vercel environment:**
+3. **Verify Railway environment:**
    ```bash
-   vercel env ls
+   railway variables
    # Confirm fastget_DATABASE_URL is set
    # Confirm AGENT_PIN is set (production PIN should differ from "1234")
    ```
 
-4. **Deploy to Vercel:**
+4. **Deploy to Railway:**
    ```bash
-   vercel --prod
+   git push   # Railway deploys the pushed branch
    ```
 
 5. **Final verification in production:**
@@ -174,7 +174,7 @@ git commit -m "Remove deprecated Google Sheets integration"
 This migration is **safe and reversible** up until the git commit. If issues arise:
 
 1. Revert commit: `git revert HEAD`
-2. Redeploy: `vercel --prod`
+2. Redeploy: push the revert (Railway redeploys)
 3. No data loss - all orders in Neon remain intact
 
 ---
@@ -232,7 +232,7 @@ This migration is **safe and reversible** up until the git commit. If issues ari
 
 ### Monitoring to set up:
 - Database connection latency (Neon console)
-- API error rates (Vercel observability)
+- API error rates (Railway logs/metrics)
 - Order creation trends (custom query in Neon)
 
 ---

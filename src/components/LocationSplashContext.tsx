@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { usePathname } from 'next/navigation';
 import { LocationSplash } from './LocationSplash';
 import { isStaffRoute } from '@/lib/staff-routes';
+import { useNativeBackHandler } from '@/lib/native-bridge';
 
 export const SERVICE_AREAS = [
   { id: 'mumbai', name: 'Mumbai', eta: '2–4 hrs' },
@@ -61,6 +62,9 @@ export function LocationSplashProvider({ children }: { children: React.ReactNode
   // The "choose your area" splash is for shoppers - it would cover the admin
   // login / admin screens on a fresh phone browser.
   const staffRoute = isStaffRoute(pathname);
+
+  // App: hardware Back closes the picker instead of leaving the screen.
+  useNativeBackHandler(mounted && isOpen && !staffRoute, handleClose);
 
   return (
     <LocationSplashContext.Provider value={{ selectedLocation, openSplash }}>

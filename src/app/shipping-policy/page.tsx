@@ -33,7 +33,7 @@ export default async function ShippingPolicyPage() {
           {t.rich("s5.body", {
             email: (chunks) => (
               <a
-                href="mailto:sukhmeet.bedi@elemantra.in"
+                href="mailto:support@elemantra.in"
                 className="text-brand-primary font-medium"
               >
                 {chunks}

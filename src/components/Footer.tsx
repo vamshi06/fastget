@@ -79,11 +79,11 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:sukhmeet.bedi@elemantra.in"
+                  href="mailto:support@elemantra.in"
                   className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-brand-primary transition-colors"
                 >
                   <Mail className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                  <span>sukhmeet.bedi@elemantra.in</span>
+                  <span>support@elemantra.in</span>
                 </a>
               </li>
             </ul>

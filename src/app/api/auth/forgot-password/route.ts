@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByEmail, setResetPasswordOtp } from '@/lib/users';
+import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { sendEmail } from '@/lib/email';
 import { passwordResetOtpTemplate } from '@/lib/email-templates';
 import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
@@ -47,7 +48,10 @@ export async function POST(request: NextRequest) {
       message: 'If that email is registered, you will receive a password reset link shortly.',
     });
 
-    if (!user || !user.passwordHash) {
+    // Accounts without a password are normally skipped. With phone login on,
+    // phone-signup customers have none yet - letting them through is how they
+    // add a password and get the email fallback (docs/PHONE_LOGIN_SETUP.md).
+    if (!user || (!user.passwordHash && !PHONE_LOGIN_ENABLED)) {
       logger.info('Auth', 'forgot-password - user not found (silent)', { email });
       logger.api('POST', '/api/auth/forgot-password', 200, Date.now() - start);
       return okResponse;

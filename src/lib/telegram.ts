@@ -8,7 +8,7 @@
  * Setup:
  *   1. Message @BotFather on Telegram, run /newbot, follow the prompts.
  *      You'll get a bot token shaped like <bot-id>:<35-char-secret>.
- *   2. Set TELEGRAM_BOT_TOKEN to that value (.env.local / Vercel env).
+ *   2. Set TELEGRAM_BOT_TOKEN to that value (.env.local / Railway variables).
  *   3. Each admin/agent messages @userinfobot to get their own numeric chat ID,
  *      then enters it under My Profile → Telegram Notifications in the app.
  *      (They must also open a chat with your bot at least once - e.g. by

@@ -24,13 +24,34 @@
   "termsOfService": "सेवा की शर्तें",
   "switchLanguage": "भाषा बदलें",
   "announcements": [
-    "₹10,000 से ऊपर के ऑर्डर पर मुफ़्त डिलीवरी - पूरे मुंबई में सेवा उपलब्ध 🚀",
+    "हर ऑर्डर पर मुफ़्त डिलीवरी - पूरे मुंबई में सेवा उपलब्ध 🚀",
     "⚡ मुंबई में निर्माण सामग्री की 60 मिनट में डिलीवरी",
     "बढ़ईगीरी · प्लंबिंग · हार्डवेयर · इलेक्ट्रिकल और भी बहुत कुछ - एक ही जगह"
   ],
   "prevAnnouncement": "पिछली सूचना",
   "nextAnnouncement": "अगली सूचना",
   "closeAnnouncement": "सूचना बंद करें",
+  "header": {
+    "deliveryIn": "डिलीवरी",
+    "eta": "{mins} मिनट में",
+    "coinsLabel": "{count} कॉइन"
+  },
+  "searchFor": "“{term}” खोजें",
+  "searchHints": ["प्लाईवुड", "सीमेंट", "CPVC पाइप", "हिंज", "दीवार पेंट", "तार और MCB"],
+  "shellCart": {
+    "items": "{count} आइटम",
+    "viewCart": "कार्ट देखें",
+    "firstOrderHint": "{discount} की छूट पाने के लिए {amount} और जोड़ें",
+    "firstOrderApplied": "पहले ऑर्डर पर {discount} की छूट लागू"
+  },
+  "shellTitles": {
+    "checkout": "चेकआउट",
+    "products": "उत्पाद",
+    "product": "उत्पाद",
+    "orderDetails": "ऑर्डर विवरण",
+    "resetPassword": "पासवर्ड रीसेट करें",
+    "verifyEmail": "ईमेल सत्यापित करें"
+  },
   "bottomNav": {
     "home": "होम",
     "category": "श्रेणी",

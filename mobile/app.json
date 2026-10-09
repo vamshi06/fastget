@@ -67,6 +67,14 @@
           "resizeMode": "contain",
           "backgroundColor": "#F5A623"
         }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"
+          ]
+        }
       ]
     ],
     "extra": {

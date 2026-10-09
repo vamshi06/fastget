@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { useToast } from '@/components/ToastContext';
 import { FloatingInput } from '@/components/FloatingInput';
 import {
@@ -22,32 +23,8 @@ import {
 
 function GuestProfile() {
   const t = useTranslations('account');
-  const tc = useTranslations('common');
   return (
-    <div className="min-h-screen bg-brand-fog flex flex-col">
-      <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
-        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">{t('profile.guestHeading')}</h1>
-        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          {t('profile.guestSubtitle')}
-        </p>
-      </div>
-      <div className="px-4 pb-8 pt-6 space-y-3">
-        <Link
-          href={'/login?redirect=/my-profile' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
-        >
-          <LogIn className="w-5 h-5" />
-          {tc('login')}
-        </Link>
-        <Link
-          href={'/signup?redirect=/my-profile' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
-        >
-          <UserPlus className="w-5 h-5" />
-          {t('guest.createAccount')}
-        </Link>
-      </div>
-    </div>
+    <SignInPrompt Icon={User} title={t('profile.guestHeading')} subtitle={t('profile.guestSubtitle')} redirect="/my-profile" />
   );
 }
 
@@ -134,8 +111,8 @@ export default function MyProfilePage() {
     <div className="min-h-screen bg-brand-fog py-8">
       <div className="max-w-xl mx-auto px-4 sm:px-6">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Header - native-title-dup: the app's top bar has back + title */}
+        <div className="native-title-dup flex items-center gap-3 mb-6">
           <Link
             href="/account"
             className="p-2 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white transition-colors"

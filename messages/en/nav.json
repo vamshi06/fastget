@@ -24,13 +24,34 @@
   "termsOfService": "Terms of Service",
   "switchLanguage": "Switch language",
   "announcements": [
-    "Free delivery on orders above ₹10,000 - serving all of Mumbai 🚀",
+    "Free delivery on every order - serving all of Mumbai 🚀",
     "⚡ 60 minute delivery on construction materials in Mumbai",
     "Carpentry · Plumbing · Hardware · Electrical & more - all in one place"
   ],
   "prevAnnouncement": "Previous announcement",
   "nextAnnouncement": "Next announcement",
   "closeAnnouncement": "Close announcement",
+  "header": {
+    "deliveryIn": "Delivery in",
+    "eta": "{mins} mins",
+    "coinsLabel": "{count} coins"
+  },
+  "searchFor": "Search for “{term}”",
+  "searchHints": ["Plywood", "Cement", "CPVC pipes", "Hinges", "Wall paint", "Wires & MCBs"],
+  "shellCart": {
+    "items": "{count, plural, one {# item} other {# items}}",
+    "viewCart": "View cart",
+    "firstOrderHint": "Add {amount} more to get {discount} off",
+    "firstOrderApplied": "{discount} off applied on your first order"
+  },
+  "shellTitles": {
+    "checkout": "Checkout",
+    "products": "Products",
+    "product": "Product",
+    "orderDetails": "Order details",
+    "resetPassword": "Reset password",
+    "verifyEmail": "Verify email"
+  },
   "bottomNav": {
     "home": "Home",
     "category": "Category",

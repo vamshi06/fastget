@@ -12,6 +12,9 @@ import { ConditionalHeader } from '@/components/ConditionalHeader';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AnnouncementBar } from '@/components/AnnouncementBar';
+import { NativeShellBridge } from '@/components/NativeShellBridge';
+import { SHELL_COOKIE, SHELL_VERSION, TAB_ROOTS } from '@/lib/shell-routes';
+import { STAFF_ROUTE_PREFIXES } from '@/lib/staff-routes';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -46,10 +49,24 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-// Runs before first paint so app-only styles (html.in-app in globals.css)
-// apply without a flash. react-native-webview defines ReactNativeWebView
-// before page scripts run on both Android and iOS.
-const IN_APP_SCRIPT = `if (window.ReactNativeWebView) document.documentElement.classList.add('in-app');`;
+// Runs before first paint so app-only styles (globals.css) apply without a
+// flash. react-native-webview defines ReactNativeWebView before page scripts
+// run, so `in-app` is always right. `native-shell` (the app draws its own
+// tab bar / top bar - see src/lib/shell-routes.ts) also needs the cookie the
+// shell-capable app sets; older app builds never set it and keep the site's
+// own chrome. data-route-kind says which native chrome the current route gets.
+const IN_APP_SCRIPT = `(function () {
+  var d = document.documentElement;
+  if (!window.ReactNativeWebView) return;
+  d.classList.add('in-app');
+  if (window.__FASTGET_SHELL__ || document.cookie.indexOf('${SHELL_COOKIE}=${SHELL_VERSION}') !== -1) {
+    d.classList.add('native-shell');
+  }
+  var p = location.pathname;
+  var staff = ${JSON.stringify(STAFF_ROUTE_PREFIXES)}.some(function (s) { return p.indexOf(s) === 0; });
+  var tab = ${JSON.stringify(TAB_ROOTS)}.indexOf(p) !== -1;
+  d.setAttribute('data-route-kind', staff ? 'staff' : tab ? 'tab' : 'sub');
+})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
@@ -76,6 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     <ConditionalFooter />
                   </div>
                   <MobileBottomNav />
+                  <NativeShellBridge />
                 </LocationSplashProvider>
               </ToastProvider>
             </CartProvider>

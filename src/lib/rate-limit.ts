@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 /**
  * Postgres-backed fixed-window rate limiter (H3).
  *
- * Works on serverless (Vercel) where in-memory counters are useless - state
+ * Works across restarts and multiple server instances, where in-memory counters would reset - state
  * lives in Neon. One row per bucket, reset when its window elapses, so the
  * table stays bounded by the number of active keys.
  *
@@ -105,7 +105,7 @@ export async function rateLimit(
   }
 }
 
-/** Best-effort client IP from proxy headers (Vercel sets x-forwarded-for). */
+/** Best-effort client IP from proxy headers (the hosting proxy sets x-forwarded-for). */
 export function getClientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for');
   if (xff) return xff.split(',')[0].trim();

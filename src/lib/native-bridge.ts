@@ -9,11 +9,49 @@ type HapticStyle = 'light' | 'medium' | 'success' | 'error';
 type NativeMessage =
   | { type: 'HAPTIC'; style: HapticStyle }
   | { type: 'BACK_INTERCEPT'; active: boolean }
+  // Native shell (mobile/src/shell): what the app's own chrome should show.
+  | { type: 'SHELL_CONFIG'; version: number; labels: Record<string, string> }
+  | { type: 'ROUTE'; path: string; title: string }
+  | {
+      type: 'CART_COUNT';
+      count: number;
+      // Pre-formatted for the app's floating cart pill.
+      itemsLabel: string;
+      totalLabel: string;
+      hint?: string;
+      cta: string;
+    }
   | { type: 'SHARE_TEXT'; text: string }
   | { type: 'DOWNLOAD_PDF'; url: string };
 
 export function isNativeApp(): boolean {
   return typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
+}
+
+// The app draws its own tab bar / top bar (class set by the head script in
+// layout.tsx). Older app builds don't, and the site keeps its own chrome.
+export function isNativeShell(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.classList.contains('native-shell');
+}
+
+// Page-specific titles for the app's top bar (e.g. the product name), keyed
+// by path. NativeShellBridge sends these in place of its route defaults.
+const pageTitles = new Map<string, string>();
+
+export function getPageTitle(path: string): string | undefined {
+  return pageTitles.get(path);
+}
+
+export function useNativeTitle(title: string | null | undefined) {
+  useEffect(() => {
+    if (!title || !isNativeApp()) return;
+    const path = window.location.pathname;
+    pageTitles.set(path, title);
+    postToNative({ type: 'ROUTE', path, title });
+    return () => {
+      pageTitles.delete(path);
+    };
+  }, [title]);
 }
 
 export function postToNative(message: NativeMessage): boolean {

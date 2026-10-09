@@ -44,7 +44,7 @@
     },
     "s7": {
       "heading": "7. आपके अधिकार, जिसमें खाता हटाना (account deletion) भी शामिल है",
-      "p1": "आप किसी भी समय ऐप में <account>Account</account> से अपने सहेजे गए पते देख और अपडेट कर सकते हैं। अपने खाते और संबंधित डेटा (पते और विशलिस्ट) को स्थायी रूप से हटाने के लिए, ऐप या वेबसाइट पर <deleteAccount>Account → Delete Account</deleteAccount> पर जाएं और अपने पासवर्ड से पुष्टि करें। यह सुविधा आपके पास ऐप हो या न हो, हमारी वेबसाइट पर जाकर भी उपलब्ध है। आप <email>sukhmeet.bedi@elemantra.in</email> पर ईमेल करके भी हटाने का अनुरोध कर सकते हैं।",
+      "p1": "आप किसी भी समय ऐप में <account>Account</account> से अपने सहेजे गए पते देख और अपडेट कर सकते हैं। अपने खाते और संबंधित डेटा (पते और विशलिस्ट) को स्थायी रूप से हटाने के लिए, ऐप या वेबसाइट पर <deleteAccount>Account → Delete Account</deleteAccount> पर जाएं और अपने पासवर्ड से पुष्टि करें। यह सुविधा आपके पास ऐप हो या न हो, हमारी वेबसाइट पर जाकर भी उपलब्ध है। आप <email>support@elemantra.in</email> पर ईमेल करके भी हटाने का अनुरोध कर सकते हैं।",
       "p2": "कर/लेखा (tax/accounting) उद्देश्यों के लिए आवश्यक ऑर्डर रिकॉर्ड, खाता हटाने के बाद भी कानून द्वारा अपेक्षित होने पर बनाए रखे जा सकते हैं।"
     },
     "s8": {
@@ -61,7 +61,7 @@
     },
     "s11": {
       "heading": "11. हमसे संपर्क करें",
-      "body": "गोपनीयता संबंधी प्रश्नों या डेटा अनुरोधों के लिए, हमसे <email>sukhmeet.bedi@elemantra.in</email> पर संपर्क करें या +91 8847777020 पर कॉल करें। FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+      "body": "गोपनीयता संबंधी प्रश्नों या डेटा अनुरोधों के लिए, हमसे <email>support@elemantra.in</email> पर संपर्क करें या +91 7045737058 पर कॉल करें। FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
     }
   },
   "refund": {
@@ -72,7 +72,7 @@
     },
     "s2": {
       "heading": "2. क्षतिग्रस्त, दोषपूर्ण, या गलत वस्तुएं",
-      "body": "यदि आपको क्षतिग्रस्त, दोषपूर्ण, या गलत वस्तुएं प्राप्त होती हैं, तो डिलीवरी के 24 घंटों के भीतर अपने ऑर्डर नंबर और समस्या की तस्वीरों के साथ <email>sukhmeet.bedi@elemantra.in</email> पर हमसे संपर्क करें। हम प्रभावित वस्तुओं के लिए रिप्लेसमेंट या पूर्ण वापसी (full refund) की व्यवस्था करेंगे।"
+      "body": "यदि आपको क्षतिग्रस्त, दोषपूर्ण, या गलत वस्तुएं प्राप्त होती हैं, तो डिलीवरी के 24 घंटों के भीतर अपने ऑर्डर नंबर और समस्या की तस्वीरों के साथ <email>support@elemantra.in</email> पर हमसे संपर्क करें। हम प्रभावित वस्तुओं के लिए रिप्लेसमेंट या पूर्ण वापसी (full refund) की व्यवस्था करेंगे।"
     },
     "s3": {
       "heading": "3. वापसी योग्य न होने वाली वस्तुएं (Non-returnable items)",
@@ -84,7 +84,7 @@
     },
     "s5": {
       "heading": "5. वापसी का अनुरोध कैसे करें",
-      "body": "अपने ऑर्डर नंबर और समस्या के संक्षिप्त विवरण के साथ <email>sukhmeet.bedi@elemantra.in</email> पर ईमेल करें या ऐप में सहायता (Support) पेज पर जाएं।"
+      "body": "अपने ऑर्डर नंबर और समस्या के संक्षिप्त विवरण के साथ <email>support@elemantra.in</email> पर ईमेल करें या ऐप में सहायता (Support) पेज पर जाएं।"
     }
   },
   "shipping": {
@@ -107,7 +107,7 @@
     },
     "s5": {
       "heading": "5. प्रश्न (Questions)",
-      "body": "किसी भी डिलीवरी संबंधी प्रश्न के लिए <email>sukhmeet.bedi@elemantra.in</email> पर संपर्क करें।"
+      "body": "किसी भी डिलीवरी संबंधी प्रश्न के लिए <email>support@elemantra.in</email> पर संपर्क करें।"
     }
   },
   "terms": {
@@ -122,7 +122,7 @@
     },
     "s3": {
       "heading": "3. आपका खाता (Your account)",
-      "body": "अपना पासवर्ड गोपनीय रखने और अपने खाते के तहत होने वाली सभी गतिविधियों के लिए आप जिम्मेदार हैं। यदि आपको अनधिकृत उपयोग का संदेह हो, तो तुरंत <email>sukhmeet.bedi@elemantra.in</email> पर हमें सूचित करें।"
+      "body": "अपना पासवर्ड गोपनीय रखने और अपने खाते के तहत होने वाली सभी गतिविधियों के लिए आप जिम्मेदार हैं। यदि आपको अनधिकृत उपयोग का संदेह हो, तो तुरंत <email>support@elemantra.in</email> पर हमें सूचित करें।"
     },
     "s4": {
       "heading": "4. ऑर्डर, मूल्य निर्धारण, और भुगतान (Orders, pricing, and payment)",
@@ -166,7 +166,7 @@
     },
     "s13": {
       "heading": "13. हमसे संपर्क करें",
-      "body": "इन शर्तों के बारे में प्रश्न हैं? <email>sukhmeet.bedi@elemantra.in</email> पर ईमेल करें या +91 8847777020 पर कॉल करें। FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+      "body": "इन शर्तों के बारे में प्रश्न हैं? <email>support@elemantra.in</email> पर ईमेल करें या +91 7045737058 पर कॉल करें। FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
     }
   }
 }

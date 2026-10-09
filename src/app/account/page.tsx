@@ -1,12 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { useWishlist } from '@/components/WishlistContext';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
+import { SignInPrompt } from '@/components/SignInPrompt';
+import { setLocale } from '@/i18n/actions';
 import {
   ClipboardList,
   MapPin,
@@ -18,60 +20,76 @@ import {
   LogOut,
   ChevronRight,
   ChevronDown,
-  LogIn,
-  UserPlus,
   User,
-  ShieldCheck,
-  Star,
   BookOpen,
   Coins,
   Gift,
+  Heart,
+  Languages,
   LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ─── Shared menu item ──────────────────────────────────────────────────── */
+/* ─── Shared menu rows ──────────────────────────────────────────────────── */
 
-function MenuItem({
-  href,
-  label,
-  Icon,
-  isLast,
-  danger,
-}: {
-  href: string;
-  label: string;
-  Icon: React.ElementType;
-  isLast: boolean;
-  danger?: boolean;
-}) {
+const rowCls = 'pressable flex items-center px-4 py-3.5 active:bg-neutral-50 hover:bg-neutral-50 transition-colors';
+
+function RowIcon({ Icon, danger }: { Icon: React.ElementType; danger?: boolean }) {
   return (
-    <Link
-      href={href as any}
-      className={cn(
-        'flex items-center px-4 py-4 hover:bg-neutral-50 transition-colors',
-        !isLast && 'border-b border-neutral-100'
-      )}
-    >
-      <div className={cn(
-        'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-        danger ? 'bg-red-50' : 'bg-brand-light'
-      )}>
-        <Icon className={cn('w-5 h-5', danger ? 'text-red-500' : 'text-brand-dark')} />
-      </div>
-      <span className={cn('ml-3 text-sm font-medium flex-1', danger ? 'text-red-600' : 'text-brand-charcoal')}>
-        {label}
-      </span>
+    <div className={cn('w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0', danger ? 'bg-red-50' : 'bg-brand-light')}>
+      <Icon className={cn('w-[18px] h-[18px]', danger ? 'text-red-500' : 'text-brand-dark')} />
+    </div>
+  );
+}
+
+function MenuItem({ href, label, Icon, value }: { href: string; label: string; Icon: React.ElementType; value?: string }) {
+  return (
+    <Link href={href as any} className={rowCls}>
+      <RowIcon Icon={Icon} />
+      <span className="ml-3 text-[15px] font-medium flex-1 text-brand-charcoal">{label}</span>
+      {value && <span className="text-sm text-brand-slate mr-1.5">{value}</span>}
       <ChevronRight className="w-4 h-4 text-brand-steel" />
     </Link>
   );
 }
 
-/* ─── Public links (visible without auth) ───────────────────────────────── */
+function MenuGroup({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <section className="mx-4 mt-4">
+      {title && <h2 className="px-1 mb-1.5 text-xs font-bold uppercase tracking-wider text-brand-steel">{title}</h2>}
+      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100 divide-y divide-neutral-100">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-const PUBLIC_ITEMS = [
-  { href: '/support', labelKey: 'menu.support', Icon: Headphones },
-] as const;
+/** Language moved here from the header. Shows the current one; tap switches. */
+function LanguageRow() {
+  const t = useTranslations('account');
+  const locale = useLocale();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const toggle = () => {
+    startTransition(async () => {
+      await setLocale(locale === 'en' ? 'hi' : 'en');
+      router.refresh();
+    });
+  };
+
+  return (
+    <button type="button" onClick={toggle} disabled={isPending} className={cn(rowCls, 'w-full text-left disabled:opacity-60')}>
+      <RowIcon Icon={Languages} />
+      <span className="ml-3 text-[15px] font-medium flex-1 text-brand-charcoal">{t('menu.language')}</span>
+      {/* Both names in their own script, so either reader can find theirs */}
+      <span className="flex items-center rounded-full bg-brand-fog p-0.5 text-xs font-semibold">
+        <span className={cn('px-2.5 py-1 rounded-full', locale === 'en' ? 'bg-white shadow-sm text-brand-charcoal' : 'text-brand-slate')}>English</span>
+        <span className={cn('px-2.5 py-1 rounded-full', locale === 'hi' ? 'bg-white shadow-sm text-brand-charcoal' : 'text-brand-slate')}>हिन्दी</span>
+      </span>
+    </button>
+  );
+}
 
 const POLICY_ITEMS = [
   { href: '/shipping-policy', labelKey: 'menu.shippingPolicy', Icon: Truck     },
@@ -80,33 +98,23 @@ const POLICY_ITEMS = [
   { href: '/terms',           labelKey: 'menu.termsOfService', Icon: FileText },
 ] as const;
 
-/* ─── Policies accordion (shared between guest + auth screens) ──────────── */
-
-function PoliciesSection() {
+function PoliciesRow() {
   const t = useTranslations('account');
   const [open, setOpen] = useState(false);
   return (
-    <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center px-4 py-4 hover:bg-neutral-50 transition-colors"
-      >
-        <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center flex-shrink-0">
-          <BookOpen className="w-5 h-5 text-brand-dark" />
-        </div>
-        <span className="ml-3 text-sm font-medium text-brand-charcoal flex-1 text-left">{t('menu.policies')}</span>
+    <div>
+      <button onClick={() => setOpen((o) => !o)} className={cn(rowCls, 'w-full text-left')}>
+        <RowIcon Icon={BookOpen} />
+        <span className="ml-3 text-[15px] font-medium text-brand-charcoal flex-1">{t('menu.policies')}</span>
         <ChevronDown className={cn('w-4 h-4 text-brand-steel transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="border-t border-neutral-100">
-          {POLICY_ITEMS.map((item, idx) => (
-            <MenuItem
-              key={item.href}
-              href={item.href}
-              label={t(item.labelKey)}
-              Icon={item.Icon}
-              isLast={idx === POLICY_ITEMS.length - 1}
-            />
+        <div className="border-t border-neutral-100 divide-y divide-neutral-100 bg-neutral-50/60">
+          {POLICY_ITEMS.map((item) => (
+            <Link key={item.href} href={item.href as any} className="flex items-center pl-16 pr-4 py-3 text-sm text-brand-graphite">
+              <span className="flex-1">{t(item.labelKey)}</span>
+              <ChevronRight className="w-4 h-4 text-brand-steel" />
+            </Link>
           ))}
         </div>
       )}
@@ -114,94 +122,41 @@ function PoliciesSection() {
   );
 }
 
+/** Rows everyone gets, signed in or not. */
+function HelpRows() {
+  const t = useTranslations('account');
+  return (
+    <>
+      <LanguageRow />
+      <MenuItem href="/support" label={t('menu.support')} Icon={Headphones} />
+      <PoliciesRow />
+    </>
+  );
+}
+
 /* ─── Guest screen ──────────────────────────────────────────────────────── */
 
 function GuestAccount() {
   const t = useTranslations('account');
-  const tc = useTranslations('common');
   return (
     <div className="min-h-screen bg-brand-fog pb-8">
-
-      {/* Hero */}
-      <div className="relative overflow-hidden">
-        <Image
-          src="/construction-background.jpg"
-          alt=""
-          fill
-          priority
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
-
-        <div className="relative z-10 px-6 pt-14 pb-8 text-center">
-          <div className="w-20 h-20 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
-            <User className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">{t('guest.heading')}</h1>
-          <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-            {t('guest.subtitle')}
-          </p>
-
-          {/* CTAs */}
-          <div className="mt-7 space-y-3 max-w-sm mx-auto">
-            <Link
-              href={'/login?redirect=/account' as any}
-              className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
-            >
-              <LogIn className="w-5 h-5" />
-              {tc('login')}
-            </Link>
-            <Link
-              href={'/signup?redirect=/account' as any}
-              className="flex items-center justify-center gap-2.5 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
-            >
-              <UserPlus className="w-5 h-5" />
-              {t('guest.createAccount')}
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 px-4 mt-7 mb-4">
-        <div className="flex-1 h-px bg-neutral-200" />
-        <span className="text-xs text-brand-steel font-medium">{t('guest.more')}</span>
-        <div className="flex-1 h-px bg-neutral-200" />
-      </div>
-
-      {/* Public links */}
-      <div className="mx-4 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
-        {PUBLIC_ITEMS.map((item, idx) => (
-          <MenuItem
-            key={item.href}
-            href={item.href}
-            label={t(item.labelKey)}
-            Icon={item.Icon}
-            isLast={idx === PUBLIC_ITEMS.length - 1}
-          />
-        ))}
-      </div>
-
-      <PoliciesSection />
-
-      <p className="text-center text-xs text-brand-steel mt-6">FastGet v1.0.0</p>
+      <SignInPrompt Icon={User} title={t('guest.heading')} subtitle={t('guest.subtitle')} redirect="/account" />
+      <MenuGroup title={t('menu.settings')}>
+        <MenuItem href="/wishlist" label={t('menu.wishlist')} Icon={Heart} />
+        <HelpRows />
+      </MenuGroup>
     </div>
   );
 }
 
 /* ─── Authenticated account page ────────────────────────────────────────── */
 
-const AUTH_ITEMS = [
-  { href: '/my-profile',   labelKey: 'menu.myProfile',    Icon: User          },
-  { href: '/my-orders',    labelKey: 'menu.orderHistory', Icon: ClipboardList },
-  { href: '/my-addresses', labelKey: 'menu.myAddresses',  Icon: MapPin        },
-] as const;
-
 export default function AccountPage() {
   const t = useTranslations('account');
   const tc = useTranslations('common');
   const tNav = useTranslations('nav');
   const { currentUser, isLoaded, logout } = useUser();
+  const { wishlistCount } = useWishlist();
   const router = useRouter();
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
 
@@ -230,113 +185,85 @@ export default function AccountPage() {
     router.push('/');
   };
 
-  return (
-    <div className="min-h-screen bg-brand-fog pb-4">
+  const tiles = [
+    { href: '/my-orders', label: t('menu.orders'), Icon: ClipboardList, value: null },
+    { href: '/my-coins', label: t('menu.coins'), Icon: Coins, value: coinBalance ?? '–' },
+    { href: '/wishlist', label: t('menu.wishlist'), Icon: Heart, value: wishlistCount || null },
+  ];
 
-      {/* Profile header */}
-      <div className="bg-white px-4 py-6 text-center border-b border-neutral-100 shadow-sm">
-        <div className="w-16 h-16 bg-brand-primary rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-          <span className="text-2xl font-black text-white">
-            {currentUser.name?.charAt(0).toUpperCase() || '?'}
-          </span>
+  return (
+    <div className="min-h-screen bg-brand-fog pb-8">
+
+      {/* Profile card */}
+      <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-neutral-100 p-4 flex items-center gap-3.5">
+        <div className="w-14 h-14 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-2xl font-black text-white">{currentUser.name?.charAt(0).toUpperCase() || '?'}</span>
         </div>
-        <h1 className="text-lg font-bold text-brand-charcoal">{currentUser.name}</h1>
-        <p className="text-sm text-brand-slate mt-0.5">{displayPhone}</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-black text-brand-charcoal truncate">{currentUser.name}</h1>
+          <p className="text-sm text-brand-slate truncate">{displayPhone}</p>
+        </div>
+        <Link href={'/my-profile' as any} className="pressable text-sm font-bold text-brand-dark px-2 py-1">
+          {t('menu.editProfile')}
+        </Link>
+      </div>
+
+      {/* Quick tiles */}
+      <div className="mx-4 mt-3 grid grid-cols-3 gap-3">
+        {tiles.map(({ href, label, Icon, value }) => (
+          <Link key={href} href={href as any} className="pressable bg-white rounded-2xl shadow-sm border border-neutral-100 py-3.5 flex flex-col items-center gap-1.5">
+            <Icon className="w-6 h-6 text-brand-dark" />
+            <span className="text-[13px] font-semibold text-brand-charcoal">{label}</span>
+            {value !== null && <span className="text-xs font-bold text-brand-slate -mt-1">{value}</span>}
+          </Link>
+        ))}
       </div>
 
       {/* Admin-only shortcut - the way into the admin panel on a phone */}
       {currentUser.role === 'admin' && (
         <Link
           href={'/admin' as any}
-          className="mx-4 mt-4 flex items-center px-4 py-4 bg-brand-charcoal text-white rounded-2xl shadow-sm hover:opacity-90 transition-opacity"
+          className="mx-4 mt-3 flex items-center px-4 py-3.5 bg-brand-charcoal text-white rounded-2xl shadow-sm hover:opacity-90 transition-opacity"
         >
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-            <LayoutDashboard className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <LayoutDashboard className="w-[18px] h-[18px] text-white" />
           </div>
           <p className="ml-3 flex-1 text-sm font-semibold">{tNav('adminDashboard')}</p>
           <ChevronRight className="w-4 h-4 text-white/70" />
         </Link>
       )}
 
-      {/* Coins balance */}
-      <Link
-        href={'/my-coins' as any}
-        className="mx-4 mt-4 flex items-center px-4 py-4 bg-white rounded-2xl shadow-sm border border-neutral-100 hover:bg-neutral-50 transition-colors"
-      >
-        <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-          <Coins className="w-5 h-5 text-brand-primary" />
-        </div>
-        <div className="ml-3 flex-1">
-          <p className="text-sm font-medium text-brand-charcoal">{t('menu.myCoins')}</p>
-          <p className="text-xs text-brand-slate">{t('menu.myCoinsSubtitle')}</p>
-        </div>
-        <span className="text-base font-black text-brand-charcoal mr-1">{coinBalance ?? '-'}</span>
-        <ChevronRight className="w-4 h-4 text-brand-steel" />
-      </Link>
-
       {/* Refer & Earn */}
       <Link
         href={'/refer' as any}
-        className="mx-4 mt-3 flex items-center px-4 py-4 bg-white rounded-2xl shadow-sm border border-neutral-100 hover:bg-neutral-50 transition-colors"
+        className="pressable mx-4 mt-3 flex items-center px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FEF3DC] to-[#FDE3B0] border border-primary-200"
       >
-        <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-          <Gift className="w-5 h-5 text-brand-primary" />
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+          <Gift className="w-5 h-5 text-brand-dark" />
         </div>
         <div className="ml-3 flex-1">
-          <p className="text-sm font-medium text-brand-charcoal">{t('menu.referAndEarn')}</p>
-          <p className="text-xs text-brand-slate">{t('menu.referAndEarnSubtitle')}</p>
+          <p className="text-[15px] font-bold text-brand-charcoal">{t('menu.referAndEarn')}</p>
+          <p className="text-xs text-brand-graphite">{t('menu.referAndEarnSubtitle')}</p>
         </div>
-        <ChevronRight className="w-4 h-4 text-brand-steel" />
+        <ChevronRight className="w-4 h-4 text-brand-graphite" />
       </Link>
 
-      {/* Auth-only items */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
-        {AUTH_ITEMS.map((item, idx) => (
-          <MenuItem
-            key={item.href}
-            href={item.href}
-            label={t(item.labelKey)}
-            Icon={item.Icon}
-            isLast={idx === AUTH_ITEMS.length - 1}
-          />
-        ))}
-      </div>
+      <MenuGroup>
+        <MenuItem href="/my-addresses" label={t('menu.myAddresses')} Icon={MapPin} />
+        <MenuItem href="/my-profile" label={t('menu.myProfile')} Icon={User} />
+      </MenuGroup>
 
-      {/* Public items */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
-        {PUBLIC_ITEMS.map((item, idx) => (
-          <MenuItem
-            key={item.href}
-            href={item.href}
-            label={t(item.labelKey)}
-            Icon={item.Icon}
-            isLast={idx === PUBLIC_ITEMS.length - 1}
-          />
-        ))}
-      </div>
+      <MenuGroup title={t('menu.settings')}>
+        <HelpRows />
+      </MenuGroup>
 
-      <PoliciesSection />
-
-      {/* Log Out */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center px-4 py-4 hover:bg-red-50 transition-colors"
-        >
-          <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <LogOut className="w-5 h-5 text-red-500" />
-          </div>
-          <span className="ml-3 text-sm font-medium text-red-600 flex-1 text-left">{tc('signOut')}</span>
-          <ChevronRight className="w-4 h-4 text-brand-steel" />
+      <MenuGroup>
+        <button onClick={handleLogout} className={cn(rowCls, 'w-full text-left')}>
+          <RowIcon Icon={LogOut} danger />
+          <span className="ml-3 text-[15px] font-medium text-red-600 flex-1">{tc('signOut')}</span>
         </button>
-      </div>
-
-      {/* Delete Account */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100">
         <DeleteAccountButton variant="card" />
-      </div>
-
-      <p className="text-center text-xs text-brand-steel mt-8">FastGet v1.0.0</p>
+      </MenuGroup>
     </div>
   );
 }

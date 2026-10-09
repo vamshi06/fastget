@@ -52,9 +52,7 @@ export function CategoryStrip() {
     <section>
       <div className="section-header">
         <div>
-          <h2 className="section-title">{t('shopByCategory')}</h2>
-          <div className="speed-accent mt-1.5" />
-        </div>
+          <h2 className="section-title">{t('shopByCategory')}</h2>        </div>
         <Link
           href="/categories"
           className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1"

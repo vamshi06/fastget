@@ -2,29 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { Order, OrderStatus } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { OrderReviewPanel } from '@/components/OrderReviewPanel';
-import {
-  Package,
-  Clock,
-  Truck,
-  CheckCircle,
-  XCircle,
-  ChevronRight,
-  ShoppingBag,
-  ArrowRight,
-  MapPin,
-  RefreshCw,
-  ClipboardList,
-  LogIn,
-  UserPlus,
-  Zap,
-  Shield,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle, ChevronRight, ClipboardList, Clock, MapPin, Package, RefreshCw, ShoppingBag, Truck, XCircle } from 'lucide-react';
 
 /* ─── Status helpers ────────────────────────────────────────────────────── */
 
@@ -55,65 +39,14 @@ function formatOrderTime(iso: string) {
 
 function GuestOrders() {
   const t = useTranslations('order');
-  const tc = useTranslations('common');
   return (
-    <div className="relative flex-1 flex flex-col overflow-hidden">
-      {/* Background photo */}
-      <Image
-        src="/construction-background.jpg"
-        alt=""
-        fill
-        priority
-        className="object-cover"
-      />
-      {/* Dark gradient overlay for text contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/80" />
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col flex-1 justify-between px-6 pt-10 pb-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-black text-white tracking-tight">{t('myOrdersTitle')}</h1>
-          <p className="text-sm text-white/80 mt-2 max-w-xs mx-auto leading-relaxed">
-            {t('guestSubtitle')}
-          </p>
-        </div>
-
-        {/* Benefits */}
-        <div className="space-y-1">
-          {[
-            { Icon: Truck,    text: t('benefitLiveTracking')   },
-            { Icon: Package,  text: t('benefitOrderHistory')   },
-            { Icon: Zap,      text: t('benefitFasterCheckout') },
-            { Icon: Shield,   text: t('benefitSecurePayments') },
-          ].map(({ Icon, text }) => (
-            <div key={text} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3.5 border border-white/15">
-              <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="text-sm font-medium text-white">{text}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* CTAs */}
-        <div className="space-y-3">
-          <Link
-            href={'/login?redirect=/my-orders' as any}
-            className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-brand-lg hover:bg-brand-dark transition-colors"
-          >
-            <LogIn className="w-5 h-5" />
-            {tc('login')}
-          </Link>
-          <Link
-            href={'/signup?redirect=/my-orders' as any}
-            className="flex items-center justify-center gap-2 w-full py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl text-base border border-white/25 hover:bg-white/20 transition-colors"
-          >
-            <UserPlus className="w-5 h-5" />
-            {t('createAccount')}
-          </Link>
-        </div>
-      </div>
-    </div>
+    <SignInPrompt
+      Icon={ClipboardList}
+      title={t('myOrdersTitle')}
+      subtitle={t('guestSubtitle')}
+      redirect="/my-orders"
+      benefits={[t('benefitLiveTracking'), t('benefitOrderHistory'), t('benefitFasterCheckout'), t('benefitSecurePayments')]}
+    />
   );
 }
 

@@ -16,20 +16,24 @@ export default async function SupportPage() {
   ];
 
   return (
-    <LegalPageLayout title={t("pageTitle")} updatedAt="16 June 2026">
+    <LegalPageLayout title={t("pageTitle")}>
       <LegalSection heading={t("getInTouch.heading")}>
         <div className="space-y-3">
           <a
-            href="mailto:sukhmeet.bedi@elemantra.in"
+            href="mailto:support@elemantra.in"
             className="flex items-center gap-3 text-brand-charcoal hover:text-brand-primary transition-colors"
           >
             <Mail className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            sukhmeet.bedi@elemantra.in
+            support@elemantra.in
           </a>
-          <div className="flex items-center gap-3 text-brand-charcoal">
+          {/* tel: - the app hands it to the dialer (WebViewScreen) */}
+          <a
+            href="tel:+917045737058"
+            className="flex items-center gap-3 text-brand-charcoal hover:text-brand-primary transition-colors"
+          >
             <Phone className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            +91 8847777020
-          </div>
+            +91 7045737058
+          </a>
         </div>
         <p className="mt-3">{t("getInTouch.orderNote")}</p>
       </LegalSection>

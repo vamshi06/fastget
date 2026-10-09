@@ -19,7 +19,7 @@ npm run dev
 - **Framework:** Next.js 14 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
-- **Database:** Neon Postgres via Vercel
+- **Database:** Neon Postgres
 
 ## Development
 

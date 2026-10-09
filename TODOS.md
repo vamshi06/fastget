@@ -4,7 +4,7 @@
 
 ### ✅ Replace Apps Script order backend with Neon Postgres (DONE)
 
-**What:** Move order create/read/update from Google Apps Script and Google Sheets to the Neon Postgres database connected through Vercel.
+**What:** Move order create/read/update from Google Apps Script and Google Sheets to the Neon Postgres database.
 
 **Status:** ✅ COMPLETE (May 11, 2026)
 
@@ -54,7 +54,7 @@
 
 - [ ] Optional Google Sheets export for ops/reporting, one-way only
 - [ ] Email service (Resend or SendGrid)
-- [ ] Error monitoring (Sentry or Vercel observability)
+- [ ] Error monitoring (Sentry or Railway logs/metrics)
 
 ---
 
@@ -63,7 +63,7 @@
 ### MVP Current
 
 - [x] Next.js scaffolding
-- [x] Neon database connected in Vercel
+- [x] Neon database connected in Railway
 - [x] Basic order CRUD on Neon
 - [x] API route tests for order create/read/update
 

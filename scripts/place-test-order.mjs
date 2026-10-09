@@ -29,7 +29,7 @@ if (!databaseUrl) {
 }
 
 if (!databaseUrl) {
-  console.error('❌ DATABASE_URL not found. Run: vercel env pull .env.local');
+  console.error('❌ DATABASE_URL not found. Add it to .env.local (copy from Railway → Variables)');
   process.exit(1);
 }
 

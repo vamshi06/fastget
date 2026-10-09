@@ -18,7 +18,13 @@
     "shippingPolicy": "शिपिंग नीति",
     "refundPolicy": "रिफंड नीति",
     "privacyPolicy": "गोपनीयता नीति",
-    "termsOfService": "सेवा की शर्तें"
+    "termsOfService": "सेवा की शर्तें",
+    "language": "भाषा",
+    "editProfile": "प्रोफ़ाइल बदलें",
+    "orders": "ऑर्डर",
+    "coins": "कॉइन",
+    "wishlist": "विशलिस्ट",
+    "settings": "सेटिंग्स और सहायता"
   },
   "deleteAccount": {
     "label": "खाता हटाएं",

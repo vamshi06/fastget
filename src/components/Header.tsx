@@ -138,6 +138,30 @@ function SearchSuggestions({
   );
 }
 
+// Search field hint that cycles through common items ("Search for “Cement”"),
+// like the big quick-commerce apps - shows what the catalogue carries.
+const HINT_INTERVAL_MS = 2500;
+
+function RotatingSearchHint() {
+  const t = useTranslations("nav");
+  const terms = t.raw("searchHints") as string[];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setIndex((i) => (i + 1) % terms.length), HINT_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [terms.length]);
+
+  return (
+    <span className="truncate">
+      <span key={index} className="inline-block animate-ticker">
+        {t("searchFor", { term: terms[index] })}
+      </span>
+    </span>
+  );
+}
+
 const NAV_CATEGORY_IDS = [
   "tools-machines",
   "carpentry",
@@ -296,77 +320,70 @@ export function Header() {
   return (
     <header
       className={cn(
-        "navbar transition-all duration-200",
+        "site-header navbar transition-all duration-200",
+        // Phones: a brand-colour block (the app paints the status bar to
+        // match on these screens - see mobile WebViewScreen).
+        "max-md:bg-gradient-to-b max-md:from-[#F5A623] max-md:to-[#F8B54A] max-md:border-b-0 max-md:backdrop-blur-none",
         scrolled && "shadow-md",
-        // 57px = the mobile top row (h-14 + 1px border). Transform doesn't
-        // affect layout, so content below never jumps.
-        collapsed && !showSuggestions && "max-md:-translate-y-[57px]",
+        // 76px = the mobile top row (h-[76px]). Transform doesn't affect
+        // layout, so content below never jumps.
+        collapsed && !showSuggestions && "max-md:-translate-y-[76px]",
       )}
     >
-      {/* ── Mobile Header Row ── */}
-      <div className="md:hidden w-full px-4 border-b border-neutral-100">
-        <div className="flex items-center h-14 gap-2">
-          {/* Delivery badge + location */}
+      {/* ── Mobile Header Row ── (quick-commerce style: delivery time is the
+          headline, location under it; language lives in Account) */}
+      <div className="md:hidden w-full px-4">
+        <div className="flex items-center h-[76px] gap-3">
+          {/* Delivery time + location */}
           <button
             onClick={openSplash}
             aria-label={t("changeLocation")}
-            className="flex items-center gap-2 flex-shrink-0 group"
+            className="flex-1 min-w-0 text-left"
           >
-            <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
-              <span className="text-[13px] font-black leading-none">~60</span>
-              <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">
-                {tc("mins")}
+            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-charcoal/60 leading-none">
+              {t("header.deliveryIn")}
+            </p>
+            <p className="text-[26px] font-black text-brand-charcoal leading-tight tracking-tight">
+              {t("header.eta", { mins: 60 })}
+            </p>
+            <p className="flex items-center gap-0.5 text-sm font-semibold text-brand-charcoal/85 leading-none">
+              <MapPin className="w-3.5 h-3.5 mr-0.5" />
+              <span className="truncate">
+                {selectedLocation
+                  ? (SERVICE_AREAS.find((a) => a.id === selectedLocation)?.name ?? selectedLocation)
+                  : tc("selectArea")}
               </span>
-            </div>
-            <div className="text-left">
-              <p className="text-[9px] text-brand-steel uppercase tracking-wide leading-none">
-                {tc("deliverTo")}
-              </p>
-              <div className="flex items-center gap-0.5">
-                <span className="text-xs font-semibold text-brand-charcoal leading-none group-hover:text-brand-primary transition-colors">
-                  {selectedLocation
-                    ? (SERVICE_AREAS.find((a) => a.id === selectedLocation)
-                        ?.name ?? selectedLocation)
-                    : tc("selectArea")}
-                </span>
-                <ChevronDown className="w-3 h-3 text-brand-steel" />
-              </div>
-            </div>
+              <ChevronDown className="w-4 h-4 flex-shrink-0" />
+            </p>
           </button>
 
-          {/* Center: Logo */}
-          <div className="flex-1 flex justify-center">
-            <Link href="/" className="flex items-center">
-              <div className="relative w-10 h-10">
-                <Image
-                  src="/fastget-logo-clear.png"
-                  alt="FastGet"
-                  fill
-                  sizes="40px"
-                  className="object-contain"
-                />
-              </div>
-            </Link>
-          </div>
-
-          {/* Right: Language + Wishlist */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <LanguageSwitcher className="px-2" />
+          {/* Right: coins (logged in) + wishlist */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {currentUser && (
+              <Link
+                href={"/my-coins" as any}
+                aria-label={t("header.coinsLabel", { count: coinBalance ?? 0 })}
+                className="pressable flex items-center gap-1.5 h-10 pl-2 pr-3 rounded-full bg-white/90 shadow-sm"
+              >
+                <span className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center">
+                  <Coins className="w-3.5 h-3.5 text-white" />
+                </span>
+                <span className="text-sm font-black text-brand-charcoal">{coinBalance ?? "–"}</span>
+              </Link>
+            )}
             <Link
               href={"/wishlist" as any}
               aria-label={tc("wishlist")}
-              className="relative p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+              className="pressable relative w-10 h-10 rounded-full bg-white/90 shadow-sm flex items-center justify-center"
             >
               <Heart
                 className={cn(
                   "w-5 h-5",
-                  wishlistCount > 0
-                    ? "fill-red-500 text-red-500"
-                    : "text-brand-charcoal",
+                  wishlistCount > 0 ? "fill-red-500 text-red-500" : "text-brand-charcoal",
                 )}
               />
               {wishlistCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#F7AE33]">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
                 </span>
               )}
@@ -378,7 +395,7 @@ export function Header() {
       {/* ── Mobile Search Row ── */}
       <div
         className={cn(
-          "md:hidden w-full px-3 pb-2.5 pt-1 border-b border-neutral-100",
+          "md:hidden w-full px-4 pb-3",
           (pathname.startsWith("/my-orders") ||
             pathname.startsWith("/account")) &&
             "hidden",
@@ -388,10 +405,11 @@ export function Header() {
         <button
           type="button"
           onClick={() => setMobileSearchOpen(true)}
-          className="pressable w-full flex items-center gap-2 pl-3 pr-4 py-2.5 bg-brand-fog border border-neutral-200 rounded-xl text-sm text-brand-steel text-left"
+          aria-label={t("searchPlaceholderMobile")}
+          className="pressable w-full h-12 flex items-center gap-2.5 px-4 bg-white rounded-xl shadow-sm text-[15px] text-brand-slate text-left"
         >
-          <Search className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">{t("searchPlaceholderMobile")}</span>
+          <Search className="w-5 h-5 flex-shrink-0 text-brand-charcoal" />
+          <RotatingSearchHint />
         </button>
       </div>
       <MobileSearchOverlay open={mobileSearchOpen} onClose={() => setMobileSearchOpen(false)} />

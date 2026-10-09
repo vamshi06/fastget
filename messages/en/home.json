@@ -1,5 +1,12 @@
 {
   "shopByCategory": "Shop by Category",
+  "trust": {
+    "freeDelivery": "Free delivery",
+    "delivery": "60-min delivery",
+    "cod": "Pay on delivery",
+    "firstOrder": "₹200 off 1st order",
+    "coins": "10% back in coins"
+  },
   "heroSlides": [
     { "title": "Construction Materials", "highlight": "Delivered in 60 Min", "description": "Carpentry, Plumbing, Hardware, Electrical & more - everything your site needs, delivered same-day." },
     { "title": "Keep Your Project", "highlight": "Moving Without Stops", "description": "Plywood, hinges, CPVC fittings, wires, bolts - urgent materials to your Mumbai site before work stops." },

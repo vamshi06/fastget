@@ -44,7 +44,7 @@
     },
     "s7": {
       "heading": "7. Your rights, including account deletion",
-      "p1": "You can review and update your saved addresses at any time from <account>Account</account> in the app. To permanently delete your account and associated data (addresses and wishlist), go to <deleteAccount>Account → Delete Account</deleteAccount> in the app or website and confirm with your password. This is available whether or not you have the app installed, by visiting our website. You can also request deletion by emailing <email>sukhmeet.bedi@elemantra.in</email>.",
+      "p1": "You can review and update your saved addresses at any time from <account>Account</account> in the app. To permanently delete your account and associated data (addresses and wishlist), go to <deleteAccount>Account → Delete Account</deleteAccount> in the app or website and confirm with your password. This is available whether or not you have the app installed, by visiting our website. You can also request deletion by emailing <email>support@elemantra.in</email>.",
       "p2": "Order records required for tax/accounting purposes may be retained as required by law even after account deletion."
     },
     "s8": {
@@ -61,7 +61,7 @@
     },
     "s11": {
       "heading": "11. Contact us",
-      "body": "For privacy questions or data requests, contact us at <email>sukhmeet.bedi@elemantra.in</email> or call +91 8847777020. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+      "body": "For privacy questions or data requests, contact us at <email>support@elemantra.in</email> or call +91 7045737058. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
     }
   },
   "refund": {
@@ -72,7 +72,7 @@
     },
     "s2": {
       "heading": "2. Damaged, defective, or wrong items",
-      "body": "If you receive damaged, defective, or incorrect items, contact us within 24 hours of delivery at <email>sukhmeet.bedi@elemantra.in</email> with your order number and photos of the issue. We will arrange a replacement or a full refund for the affected items."
+      "body": "If you receive damaged, defective, or incorrect items, contact us within 24 hours of delivery at <email>support@elemantra.in</email> with your order number and photos of the issue. We will arrange a replacement or a full refund for the affected items."
     },
     "s3": {
       "heading": "3. Non-returnable items",
@@ -84,7 +84,7 @@
     },
     "s5": {
       "heading": "5. How to request a refund",
-      "body": "Email <email>sukhmeet.bedi@elemantra.in</email> or visit the Support page in the app with your order number and a brief description of the issue."
+      "body": "Email <email>support@elemantra.in</email> or visit the Support page in the app with your order number and a brief description of the issue."
     }
   },
   "shipping": {
@@ -107,7 +107,7 @@
     },
     "s5": {
       "heading": "5. Questions",
-      "body": "Contact <email>sukhmeet.bedi@elemantra.in</email> for any delivery questions."
+      "body": "Contact <email>support@elemantra.in</email> for any delivery questions."
     }
   },
   "terms": {
@@ -122,7 +122,7 @@
     },
     "s3": {
       "heading": "3. Your account",
-      "body": "You are responsible for keeping your password confidential and for all activity under your account. Notify us immediately at <email>sukhmeet.bedi@elemantra.in</email> if you suspect unauthorized use."
+      "body": "You are responsible for keeping your password confidential and for all activity under your account. Notify us immediately at <email>support@elemantra.in</email> if you suspect unauthorized use."
     },
     "s4": {
       "heading": "4. Orders, pricing, and payment",
@@ -166,7 +166,7 @@
     },
     "s13": {
       "heading": "13. Contact us",
-      "body": "Questions about these terms? Email <email>sukhmeet.bedi@elemantra.in</email> or call +91 8847777020. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
+      "body": "Questions about these terms? Email <email>support@elemantra.in</email> or call +91 7045737058. FastGet, Office no - 17, 2nd Floor, Bhavan's Campus, Sardar Patel Technology Business Incubator, Old D N Nagar, Munshi Nagar, Andheri West, Mumbai, Maharashtra 400058."
     }
   }
 }

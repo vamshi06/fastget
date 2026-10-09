@@ -10,6 +10,7 @@ import { useCart, getMinOrderQty } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductSection } from '@/components/home/ProductSection';
 import { Product } from '@/types';
 
 export default function WishlistPage() {
@@ -45,11 +46,12 @@ export default function WishlistPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-50 rounded-2xl flex items-center justify-center">
+            {/* native-title-dup: the app's top bar already shows the title */}
+            <div className="native-title-dup w-10 h-10 bg-red-50 rounded-2xl flex items-center justify-center">
               <Heart className="w-5 h-5 text-red-500 fill-red-500" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-brand-charcoal">{t('myWishlistTitle')}</h1>
+              <h1 className="native-title-dup text-2xl font-black text-brand-charcoal">{t('myWishlistTitle')}</h1>
               {isLoaded && (
                 <p className="text-sm text-brand-slate">
                   {wishlistCount === 0 ? t('noSavedItems') : t('savedItemsCount', { count: wishlistCount })}
@@ -117,6 +119,12 @@ export default function WishlistPage() {
             </Link>
           </div>
         )}
+        {/* An empty wishlist still leads somewhere */}
+        {isLoaded && wishlistCount === 0 && (
+          <div className="mt-8">
+            <ProductSection title={tc('popularNow')} limit={10} />
+          </div>
+        )}
 
         {/* Wishlist grid */}
         {isLoaded && wishlistCount > 0 && (
@@ -138,7 +146,7 @@ export default function WishlistPage() {
                   <button
                     onClick={() => handleRemove(product)}
                     aria-label={t('removeNamedFromWishlist', { name: product.name })}
-                    className="absolute top-1.5 left-1.5 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm border border-neutral-200 rounded-full flex items-center justify-center shadow-sm
+                    className="absolute top-1.5 right-1.5 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm border border-neutral-200 rounded-full flex items-center justify-center shadow-sm
                                opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:border-red-200"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-500" />

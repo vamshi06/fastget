@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastContext';
 import { CartItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { haptic } from '@/lib/native-bridge';
+import { ProductSection } from '@/components/home/ProductSection';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2, Tag, Coins } from 'lucide-react';
 
 export default function CartPage() {
@@ -107,19 +108,23 @@ export default function CartPage() {
 
   if (isLoaded && state.items.length === 0) {
     return (
-      <div className="min-h-screen bg-brand-fog py-16">
+      <div className="min-h-screen bg-brand-fog pt-10 pb-10 md:py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingCart className="w-10 h-10 text-brand-steel" />
+          <div className="w-24 h-24 bg-brand-light rounded-full flex items-center justify-center mx-auto mb-5">
+            <ShoppingCart className="w-11 h-11 text-brand-dark" />
           </div>
-          <h1 className="text-2xl font-black text-brand-charcoal mb-2">{t('emptyTitle')}</h1>
-          <p className="text-brand-slate mb-8">
+          <h1 className="text-xl md:text-2xl font-black text-brand-charcoal mb-1.5">{t('emptyTitle')}</h1>
+          <p className="text-sm text-brand-slate mb-6">
             {t('emptyMessage')}
           </p>
-          <Link href="/catalog" className="btn-primary inline-flex px-8 py-3">
+          <Link href="/catalog" className="btn-primary inline-flex px-8 h-12 text-base">
             <Package className="w-5 h-5" />
             {tc('browseProducts')}
           </Link>
+        </div>
+        {/* An empty cart still leads somewhere */}
+        <div className="page-container mt-10">
+          <ProductSection title={tc('popularNow')} limit={10} />
         </div>
       </div>
     );
@@ -129,7 +134,8 @@ export default function CartPage() {
     // pb-32 on phones keeps the summary clear of the pinned checkout bar.
     <div className="min-h-screen bg-brand-fog pt-4 pb-32 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-xl md:text-2xl font-black text-brand-charcoal mb-4 md:mb-8">{t('pageTitle')}</h1>
+        {/* native-title-dup: the app's top bar already shows this title */}
+        <h1 className="native-title-dup text-xl md:text-2xl font-black text-brand-charcoal mb-4 md:mb-8">{t('pageTitle')}</h1>
 
         <div className="grid lg:grid-cols-3 gap-5 md:gap-8">
           {/* Cart Items */}

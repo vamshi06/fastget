@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
  * Runs once at server boot (via src/instrumentation.ts) so a misconfigured
  * deploy fails LOUDLY in the logs instead of silently surfacing a generic
  * "Internal server error" 500 on every login. The classic failure this guards
- * against: ADMIN_SESSION_SECRET unset in the hosting env (Railway/Vercel),
+ * against: ADMIN_SESSION_SECRET unset in the hosting env (Railway),
  * which makes createSessionToken() throw AFTER the password is verified - so
  * users authenticate correctly but still can't log in.
  */
@@ -46,7 +46,7 @@ export function validateRuntimeConfig(): string[] {
   if (missing.length > 0) {
     logger.error('Config', 'Missing required environment variables at startup', { missing });
     // Plain console banner too: guarantees visibility even if LOG_LEVEL filters,
-    // and stands out in Railway/Vercel deploy logs.
+    // and stands out in Railway deploy logs.
     console.error('\n============================================================');
     console.error('  FATAL CONFIG - missing required environment variables:');
     for (const m of missing) console.error('    • ' + m);

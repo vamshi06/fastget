@@ -77,9 +77,7 @@ export function ProductSection({
       <div className="section-header">
         <div>
           <h2 className="section-title">{title}</h2>
-          {subtitle && <p className="text-sm text-brand-slate mt-0.5">{subtitle}</p>}
-          <div className="speed-accent mt-1.5" />
-        </div>
+          {subtitle && <p className="text-sm text-brand-slate mt-0.5">{subtitle}</p>}        </div>
         <Link
           href={catalogHref as any}
           className="text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors flex items-center gap-1 shrink-0"

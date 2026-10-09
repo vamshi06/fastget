@@ -45,7 +45,7 @@ Create and verify the `orders` table schema in Neon Postgres.
 
 - [ ] **Verify environment configuration**
   - Check `DATABASE_URL` or `fastget_DATABASE_URL` in `.env.local`
-  - Pull from Vercel: `vercel pull --environment=development`
+  - Copy from Railway: service → Variables → Raw Editor
   - Confirm connection string points to Neon
 
 - [ ] **Test schema locally**
@@ -53,9 +53,9 @@ Create and verify the `orders` table schema in Neon Postgres.
   - Verify schema in Neon console
   - Check indexes are created
 
-- [ ] **Sync schema to Vercel preview/production**
+- [ ] **Sync schema to production**
   - Verify schema exists in production Neon database
-  - Test connection from Vercel runtime
+  - Test connection from the Railway deployment
 
 ---
 
@@ -206,7 +206,7 @@ Verify order CRUD works end-to-end without breaking existing UI.
 
 #### **Local Development**
 
-- [ ] Run with `vercel env run -- next dev` to load Neon env vars
+- [ ] Run with `railway run npm run dev` to load Neon env vars
 - [ ] Or manually set `fastget_DATABASE_URL` in `.env.local`
 - [ ] Confirm connection to Neon test database
 
@@ -225,9 +225,9 @@ Remove Google Apps Script/Sheets dependencies and finalize migration.
   - ✅ No Google Sheets dependencies in package.json
 
 - [x] **Clean up environment variables**
-  - ✅ No `GOOGLE_SHEETS_ID` in Vercel (never was set)
-  - ✅ No `GOOGLE_APPS_SCRIPT_DEPLOYMENT_ID` in Vercel (never was set)
-  - ✅ No `GOOGLE_SHEETS_API_KEY` in Vercel (never was set)
+  - ✅ No `GOOGLE_SHEETS_ID` in production (never was set)
+  - ✅ No `GOOGLE_APPS_SCRIPT_DEPLOYMENT_ID` in production (never was set)
+  - ✅ No `GOOGLE_SHEETS_API_KEY` in production (never was set)
   - ✅ `fastget_DATABASE_URL` is set in all environments (dev, preview, production)
 
 - [x] **Verify no fallback to Apps Script**
@@ -283,7 +283,7 @@ Remove Google Apps Script/Sheets dependencies and finalize migration.
 ## Dependencies
 
 - `@neondatabase/serverless` (for Neon connection)
-- `fastget_DATABASE_URL` environment variable (from Vercel)
+- `fastget_DATABASE_URL` environment variable (from Railway)
 - TypeScript types in `src/types/index.ts`
 - Existing utilities in `src/lib/utils.ts`
 
@@ -291,7 +291,7 @@ Remove Google Apps Script/Sheets dependencies and finalize migration.
 
 If critical issues occur post-cutover:
 1. Revert to previous commit with Apps Script code
-2. Restore Google Sheets env vars in Vercel
+2. Restore Google Sheets env vars in Railway
 3. Update API routes to use `sheets.ts` again
 4. Investigate Neon issue and retry migration next day
 

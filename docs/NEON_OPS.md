@@ -14,8 +14,8 @@ fastget_DATABASE_URL=postgresql://...
 ```
 
 ### Production
-- Environment variable automatically set in Vercel
-- Use `vercel env pull` to load into `.env.local`
+- Environment variable set in Railway → service → Variables
+- Copy it into `.env.local` (Variables → Raw Editor) for local use
 
 ## Accessing the Database
 
@@ -202,8 +202,8 @@ pg_dump postgresql://user:password@host/neondb > backup.sql
 Monitor these logs for issues:
 
 ```bash
-# Recent errors in Vercel
-vercel logs --filter=error --follow
+# Recent errors on Railway (Railway CLI)
+railway logs
 
 # Database connection errors
 grep -i "database" ~/.pm2/logs/*

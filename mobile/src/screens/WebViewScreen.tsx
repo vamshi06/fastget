@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Linking, Platform, Share, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, BackHandler, Easing, Keyboard, Linking, Platform, Share, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../shell/theme';
 import * as Haptics from 'expo-haptics';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
 import { APP_URL } from '../constants/config';
+import CartPill, { CART_PILL_SPACE, CartSummary } from '../shell/CartPill';
+import TabBar from '../shell/TabBar';
+import TopBar from '../shell/TopBar';
+import { getActiveTab, getRouteKind, pathOf, showsCartPill, showsCartShortcut, TabKey } from '../shell/routes';
 
 const SCHEME = 'fastget://';
 
@@ -68,15 +73,63 @@ function playHaptic(style: unknown) {
   Haptics.performAndroidHapticsAsync(type).catch(() => {});
 }
 
+// Tells the site this app draws its own chrome (native shell). Runs at page
+// start; the cookie is what the site's head script reads on later loads, as
+// this isn't guaranteed to run before it on Android. See src/lib/shell-routes.ts.
+const SHELL_BOOTSTRAP = `
+  window.__FASTGET_SHELL__ = 2;
+  document.cookie = 'fg_shell=2; path=/; max-age=2592000; SameSite=Lax';
+  true;
+`;
+
+type Direction = 'forward' | 'back' | 'tab';
+
 export default function WebViewScreen() {
   const webViewRef = useRef<WebView>(null);
+  const insets = useSafeAreaInsets();
   const [canGoBack, setCanGoBack] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [webViewSource, setWebViewSource] = useState({ uri: APP_URL });
-  // Set while the page has a sheet open that Back should close (the site
-  // sends BACK_INTERCEPT - see useNativeBackHandler in native-bridge.ts).
-  const backInterceptRef = useRef(false);
+
+  // ── Native shell state, fed by the site (NativeShellBridge.tsx) ──
+  // The chrome only appears once the site says it supports it (SHELL_CONFIG),
+  // so this build still works against a site deployed before the shell.
+  const [shellReady, setShellReady] = useState(false);
+  const [path, setPath] = useState('/');
+  const [titles, setTitles] = useState<Record<string, string>>({});
+  const [labels, setLabels] = useState<Partial<Record<TabKey, string>>>({});
+  const [cart, setCart] = useState<CartSummary | null>(null);
+  const cartCount = cart?.count ?? 0;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const pathRef = useRef<string | null>(null);
+  // How the next path change happened, for the transition. Unset = the page
+  // navigated itself (a link tap), which is a forward push.
+  const pendingDirection = useRef<Direction | null>(null);
+  // Sheets currently open in the page that Back should close (BACK_INTERCEPT,
+  // see useNativeBackHandler in native-bridge.ts). A count, in case two overlap.
+  const backIntercepts = useRef(0);
+
+  // Screen transition: new screens slide in from the right, Back slides from
+  // the left, tab switches crossfade. Opacity + translate only, native driver.
+  const slide = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(1)).current;
+
+  const animateTransition = useCallback((direction: Direction) => {
+    const easing = Easing.out(Easing.cubic);
+    if (direction === 'tab') {
+      slide.setValue(0);
+      fade.setValue(0.35);
+      Animated.timing(fade, { toValue: 1, duration: 180, easing, useNativeDriver: true }).start();
+      return;
+    }
+    slide.setValue(direction === 'back' ? -40 : 40);
+    fade.setValue(0.4);
+    Animated.parallel([
+      Animated.timing(slide, { toValue: 0, duration: 240, easing, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 200, easing, useNativeDriver: true }),
+    ]).start();
+  }, [fade, slide]);
 
   useEffect(() => {
     const handleDeepLink = (rawUrl: string) => {
@@ -89,28 +142,72 @@ export default function WebViewScreen() {
     return () => sub.remove();
   }, []);
 
-  // Android hardware back button: navigate back in WebView history first.
+  // The tab bar would ride up on top of the keyboard - hide it while typing.
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
-    const onBackPress = () => {
-      if (backInterceptRef.current) {
-        // Let the page close its open sheet instead of leaving the screen.
-        webViewRef.current?.injectJavaScript(
-          "window.dispatchEvent(new Event('fastget:back')); true;",
-        );
+  const inject = useCallback((js: string) => {
+    webViewRef.current?.injectJavaScript(`${js}; true;`);
+  }, []);
+
+  // Client-side navigation in the site (no page reload) via NativeShellBridge.
+  const navigate = useCallback((to: string, direction: Direction) => {
+    pendingDirection.current = direction;
+    inject(`window.dispatchEvent(new CustomEvent('fastget:navigate', { detail: { path: ${JSON.stringify(to)} } }))`);
+  }, [inject]);
+
+  // Shared by the hardware Back button and the top bar's back arrow.
+  // Follows Android's model: Back on a top-level tab returns to Home, and Back
+  // on Home leaves the app; inside a flow it walks back through history.
+  const handleBack = useCallback((): boolean => {
+    if (backIntercepts.current > 0) {
+      // Let the page close its open sheet instead of leaving the screen.
+      inject("window.dispatchEvent(new Event('fastget:back'))");
+      return true;
+    }
+    if (shellReady) {
+      const kind = getRouteKind(path);
+      if (kind === 'tab') {
+        if (path !== '/') {
+          navigate('/', 'tab');
+          return true;
+        }
+        return false; // Home: let the OS close the app
+      }
+      if (!canGoBack && kind === 'sub') {
+        // Opened straight into a sub-page (deep link) - Back goes Home.
+        navigate('/', 'back');
         return true;
       }
-      if (canGoBack) {
-        webViewRef.current?.goBack();
-        return true; // consumed - prevent app exit
-      }
-      return false; // let the OS handle (exit app)
-    };
+    }
+    if (canGoBack) {
+      pendingDirection.current = 'back';
+      webViewRef.current?.goBack();
+      return true; // consumed - prevent app exit
+    }
+    return false; // let the OS handle (exit app)
+  }, [canGoBack, inject, navigate, path, shellReady]);
 
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', handleBack);
     return () => sub.remove();
-  }, [canGoBack]);
+  }, [handleBack]);
+
+  const handleTabPress = useCallback((_key: TabKey, to: string) => {
+    if (to === path) {
+      // Re-tapping the current tab scrolls it back to the top, as native apps do.
+      inject("window.scrollTo({ top: 0, behavior: 'smooth' })");
+      return;
+    }
+    navigate(to, 'tab');
+  }, [inject, navigate, path]);
 
   const handleRetry = () => {
     setHasError(false);
@@ -120,6 +217,66 @@ export default function WebViewScreen() {
 
   const handleNavigationStateChange = (navState: WebViewNavigation) => {
     setCanGoBack(navState.canGoBack);
+
+    // Fires for client-side (pushState) navigations too, so the chrome
+    // follows every route change. Query-only changes (filters) don't count.
+    const next = pathOf(navState.url, APP_URL);
+    if (next && next !== pathRef.current) {
+      const isFirst = pathRef.current === null;
+      pathRef.current = next;
+      setPath(next);
+      if (!isFirst && shellReady) animateTransition(pendingDirection.current ?? 'forward');
+      pendingDirection.current = null;
+    }
+  };
+
+  const handleMessage = (data: string) => {
+    let msg: any;
+    try {
+      msg = JSON.parse(data);
+    } catch {
+      return;
+    }
+    switch (msg?.type) {
+      case 'SHELL_CONFIG':
+        setShellReady(true);
+        if (msg.labels && typeof msg.labels === 'object') setLabels(msg.labels);
+        break;
+      case 'ROUTE':
+        if (typeof msg.path === 'string' && typeof msg.title === 'string') {
+          setTitles((prev) => (prev[msg.path] === msg.title ? prev : { ...prev, [msg.path]: msg.title }));
+        }
+        break;
+      case 'CART_COUNT':
+        if (typeof msg.count === 'number') {
+          setCart({
+            count: msg.count,
+            itemsLabel: typeof msg.itemsLabel === 'string' ? msg.itemsLabel : `${msg.count}`,
+            totalLabel: typeof msg.totalLabel === 'string' ? msg.totalLabel : '',
+            hint: typeof msg.hint === 'string' ? msg.hint : undefined,
+            cta: typeof msg.cta === 'string' ? msg.cta : 'View cart',
+          });
+        }
+        break;
+      case 'HAPTIC':
+        playHaptic(msg.style);
+        break;
+      case 'BACK_INTERCEPT':
+        backIntercepts.current = Math.max(0, backIntercepts.current + (msg.active === true ? 1 : -1));
+        break;
+      case 'DOWNLOAD_PDF':
+        // Opens the PDF URL via the OS (only our own-origin URLs):
+        // Android → Download Manager saves the file to Downloads
+        if (isOwnOriginUrl(msg.url)) Linking.openURL(msg.url);
+        break;
+      case 'SHARE_TEXT':
+        // Referral "Share with friends" - the WebView has no
+        // navigator.share, so open the native share sheet instead.
+        if (typeof msg.text === 'string' && msg.text.length <= 1000) {
+          Share.share({ message: msg.text }).catch(() => {});
+        }
+        break;
+    }
   };
 
   // Hand off UPI deep links and intent:// URLs to the OS so Razorpay's UPI
@@ -180,87 +337,117 @@ export default function WebViewScreen() {
     true;
   `;
 
+  const routeKind = shellReady ? getRouteKind(path) : null;
+  const pillVisible = shellReady && cartCount > 0 && !keyboardVisible && showsCartPill(path);
+
+  // Ask the page to leave room under its content while the pill floats over
+  // it (globals.css --shell-overlay). Re-sent after every full page load.
+  const overlayRef = useRef('0px');
+  overlayRef.current = pillVisible ? `${CART_PILL_SPACE}px` : '0px';
+  const syncOverlay = useCallback(() => {
+    inject(`document.documentElement.style.setProperty('--shell-overlay', '${overlayRef.current}')`);
+  }, [inject]);
+  useEffect(() => {
+    syncOverlay();
+  }, [pillVisible, syncOverlay]);
+
   return (
-    // edges={['top']} keeps the status bar area clear while letting the WebView
-    // extend edge-to-edge at the bottom so the site's own layout can manage it.
-    <SafeAreaView style={styles.container} edges={['top']}>
+    // With the native shell the WebView stops above the system nav bar (the
+    // bottom edge is ours: tab bar or white inset). Without it - a site from
+    // before the shell - the page runs edge-to-edge and manages that itself.
+    <SafeAreaView style={styles.container} edges={shellReady ? ['bottom'] : []}>
+      {/* Status-bar strip: brand orange over the tab screens' orange header,
+          white over the white native top bar (and over the pre-shell site). */}
+      <View style={{ height: insets.top, backgroundColor: routeKind === 'tab' ? colors.headerTop : '#FFFFFF' }} />
       {hasError ? (
         <ErrorScreen onRetry={handleRetry} />
       ) : (
-        <View style={styles.webViewContainer}>
-          <WebView
-            ref={webViewRef}
-            source={webViewSource}
-            style={styles.webView}
-            userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
-            injectedJavaScript={injectedJavaScript}
-            javaScriptCanOpenWindowsAutomatically={false}
-            onLoadStart={() => {
-              setHasError(false);
-              backInterceptRef.current = false; // full page load: no sheet open
-            }}
-            onLoadEnd={() => setInitialLoading(false)}
-            onError={() => {
-              setHasError(true);
-              setInitialLoading(false);
-            }}
-            onHttpError={({ nativeEvent }) => {
-              // Only treat 5xx as fatal; 4xx may still render a page from the app.
-              if (nativeEvent.statusCode >= 500) {
+        <>
+          {routeKind === 'sub' && (
+            <TopBar
+              title={titles[path] ?? ''}
+              cartCount={cartCount}
+              showCart={showsCartShortcut(path)}
+              onBack={handleBack}
+              onCart={() => navigate('/cart', 'forward')}
+            />
+          )}
+
+          <View style={styles.webViewContainer}>
+          <Animated.View style={[styles.webViewContainer, { opacity: fade, transform: [{ translateX: slide }] }]}>
+            <WebView
+              ref={webViewRef}
+              source={webViewSource}
+              style={styles.webView}
+              userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
+              injectedJavaScript={injectedJavaScript}
+              injectedJavaScriptBeforeContentLoaded={SHELL_BOOTSTRAP}
+              javaScriptCanOpenWindowsAutomatically={false}
+              onLoadStart={() => {
+                setHasError(false);
+                backIntercepts.current = 0; // full page load: no sheet open
+              }}
+              onLoadEnd={() => {
+                setInitialLoading(false);
+                syncOverlay();
+              }}
+              onError={() => {
                 setHasError(true);
                 setInitialLoading(false);
-              }
-            }}
-            onNavigationStateChange={handleNavigationStateChange}
-            onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-            onMessage={(event) => {
-              try {
-                const msg = JSON.parse(event.nativeEvent.data);
-                if (msg.type === 'HAPTIC') {
-                  playHaptic(msg.style);
-                } else if (msg.type === 'BACK_INTERCEPT') {
-                  backInterceptRef.current = msg.active === true;
-                } else if (msg.type === 'DOWNLOAD_PDF' && isOwnOriginUrl(msg.url)) {
-                  // Opens the PDF URL via the OS (only our own-origin URLs):
-                  // Android → Download Manager saves the file to Downloads
-                  // iOS → Safari opens it as a PDF with share/print options
-                  Linking.openURL(msg.url);
-                } else if (msg.type === 'SHARE_TEXT' && typeof msg.text === 'string' && msg.text.length <= 1000) {
-                  // Referral "Share with friends" - the WebView has no
-                  // navigator.share, so open the native share sheet instead.
-                  Share.share({ message: msg.text }).catch(() => {});
+              }}
+              onHttpError={({ nativeEvent }) => {
+                // Only treat 5xx as fatal; 4xx may still render a page from the app.
+                if (nativeEvent.statusCode >= 500) {
+                  setHasError(true);
+                  setInitialLoading(false);
                 }
-              } catch {}
-            }}
-            javaScriptEnabled
-            domStorageEnabled
-            // iOS swipe-back gesture
-            allowsBackForwardNavigationGestures
-            // Pull-to-refresh inside the WebView
-            pullToRefreshEnabled
-            // Android: no blue edge-glow when scrolling past the top/bottom
-            overScrollMode="never"
-            // Hide the WebView's own scrollbars, like a native list
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-            // Allow cookies & session storage to persist across reloads
-            sharedCookiesEnabled
-          />
+              }}
+              onNavigationStateChange={handleNavigationStateChange}
+              onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+              onMessage={(event) => handleMessage(event.nativeEvent.data)}
+              javaScriptEnabled
+              domStorageEnabled
+              // Pull-to-refresh inside the WebView
+              pullToRefreshEnabled
+              // Android: no blue edge-glow when scrolling past the top/bottom
+              overScrollMode="never"
+              // Hide the WebView's own scrollbars, like a native list
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              // Allow cookies & session storage to persist across reloads
+              sharedCookiesEnabled
+            />
+          </Animated.View>
+
+          {/* Outside the transition so it stays put while screens slide */}
+          {pillVisible && cart && (
+            <CartPill summary={cart} onPress={() => navigate('/cart', 'forward')} />
+          )}
+          </View>
+
+          {routeKind === 'tab' && !keyboardVisible && (
+            <TabBar
+              active={getActiveTab(path)}
+              labels={labels}
+              onPress={handleTabPress}
+            />
+          )}
+
           {/* Splash overlay only on first launch - dismissed once the initial page loads */}
           {initialLoading && (
             <View style={StyleSheet.absoluteFill}>
               <LoadingScreen />
             </View>
           )}
-        </View>
+        </>
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Fills the status-bar strip above the WebView - white to match the site's
-  // header so the top of the app reads as one surface (dark icons, App.tsx).
+  // Fills the status-bar strip (and, with the shell, the bottom inset) - white
+  // to match the site's header and the native bars (dark icons, App.tsx).
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

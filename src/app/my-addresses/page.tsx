@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { useToast } from '@/components/ToastContext';
 import { FloatingInput } from '@/components/FloatingInput';
 import { UserAddress, AddressType } from '@/types';
@@ -61,46 +62,14 @@ const EMPTY_FORM: AddressFormState = {
 
 function GuestAddresses() {
   const t = useTranslations('account');
-  const tc = useTranslations('common');
   return (
-    <div className="min-h-screen bg-brand-fog flex flex-col">
-      <div className="bg-white px-6 pt-12 pb-8 text-center border-b border-neutral-100">
-        <h1 className="text-2xl font-black text-brand-charcoal tracking-tight">{t('addresses.guestHeading')}</h1>
-        <p className="text-sm text-brand-slate mt-2 max-w-xs mx-auto leading-relaxed">
-          {t('addresses.guestSubtitle')}
-        </p>
-      </div>
-      <div className="px-4 py-6 space-y-3">
-        {[
-          { Icon: MapPin,     text: t('addresses.benefit1') },
-          { Icon: Star,       text: t('addresses.benefit2') },
-          { Icon: Home,       text: t('addresses.benefit3') },
-        ].map(({ Icon, text }) => (
-          <div key={text} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-neutral-100">
-            <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Icon className="w-4 h-4 text-brand-primary" />
-            </div>
-            <span className="text-sm font-medium text-brand-charcoal">{text}</span>
-          </div>
-        ))}
-      </div>
-      <div className="px-4 pb-8 space-y-3">
-        <Link
-          href={'/login?redirect=/my-addresses' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-brand-primary text-white font-bold rounded-2xl text-base shadow-md hover:bg-brand-dark transition-colors"
-        >
-          <LogIn className="w-5 h-5" />
-          {tc('login')}
-        </Link>
-        <Link
-          href={'/signup?redirect=/my-addresses' as any}
-          className="flex items-center justify-center gap-2 w-full py-4 bg-white text-brand-charcoal font-semibold rounded-2xl text-base border border-neutral-200 shadow-sm hover:border-brand-primary hover:text-brand-primary transition-colors"
-        >
-          <UserPlus className="w-5 h-5" />
-          {t('guest.createAccount')}
-        </Link>
-      </div>
-    </div>
+    <SignInPrompt
+      Icon={MapPin}
+      title={t('addresses.guestHeading')}
+      subtitle={t('addresses.guestSubtitle')}
+      redirect="/my-addresses"
+      benefits={[t('addresses.benefit1'), t('addresses.benefit2'), t('addresses.benefit3')]}
+    />
   );
 }
 
@@ -441,14 +410,15 @@ export default function MyAddressesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            {/* native-title-dup: the app's top bar has back + title */}
             <Link
               href="/account"
-              className="p-2 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white transition-colors"
+              className="native-title-dup p-2 rounded-xl text-brand-slate hover:text-brand-charcoal hover:bg-white transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-black text-brand-charcoal">{t('addresses.heading')}</h1>
+              <h1 className="native-title-dup text-2xl font-black text-brand-charcoal">{t('addresses.heading')}</h1>
               <p className="text-sm text-brand-slate mt-0.5">
                 {loading ? tc('loading') : t('addresses.savedAddressCount', { count: addresses.length })}
               </p>

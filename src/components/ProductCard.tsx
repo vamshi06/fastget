@@ -94,13 +94,15 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       <Link href={`/product/${product.id}`} className="pressable block">
         <div className="product-card h-full flex flex-col">
 
-          {/* Square image with overlaid cart control */}
-          <div className="relative w-full aspect-square bg-white">
+          {/* Square image with overlaid cart control. The img is absolutely
+              positioned so a tall/wide photo can never stretch the square -
+              every card in a row stays the same size, with no gap before the price. */}
+          <div className="relative w-full aspect-square bg-white overflow-hidden">
             {product.imageUrl ? (
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-full h-full object-contain p-2"
+                className="absolute inset-0 w-full h-full object-contain p-3"
                 loading="lazy"
               />
             ) : (
@@ -113,13 +115,13 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
             <button
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
-              className="absolute top-1.5 left-1.5 z-10 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 active:scale-90 transition-transform"
+              className="absolute top-1.5 right-1.5 z-10 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 active:scale-90 transition-transform"
             >
               <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
             </button>
 
             {discount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
+              <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
                 {t('offBadge', { discount })}
               </span>
             )}
@@ -163,7 +165,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
             <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
               {minQty > 1 ? t('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
             </p>
-            <div className="flex items-baseline gap-1 flex-wrap mt-auto pt-1.5">
+            <div className="flex items-baseline gap-1 flex-wrap mt-1.5">
               <span className="text-[15px] font-black text-brand-charcoal">{formatCurrency(product.price)}</span>
               {hasMrp && <span className="text-[11px] text-neutral-400 line-through">{formatCurrency(product.mrpPrice!)}</span>}
             </div>

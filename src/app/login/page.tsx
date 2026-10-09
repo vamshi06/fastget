@@ -3,33 +3,14 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { AuthHero } from '@/components/AuthHero';
+import { PhoneLogin } from '@/components/PhoneLogin';
+import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { useUser } from '@/components/UserContext';
 import { isStaffRoute } from '@/lib/staff-routes';
-import { AlertCircle, ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Mail } from 'lucide-react';
 
-function AuthHero({ title }: { title: string }) {
-  return (
-    <div className="relative h-[38vh] min-h-[240px] flex-shrink-0 md:h-auto md:min-h-[560px] md:w-[45%]">
-      <Image
-        src="/construction-background.jpg"
-        alt=""
-        fill
-        priority
-        className="object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60 md:bg-gradient-to-t md:from-black/75 md:via-black/20 md:to-black/5" />
-      <Link
-        href="/"
-        className="absolute top-4 left-4 md:top-6 md:left-6 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5 text-white" />
-      </Link>
-      <h1 className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-3xl md:text-4xl font-black text-white tracking-tight">{title}</h1>
-    </div>
-  );
-}
 
 function LoginForm() {
   const t = useTranslations('auth');
@@ -48,6 +29,8 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // With phone login on, the email form is the secondary option.
+  const [useEmail, setUseEmail] = useState(!PHONE_LOGIN_ENABLED);
 
   // When the API returns requiresVerification: true
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -119,7 +102,7 @@ function LoginForm() {
       <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
         <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
         <AuthHero title={t('login.checkEmailTitle')} />
-        <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col items-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
+        <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col items-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
           <Mail className="w-12 h-12 text-brand-primary mb-3" />
           <p className="text-sm text-brand-slate max-w-xs">
             {t('login.verifyPrompt', { email: unverifiedEmail })}
@@ -162,7 +145,32 @@ function LoginForm() {
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
       <AuthHero title={tc('login')} />
-      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
+      <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
+      {/* Phone login (WhatsApp code) - only when switched on, see
+          docs/PHONE_LOGIN_SETUP.md. Otherwise this page is email-only as before. */}
+      {PHONE_LOGIN_ENABLED && !useEmail ? (
+        <>
+          <PhoneLogin redirect={redirect} />
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="text-xs text-brand-steel">{t('phone.or')}</span>
+            <div className="flex-1 h-px bg-neutral-200" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setUseEmail(true)}
+            className="w-full py-3.5 border border-neutral-200 hover:bg-brand-fog text-brand-charcoal font-semibold rounded-full text-sm transition-colors"
+          >
+            {t('phone.useEmail')}
+          </button>
+        </>
+      ) : (
+      <>
+      {PHONE_LOGIN_ENABLED && (
+        <button type="button" onClick={() => setUseEmail(false)} className="self-start mb-4 text-sm font-semibold text-brand-primary">
+          ← {t('phone.usePhone')}
+        </button>
+      )}
       <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">{t('login.subtitle')}</p>
 
       {error && (
@@ -227,6 +235,8 @@ function LoginForm() {
           {isLoading ? t('login.submitting') : tc('login')}
         </button>
       </form>
+      </>
+      )}
 
       <div className="flex-1 min-h-6 md:hidden" />
 

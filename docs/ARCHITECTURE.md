@@ -16,29 +16,28 @@ immediately, and the customer can track status through a tokenized link.
 
 ### Decision
 
-Use Neon Postgres connected through Vercel for all order writes, reads, and status
+Use Neon Postgres for all order writes, reads, and status
 updates.
 
 ### Why
 
 - Apps Script deployment access caused `401` failures and UI crashes.
 - Google Sheets is weak as a production order database.
-- The app already runs on Vercel and has Neon env vars pulled locally.
+- The app already has Neon env vars set up locally and in production.
 - The existing API routes can keep their public contract while swapping the storage
   implementation underneath.
 
-### Vercel Notes
+### Railway Notes
 
-Vercel docs recommend using `vercel env run -- next dev` to run local development
-with project environment variables injected. They also support `vercel pull` to pull
-environment variables for a selected environment.
+The site is hosted on Railway (`railway.toml`). The Railway CLI can run local
+commands with the production service's variables injected (`railway login`,
+then `railway link` once in this folder).
 
 Use these commands when verifying Neon locally:
 
 ```bash
-vercel pull --environment=development
-vercel env run -- next dev
-vercel env run -e production -- npm run build
+npm run dev                       # uses .env.local
+railway run npm run build         # build with Railway's production variables
 ```
 
 ---
@@ -102,7 +101,7 @@ vercel env run -e production -- npm run build
 | Backend | Next.js API routes |
 | Database | Neon Postgres |
 | DB Client | `@neondatabase/serverless` |
-| Hosting | Vercel |
+| Hosting | Railway |
 
 ---
 
@@ -319,7 +318,7 @@ Move to real auth before adding multiple delivery agents or payment collection.
 
 ### Required Runtime Variables
 
-The Neon Vercel integration has pulled project-prefixed env vars locally. Use the
+The project uses the project-prefixed Neon env var name (`fastget_DATABASE_URL`). Use the
 pooled connection URL for API routes unless a future migration tool needs the
 unpooled URL.
 
@@ -334,7 +333,7 @@ DATABASE_URL=<same pooled URL>
 POSTGRES_URL=<same pooled URL>
 
 # Existing app config
-NEXT_PUBLIC_APP_URL=https://fastget.vercel.app
+NEXT_PUBLIC_APP_URL=https://fastget.in
 AGENT_PIN=<shared-agent-pin-for-mvp-status-updates>
 ```
 
@@ -343,7 +342,7 @@ AGENT_PIN=<shared-agent-pin-for-mvp-status-updates>
 Local development must not write into production order data.
 
 ```
-Vercel Production
+Railway Production
   fastget_DATABASE_URL -> Neon production database: neondb
 
 Local development
@@ -353,10 +352,10 @@ Local development
 ```
 
 The current DB client reads `DATABASE_URL`, so local env files also include
-`DATABASE_URL=<fastget_test pooled URL>` as an alias to the project-prefixed Vercel
+`DATABASE_URL=<fastget_test pooled URL>` as an alias to the project-prefixed
 variable.
 
-The original Vercel-pulled local env files are backed up locally as:
+The original local env files are backed up locally as:
 
 ```bash
 .env.local.before-neon-test-db
@@ -382,13 +381,13 @@ npm run dev
 `npm run dev` now uses `.env.local`, which points at the Neon `fastget_test`
 database on this machine.
 
-If you pull Vercel env vars again, re-check that local URLs still point at
+If you copy production env vars locally again, re-check that local URLs still point at
 `fastget_test` before testing checkout.
 
 ### Production Verification
 
 ```bash
-vercel env run -e production -- npm run build
+railway run npm run build
 ```
 
 ---
@@ -481,7 +480,7 @@ Minimum required before ship:
 4. Keep response shapes identical to current frontend expectations.
 5. Add `AGENT_PIN` validation in the update route.
 6. Remove or quarantine `src/lib/sheets.ts`.
-7. Remove Apps Script env vars from docs and Vercel after cutover.
+7. Remove Apps Script env vars from docs and Railway after cutover.
 8. Add tests and run `npm run build`, `npm run typecheck`, and browser QA.
 
 Sequential implementation, no parallelization opportunity. The route changes all touch
@@ -510,7 +509,7 @@ the same order persistence module and should land together.
 ```bash
 npm run build
 npm run typecheck
-vercel --prod
+git push                          # Railway deploys the pushed branch
 ```
 
 ---
@@ -544,5 +543,5 @@ vercel --prod
 ## Monitoring
 
 - **Database-level:** Neon query metrics and connection health.
-- **App-level:** Vercel logs for `/api/orders`, `/api/orders/[token]`, and `/api/orders/update`.
+- **App-level:** Railway deploy logs (`railway logs`) for `/api/orders`, `/api/orders/[token]`, and `/api/orders/update`.
 - **Business-level:** orders per day, failed checkout count, delivery success rate.

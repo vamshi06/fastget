@@ -3,31 +3,10 @@
 import { useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
+import { AuthHero } from '@/components/AuthHero';
+import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
 
-function AuthHero({ title }: { title: string }) {
-  return (
-    <div className="relative h-[28vh] min-h-[180px] flex-shrink-0">
-      <Image
-        src="/construction-background.jpg"
-        alt=""
-        fill
-        priority
-        className="object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/60" />
-      <Link
-        href="/login"
-        className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5 text-white" />
-      </Link>
-      <h1 className="absolute bottom-6 left-6 text-2xl font-black text-white tracking-tight">{title}</h1>
-    </div>
-  );
-}
 
 function VerifyEmailContent() {
   const t = useTranslations('auth');
@@ -103,9 +82,10 @@ function VerifyEmailContent() {
 
   if (state === 'success') {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
+        <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
         <AuthHero title={t('verifyEmail.heroTitle')} />
-        <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center">
+        <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 py-10 shadow-xl flex flex-col items-center justify-center text-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:px-14 md:py-10">
           <CheckCircle2 className="w-14 h-14 text-green-500 mb-4" />
           <p className="text-sm text-brand-slate">{t('verifyEmail.successMessage')}</p>
           <Link
@@ -115,14 +95,16 @@ function VerifyEmailContent() {
             {t('common.goToLogin')}
           </Link>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
+      <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
       <AuthHero title={t('verifyEmail.heroTitle')} />
-      <div className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 pt-6 pb-6 shadow-xl flex flex-col justify-center">
+      <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-8 pt-6 pb-6 shadow-xl flex flex-col justify-center md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:px-14 md:py-10">
         <div className="text-center mb-5">
           <Mail className="w-10 h-10 text-brand-primary mx-auto mb-3" />
           <p className="text-sm text-brand-slate">
@@ -190,6 +172,7 @@ function VerifyEmailContent() {
             {t('common.resend')}
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );

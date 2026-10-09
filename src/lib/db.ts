@@ -21,7 +21,7 @@ neonConfig.fetchFunction = (url: string, options: RequestInit) =>
  * @module lib/db
  */
 
-// Support both plain DATABASE_URL and Vercel-prefixed version (fastget_DATABASE_URL)
+// Support both plain DATABASE_URL and the project-prefixed name (fastget_DATABASE_URL)
 const databaseUrl = process.env.DATABASE_URL || process.env.fastget_DATABASE_URL;
 
 // Lazy-initialise clients so that a missing env var does NOT crash the entire
@@ -961,7 +961,7 @@ export async function getOrdersByStatus(status: OrderStatus): Promise<Order[]> {
 /**
  * Filters for the admin order list and CSV export. Dates are calendar days
  * (YYYY-MM-DD) in India time, so "From 5 Oct" means from 00:00 IST - the same
- * whether the query runs on a laptop in IST or a Vercel function in UTC.
+ * whether the query runs on a laptop in IST or the production server in UTC.
  */
 export interface AdminOrderFilters {
   status?: OrderStatus;

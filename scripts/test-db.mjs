@@ -5,8 +5,8 @@
  * Usage:
  *   DATABASE_URL="postgresql://..." node scripts/test-db.mjs
  * 
- * Or pull env vars from Vercel first:
- *   vercel env pull .env.local
+ * Or copy the variables from Railway first:
+ *   Railway → service → Variables → Raw Editor → paste into .env.local
  *   node scripts/test-db.mjs
  */
 
@@ -41,7 +41,7 @@ if (!databaseUrl) {
   console.error('Checked for: DATABASE_URL, fastget_DATABASE_URL');
   console.error('');
   console.error('To fix:');
-  console.error('  1. Pull env vars: vercel env pull .env.local');
+  console.error('  1. Copy env vars from Railway (Variables → Raw Editor) into .env.local');
   console.error('  2. Run test:      node scripts/test-db.mjs');
   console.error('');
   console.error('Or set it directly:');
