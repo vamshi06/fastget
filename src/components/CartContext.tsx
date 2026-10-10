@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useState, useRef } from 'react';
 import { CartItem, Product } from '@/types';
 import { useUser } from './UserContext';
+import { track } from '@/lib/analytics';
 
 interface CartState {
   items: CartItem[];
@@ -47,6 +48,18 @@ interface LivePrice {
  */
 export function getMinOrderQty(product: Product): number {
   return product.moq && product.moq > 1 ? Math.floor(product.moq) : 1;
+}
+
+/** Product fields attached to cart/product analytics events. */
+export function productProps(product: Product, quantity?: number) {
+  return {
+    product_id: product.id,
+    product_name: product.name,
+    category: product.categoryName || product.category,
+    price: product.price,
+    is_flash_sale: Boolean(product.isFlashSale),
+    ...(quantity !== undefined && { quantity }),
+  };
 }
 
 // Raises any line below its product's minimum up to that minimum - for carts
@@ -368,10 +381,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback((product: Product, quantity: number) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
+    track('added_to_cart', productProps(product, quantity));
   }, []);
 
+  // Read through a ref so removeItem keeps a stable identity.
+  const itemsRef = useRef(state.items);
+  itemsRef.current = state.items;
+
   const removeItem = useCallback((productId: string) => {
+    const line = itemsRef.current.find(item => item.product.id === productId);
     dispatch({ type: 'REMOVE_ITEM', payload: { productId } });
+    if (line) track('removed_from_cart', productProps(line.product, line.quantity));
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {

@@ -13,6 +13,7 @@ import { ConditionalFooter } from '@/components/ConditionalFooter';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AnnouncementBar } from '@/components/AnnouncementBar';
 import { NativeShellBridge } from '@/components/NativeShellBridge';
+import { Analytics } from '@/components/Analytics';
 import { ThemeProvider } from '@/components/ThemeContext';
 import { THEME_SCRIPT } from '@/lib/theme';
 import { SHELL_COOKIE, SHELL_VERSION, TAB_ROOTS } from '@/lib/shell-routes';
@@ -98,6 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </div>
                   <MobileBottomNav />
                   <NativeShellBridge />
+                  <Analytics />
                 </LocationSplashProvider>
               </ToastProvider>
             </CartProvider>

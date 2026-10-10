@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getPushToken, setPushToken } from '@/lib/native-bridge';
+import { track } from '@/lib/analytics';
 
 interface CurrentUser {
   id: string;
@@ -88,6 +89,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = useCallback(() => {
+    track('logged_out');
     setCurrentUser(null);
     localStorage.removeItem('fastget_currentUser');
     // Clear the server session cookie too - otherwise the next /api/auth/me

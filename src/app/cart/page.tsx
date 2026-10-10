@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastContext';
 import { CartItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { haptic } from '@/lib/native-bridge';
+import { track } from '@/lib/analytics';
 import { ProductSection } from '@/components/home/ProductSection';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2, Tag, Coins } from 'lucide-react';
 
@@ -45,6 +46,14 @@ export default function CartPage() {
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
   const [firstOrderDiscountAmount, setFirstOrderDiscountAmount] = useState(200);
   const [firstOrderMinOrder, setFirstOrderMinOrder] = useState(449);
+
+  // Once per visit, after the saved cart has loaded.
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || viewTracked.current) return;
+    viewTracked.current = true;
+    track('cart_viewed', { item_count: state.items.length, cart_value: getSubtotal() });
+  }, [isLoaded, state.items.length, getSubtotal]);
 
   // Fetch whether the user still qualifies for the first-order coupon (for
   // preview only - the checkout/order APIs always re-validate this server-side).

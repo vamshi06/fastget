@@ -9,7 +9,7 @@ export default async function PrivacyPolicyPage() {
   const s3List = t.raw("s3.list") as string[];
 
   return (
-    <LegalPageLayout title={t("title")} updatedAt="16 June 2026">
+    <LegalPageLayout title={t("title")} updatedAt="10 October 2026">
       <LegalSection heading={t("s1.heading")}>
         <p>{t("s1.body")}</p>
       </LegalSection>
@@ -46,6 +46,12 @@ export default async function PrivacyPolicyPage() {
           </li>
           <li>
             <strong>Neon (PostgreSQL hosting)</strong> - {t("s4.neon")}
+          </li>
+          <li>
+            <strong>Expo and Google Firebase Cloud Messaging</strong> - {t("s4.push")}
+          </li>
+          <li>
+            <strong>PostHog</strong> - {t("s4.posthog")}
           </li>
         </ul>
         <p>{t("s4.outro")}</p>

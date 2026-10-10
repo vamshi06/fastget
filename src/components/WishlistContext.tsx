@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { Product } from '@/types';
 import { useUser } from './UserContext';
+import { track } from '@/lib/analytics';
 
 const WISHLIST_STORAGE_KEY = 'fastget.wishlist.v1';
 const GUEST = 'guest';
@@ -135,6 +136,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const addToWishlist = useCallback(async (product: Product) => {
     if (itemsRef.current.some(p => p.id === product.id)) return true;
     setItems([product, ...itemsRef.current]);
+    track('wishlist_added', { product_id: product.id, product_name: product.name });
     if (!currentUser) return true;
 
     const ok = await saveToServer(product);

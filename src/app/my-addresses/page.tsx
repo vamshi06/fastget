@@ -262,12 +262,12 @@ function AddressCard({
         </div>
       </div>
 
-      <p className="text-brand-charcoal text-sm font-medium leading-snug">{address.street}</p>
+      <p className="ph-no-capture text-brand-charcoal text-sm font-medium leading-snug">{address.street}</p>
       {address.landmark && (
-        <p className="text-brand-slate text-xs mt-0.5">{t('addresses.near', { landmark: address.landmark })}</p>
+        <p className="ph-no-capture text-brand-slate text-xs mt-0.5">{t('addresses.near', { landmark: address.landmark })}</p>
       )}
-      <p className="text-brand-slate text-sm mt-0.5">{address.city}</p>
-      <p className="text-brand-slate text-xs mt-1">{address.phone}</p>
+      <p className="ph-no-capture text-brand-slate text-sm mt-0.5">{address.city}</p>
+      <p className="ph-no-capture text-brand-slate text-xs mt-1">{address.phone}</p>
 
       {!address.isPrimary && (
         <button

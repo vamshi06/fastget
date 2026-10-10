@@ -236,7 +236,7 @@ export default function AccountPage() {
         <div className="w-14 h-14 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
           <span className="text-2xl font-black text-white">{currentUser.name?.charAt(0).toUpperCase() || '?'}</span>
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="ph-no-capture flex-1 min-w-0">
           <h1 className="text-lg font-black text-brand-charcoal truncate">{currentUser.name}</h1>
           <p className="text-sm text-brand-slate truncate">{displayPhone}</p>
         </div>

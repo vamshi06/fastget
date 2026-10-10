@@ -10,6 +10,7 @@ import { SignInPrompt } from '@/components/SignInPrompt';
 import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { haptic } from '@/lib/native-bridge';
+import { track } from '@/lib/analytics';
 import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
 import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
@@ -120,6 +121,24 @@ function CheckoutPageContent() {
     const top = errorRef.current.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
     window.scrollTo({ top, behavior: 'smooth' });
   }, [error]);
+
+  // Every error the customer sees here (validation, payment, server) - the
+  // most direct answer to "why did they leave at checkout?".
+  useEffect(() => {
+    if (error) track('checkout_error', { message: error, payment_method: paymentMethod });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
+
+  // Funnel step, once per visit: reached checkout, or hit the sign-in wall.
+  const arrivalTracked = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || arrivalTracked.current) return;
+    arrivalTracked.current = true;
+    if (!currentUser) track('checkout_login_required', { item_count: state.items.length });
+    else if (state.items.length > 0) {
+      track('checkout_started', { item_count: state.items.length, cart_value: getTotal() });
+    }
+  }, [isLoaded, currentUser, state.items.length, getTotal]);
 
   const [useAccountName, setUseAccountName] = useState(false);
   const [useAccountPhone, setUseAccountPhone] = useState(false);
@@ -260,6 +279,18 @@ function CheckoutPageContent() {
     }
   };
 
+  const trackOrderPlaced = (method: PaymentMethod) => {
+    track('order_placed', {
+      payment_method: method,
+      total: getTotal() - firstOrderDiscount - coinDiscount,
+      item_count: state.items.length,
+      delivery_type: formData.deliveryType,
+      first_order_discount: firstOrderDiscount,
+      coins_used: coinDiscount,
+      referral_applied: Boolean(appliedReferral),
+    });
+  };
+
   const handlePlaceCodOrder = async () => {
     setIsSubmitting(true);
     try {
@@ -280,6 +311,7 @@ function CheckoutPageContent() {
       const data = await res.json();
       if (res.ok && data.statusToken) {
         haptic('success');
+        trackOrderPlaced('cod');
         await persistAddressIfRequested();
         clearCart();
         router.push(`/order/${data.statusToken}`);
@@ -350,6 +382,7 @@ function CheckoutPageContent() {
       }
 
       const { razorpayOrderId, amount, currency, orderToken } = await createRes.json();
+      track('payment_opened', { amount: amount / 100 });
 
       // Step 2 - open Razorpay checkout.
       await openCheckout({
@@ -375,15 +408,18 @@ function CheckoutPageContent() {
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.statusToken) {
               haptic('success');
+              trackOrderPlaced('razorpay');
               await persistAddressIfRequested();
               clearCart();
               router.push(`/order/${verifyData.statusToken}`);
             } else {
+              track('payment_failed', { stage: 'verify', status: verifyRes.status });
               setPaymentState('failed');
               setIsSubmitting(false);
               setError(verifyData.error || t('errorPaymentVerificationFailed'));
             }
           } catch {
+            track('payment_failed', { stage: 'verify_network' });
             setPaymentState('failed');
             setIsSubmitting(false);
             setError(t('errorPaymentVerificationFailed'));
@@ -396,6 +432,7 @@ function CheckoutPageContent() {
         theme: { color: '#F5A623' },
         modal: {
           ondismiss: () => {
+            track('payment_dismissed');
             setPaymentState('idle');
             setIsSubmitting(false);
             setError(t('errorPaymentNotCompleted'));
@@ -517,7 +554,7 @@ function CheckoutPageContent() {
                       <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
                         {(() => { const Icon = ADDRESS_TYPE_ICONS[selectedAddress.type]; return <Icon className="w-4 h-4 text-brand-primary" />; })()}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="ph-no-capture flex-1 min-w-0">
                         <p className="text-xs font-bold text-brand-primary uppercase tracking-wide mb-0.5">
                           {ADDRESS_TYPE_LABELS[selectedAddress.type]}
                         </p>
@@ -555,7 +592,7 @@ function CheckoutPageContent() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-brand-charcoal">{ADDRESS_TYPE_LABELS[addr.type]}{addr.isPrimary && <span className="ml-1.5 text-brand-primary">· {t('primaryBadge')}</span>}</p>
-                                <p className="text-xs text-brand-slate truncate">{addr.street}, {addr.city}</p>
+                                <p className="ph-no-capture text-xs text-brand-slate truncate">{addr.street}, {addr.city}</p>
                               </div>
                               {isActive && <ChevronRight className="w-4 h-4 text-brand-primary flex-shrink-0" />}
                             </button>

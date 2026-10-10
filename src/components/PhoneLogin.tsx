@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useUser } from '@/components/UserContext';
+import { track } from '@/lib/analytics';
 
 type Step = 'phone' | 'code' | 'profile';
 
@@ -53,6 +54,7 @@ export function PhoneLogin({ redirect }: { redirect: string | null }) {
 
   function finishLogin(data: { id: string; name: string; email: string; phone: string; role: string }) {
     setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone, role: data.role });
+    track('logged_in', { method: 'phone' });
     router.push((redirect || '/') as any);
     router.refresh();
   }

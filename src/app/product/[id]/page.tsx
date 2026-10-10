@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER } from '@/components/CartContext';
+import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER, productProps } from '@/components/CartContext';
+import { track } from '@/lib/analytics';
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
 import { HomeProductCard } from '@/components/home/HomeProductCard';
@@ -67,6 +68,7 @@ export default function ProductDetailPage() {
         const p: ProductWithVariants = json.data;
         setProduct(p);
         if (p.variants?.length) setSelectedVariant(p.variants[0]);
+        track('product_viewed', { ...productProps(p), stock_status: p.stockStatus });
       })
       .catch((err) => setError(err.message || t('failedToLoadProduct')))
       .finally(() => setLoading(false));

@@ -21,6 +21,8 @@ const csp = [
   "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com",
   "connect-src 'self' https://*.razorpay.com https://lumberjack.razorpay.com",
   "frame-src 'self' https://*.razorpay.com",
+  // PostHog session replay compresses recordings in a blob: web worker.
+  "worker-src 'self' blob:",
   "form-action 'self' https://*.razorpay.com",
 ].join('; ');
 
@@ -93,6 +95,18 @@ const nextConfig = {
     ];
   },
 
+  // PostHog analytics (src/lib/analytics.ts) sends to /ingest on our own
+  // domain; forward it to PostHog's cloud. Keeps ad blockers from eating the
+  // events and keeps PostHog's hosts out of the CSP.
+  async rewrites() {
+    const region = process.env.NEXT_PUBLIC_POSTHOG_REGION === 'eu' ? 'eu' : 'us';
+    return [
+      { source: '/ingest/static/:path*', destination: `https://${region}-assets.i.posthog.com/static/:path*` },
+      { source: '/ingest/:path*', destination: `https://${region}.i.posthog.com/:path*` },
+    ];
+  },
+  // PostHog's API paths end in a slash; Next would otherwise redirect them away.
+  skipTrailingSlashRedirect: true,
 };
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AuthHero } from '@/components/AuthHero';
 import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 
 function SignupForm() {
@@ -27,6 +28,10 @@ function SignupForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (error) track('signup_error', { message: error });
+  }, [error]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,6 +79,7 @@ function SignupForm() {
         return;
       }
 
+      track('signed_up', { method: 'email' });
       const email = data.email || formData.email.toLowerCase().trim();
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch {

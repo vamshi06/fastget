@@ -552,7 +552,7 @@ export function Header() {
                   <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center shadow-brand">
                     <User className="w-4 h-4 text-white" />
                   </div>
-                  <span className="hidden sm:inline text-sm font-medium text-brand-charcoal truncate max-w-[120px]">
+                  <span className="ph-no-capture hidden sm:inline text-sm font-medium text-brand-charcoal truncate max-w-[120px]">
                     {currentUser.name}
                   </span>
                   <ChevronDown
@@ -566,7 +566,7 @@ export function Header() {
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden z-50 animate-fade-in">
                     {/* Profile header */}
-                    <div className="px-5 py-4 bg-primary-50 border-b border-neutral-100">
+                    <div className="ph-no-capture px-5 py-4 bg-primary-50 border-b border-neutral-100">
                       <p className="text-sm font-semibold text-brand-charcoal">{currentUser.name}</p>
                       <p className="text-xs text-brand-slate mt-0.5 truncate">{currentUser.email}</p>
                     </div>

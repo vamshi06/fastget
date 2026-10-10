@@ -123,7 +123,7 @@ export default function MyProfilePage() {
         </div>
 
         {/* Avatar card */}
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 text-center mb-4">
+        <div className="ph-no-capture bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 text-center mb-4">
           <div className="w-16 h-16 bg-brand-primary rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
             <span className="text-2xl font-black text-white">
               {currentUser.name?.charAt(0).toUpperCase() || '?'}
@@ -177,7 +177,7 @@ export default function MyProfilePage() {
             </div>
           </form>
         ) : (
-          <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+          <div className="ph-no-capture bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
             <div className="flex items-center px-5 py-4 border-b border-neutral-100">
               <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-brand-primary" />

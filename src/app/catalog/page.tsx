@@ -21,6 +21,7 @@ import { useIsPhone, useLockBodyScroll } from '@/lib/use-back-to-close';
 import { useNativeBackHandler, useNativeTitle } from '@/lib/native-bridge';
 import { getSubcategoryTiles } from '@/lib/category-tiles';
 import { ProductCardSkeleton } from '@/components/Skeletons';
+import { track } from '@/lib/analytics';
 
 // ── DB category definitions ────────────────────────────────────────────────────
 
@@ -143,6 +144,8 @@ function CatalogPageContent() {
 
       setProducts(json.data.products as Product[]);
       setTotal(json.data.total);
+      // Searches with 0 results show what customers want that we don't stock.
+      if (q && page === 1) track('searched', { query: q, results: json.data.total, category: cat || undefined });
       setTotalPages(Math.max(1, Math.ceil(json.data.total / PAGE_SIZE)));
       setLoadedPage(page);
       setLoading(false);

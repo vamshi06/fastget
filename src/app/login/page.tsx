@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -9,6 +9,7 @@ import { PhoneLogin } from '@/components/PhoneLogin';
 import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { useUser } from '@/components/UserContext';
 import { isStaffRoute } from '@/lib/staff-routes';
+import { track } from '@/lib/analytics';
 import { AlertCircle, Eye, EyeOff, Mail } from 'lucide-react';
 
 
@@ -35,6 +36,13 @@ function LoginForm() {
   // When the API returns requiresVerification: true
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  useEffect(() => {
+    if (error) track('login_error', { message: error });
+  }, [error]);
+  useEffect(() => {
+    if (unverifiedEmail) track('login_error', { message: 'email_not_verified' });
+  }, [unverifiedEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +74,7 @@ function LoginForm() {
       }
 
       setCurrentUser({ id: data.id, name: data.name, email: data.email, phone: data.phone, role: data.role });
+      track('logged_in', { method: 'email' });
       // Admins sign in here too and land on the admin panel by default. A
       // non-admin is never sent to a staff screen (it would just bounce back here).
       const isAdmin = data.role === 'admin';
