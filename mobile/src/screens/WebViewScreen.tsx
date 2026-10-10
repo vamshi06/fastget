@@ -3,8 +3,7 @@ import { Animated, BackHandler, Easing, Keyboard, Linking, Platform, Share, Styl
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../shell/theme';
 import * as Haptics from 'expo-haptics';
-import * as Notifications from 'expo-notifications';
-import { getPushToken, pathFromResponse } from '../notifications';
+import { getPushToken, listenForNotificationTaps } from '../notifications';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import ErrorScreen from '../components/ErrorScreen';
 import LoadingScreen from '../components/LoadingScreen';
@@ -150,12 +149,7 @@ export default function WebViewScreen() {
   const shellReadyRef = useRef(false);
   shellReadyRef.current = shellReady;
   useEffect(() => {
-    let lastHandled: string | null = null;
-    const open = (response: Notifications.NotificationResponse | null, coldStart: boolean) => {
-      const target = pathFromResponse(response);
-      const id = response?.notification.request.identifier ?? null;
-      if (!target || id === lastHandled) return;
-      lastHandled = id;
+    return listenForNotificationTaps((target, coldStart) => {
       if (!coldStart && shellReadyRef.current) {
         pendingDirection.current = 'forward';
         webViewRef.current?.injectJavaScript(
@@ -164,11 +158,7 @@ export default function WebViewScreen() {
       } else {
         setWebViewSource({ uri: `${APP_URL}${target}` });
       }
-    };
-
-    Notifications.getLastNotificationResponseAsync().then((r) => open(r, true)).catch(() => {});
-    const sub = Notifications.addNotificationResponseReceivedListener((r) => open(r, false));
-    return () => sub.remove();
+    });
   }, []);
 
   // The tab bar would ride up on top of the keyboard - hide it while typing.

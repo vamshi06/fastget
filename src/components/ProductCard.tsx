@@ -52,14 +52,8 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
     if (quantity === 0) {
       setIsAdding(true);
       try {
+        // No success toast: the stepper and the cart bar already confirm it.
         addItem(product, minQty); // the cart also enforces this
-        showToast(
-          minQty > 1
-            ? tc('addedToCartMin', { qty: minQty, name: product.name })
-            : tc('addedToCart', { name: product.name }),
-          'success',
-          { label: tc('viewCart'), href: '/cart' },
-        );
       } catch {
         showToast(t('couldNotAddItem'), 'error');
       } finally {

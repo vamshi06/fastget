@@ -122,12 +122,12 @@ export default function ProductDetailPage() {
       };
       const safeQuantity = Math.max(moq, quantity);
       haptic('success');
+      // No success toast: the button turning into "View Cart" and the
+      // "In cart: N" line already confirm it.
       if (cartQuantity === 0) {
         addItem(cartProduct, safeQuantity);
-        showToast(tc('addedToCart', { name: product.name }), 'success', { label: tc('viewCart'), href: '/cart' });
       } else {
         updateQuantity(product.id, safeQuantity);
-        showToast(t('quantityUpdated'), 'success', { label: tc('viewCart'), href: '/cart' });
       }
     } catch {
       showToast(t('couldNotAddItem'), 'error');

@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useCart, getMinOrderQty } from '@/components/CartContext';
-import { useToast } from '@/components/ToastContext';
 import { haptic } from '@/lib/native-bridge';
 import { Product } from '@/types';
 
@@ -15,7 +14,6 @@ interface HomeProductCardProps {
 
 export function HomeProductCard({ product }: HomeProductCardProps) {
   const { state, addItem, updateQuantity } = useCart();
-  const { showToast } = useToast();
   const t = useTranslations('home');
   const tc = useTranslations('common');
   const tp = useTranslations('product');
@@ -34,15 +32,9 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // No success toast: the stepper and the cart bar already confirm it.
     addItem(product, minQty); // the cart also enforces this
     haptic('light');
-    showToast(
-      minQty > 1
-        ? tc('addedToCartMin', { qty: minQty, name: product.name })
-        : tc('addedToCart', { name: product.name }),
-      'success',
-      { label: tc('viewCart'), href: '/cart' },
-    );
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
