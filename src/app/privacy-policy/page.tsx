@@ -53,6 +53,12 @@ export default async function PrivacyPolicyPage() {
           <li>
             <strong>PostHog</strong> - {t("s4.posthog")}
           </li>
+          <li>
+            <strong>Google Maps</strong> - {t("s4.maps")}
+          </li>
+          <li>
+            <strong>WhatsApp</strong> - {t("s4.whatsapp")}
+          </li>
         </ul>
         <p>{t("s4.outro")}</p>
       </LegalSection>

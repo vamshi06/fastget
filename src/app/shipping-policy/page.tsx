@@ -7,7 +7,7 @@ export default async function ShippingPolicyPage() {
   const t = await getTranslations("legal.shipping");
 
   return (
-    <LegalPageLayout title={t("title")} updatedAt="16 June 2026">
+    <LegalPageLayout title={t("title")} updatedAt="10 October 2026">
       <LegalSection heading={t("s1.heading")}>
         <p>{t("s1.body")}</p>
       </LegalSection>

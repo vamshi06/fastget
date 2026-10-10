@@ -11,11 +11,12 @@
       "list": [
         "Account details: name, email address, phone number, and password (stored as a one-way hash, never in plain text)",
         "Delivery addresses you save to your account",
+        "Delivery site details: the site address and pincode, and - only if you tap \"Use my current location\" at checkout - your phone's location at that moment, saved with the order so our delivery team can find the site. If you add GST details at checkout, we save the GSTIN and business name to print on your invoice.",
         "Order history: items purchased, order status, and invoices",
         "Communications you send us (e.g. support requests)",
         "Usage information: pages you open, products you view, searches, taps, errors you run into, and whether you use the app or a browser. We may also make session recordings of how the app is used. What you type, and your name, address and phone number, are hidden in these recordings."
       ],
-      "outro": "If you allow notifications, the app also stores a push token for your phone so we can send you order updates. We do not collect your device location or contacts. Apart from internet access, the only permission the app asks for is to show notifications, which you can refuse or turn off at any time in your phone's settings."
+      "outro": "If you allow notifications, the app also stores a push token for your phone so we can send you order updates. We do not collect your contacts, and we only read your location when you tap \"Use my current location\" at checkout - never in the background. Apart from internet access, the app asks for two permissions: to show notifications, and to use your location for that checkout button. You can refuse either, or turn them off at any time in your phone's settings - you can still type your address instead."
     },
     "s3": {
       "heading": "3. How we use your information",
@@ -36,7 +37,9 @@
       "neon": "stores our application database, including your account and order data, on infrastructure hosted in AWS ap-southeast-1.",
       "push": "deliver order-update notifications to the FastGet app. They receive your phone's push token and the notification text (such as your order status and amount), and nothing else about you.",
       "posthog": "provides product analytics. It receives the usage information and session recordings described above, linked to a random identifier or your account ID. It never receives your name, email address or phone number. Data is stored in the United States.",
-      "outro": "We do not sell your personal information to third parties."
+      "outro": "We do not sell your personal information to third parties.",
+      "whatsapp": "if you choose to chat with us on WhatsApp, your messages are handled by WhatsApp under its own privacy policy. We only see what you send us in the chat.",
+      "maps": "our delivery team may open a delivery site's pinned location in Google Maps to find the way. Only the location of the site is opened, not your name or phone number."
     },
     "s5": {
       "heading": "5. Cookies and local storage",

@@ -217,6 +217,88 @@ Keep every existing answer and **add** these:
   "sharing" either.
 - After saving, Google reviews the form. It doesn't need a new app build.
 
+## 8. Next app build: location permission + Play Console changes
+
+The next Android build (versionCode **15**) adds two things that need Play
+Console updates:
+
+- **Location permission** (`ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION`
+  in `mobile/app.json`). It's used only when a customer taps **"Use my current
+  location"** at checkout. The site's pin is saved with the order so the
+  driver can open it in Google Maps. It's foreground only: no background
+  location, nothing is tracked.
+- **WhatsApp links open in WhatsApp** (the "Chat on WhatsApp" buttons). This
+  needs no permission and collects no data.
+
+The privacy policy was updated to match *(done 2026-10-10, en + hi)*. It used
+to say "we do not collect your device location". It now describes the
+checkout location pin, GST details, Google Maps and WhatsApp. **Deploy the
+website before submitting the build**, so the live policy matches the app
+when Google reviews it.
+
+### 8a. Build and release
+
+1. `mobile/app.json`: set `"versionCode": 15` (and bump `"version"`, e.g. `10.1.0`).
+2. Build with EAS as usual and upload the `.aab` to **Release → Production →
+   Create new release**. If the push-notifications build is still pending,
+   this one build covers both.
+3. Suggested release notes ("What's new"):
+   ```
+   • Use your current location at checkout so our driver finds your site
+   • Chat with us on WhatsApp from any product or order
+   • Sizes of the same product now grouped together
+   ```
+
+### 8b. Data safety form: add location (and GST details)
+
+Play Console → FastGet → **Policy and programs → App content → Data safety → Manage**.
+Keep every existing answer and **add**:
+
+| Data type | Collected? | Shared? | Required or optional | Purposes |
+|---|---|---|---|---|
+| **Location → Precise location** | Yes | No | **Optional** | App functionality |
+| **Personal info → Other info** (GSTIN, business name) | Yes | No | **Optional** | App functionality |
+
+- **Optional**, because customers can skip the location button and type the
+  address, and GST details are only entered if they want a GST invoice.
+- **"Is this data processed ephemerally?"** No. The pin is saved with the order.
+- **Shared?** No. The pin is opened in Google Maps by our own staff, and
+  Neon only stores it for us, so neither counts as sharing.
+- **Approximate location:** we only save the precise pin. If Google's checks
+  flag the `ACCESS_COARSE_LOCATION` permission, also tick **Approximate
+  location** with the same answers.
+- **Personal info → Address** should already be declared for delivery
+  addresses. The pincode is part of it, so nothing new is needed there.
+- WhatsApp chats happen inside WhatsApp, not our app, so nothing to declare.
+
+### 8c. Other Play Console checks
+
+- **App content → Location permissions / Sensitive permissions:** no
+  declaration form is needed, because we don't ask for background location
+  (`ACCESS_BACKGROUND_LOCATION`). If Play Console still asks, answer that
+  location is used only in the foreground, when the user taps a button at
+  checkout, to pin the delivery site.
+- **Policy and programs → App content → Privacy policy:** the URL stays
+  `https://fastget.in/privacy-policy`. Just make sure the updated version is
+  deployed (section 8 above).
+- **Pre-launch report** (Release → Testing → Pre-launch report): after
+  uploading, check it lists no new permission warnings.
+- After the release goes live, the location prompt only appears the first
+  time someone taps the location button. Android asks for permission then,
+  and a "Deny" still lets them type the address.
+
+### 8d. PostHog: new events to use
+
+Two new events (already in the event reference below). Add them to the
+"Customer journey" dashboard:
+
+- **Trends on `reordered`**: how often customers use "Order again".
+  Compare with `order_placed` to see what share of orders are repeats.
+- **Trends on `whatsapp_chat_opened`**, broken down by `source`
+  (`product`, `order`, `support`, `account`): which screens make people ask
+  questions. Many `product` chats on one item usually means its description
+  or photos are missing something.
+
 ## Event reference
 
 Event names are what the funnels are built on. Renaming one breaks its funnel.
@@ -234,6 +316,8 @@ Event names are what the funnels are built on. Renaming one breaks its funnel.
 | `checkout_error` | any error shown on checkout | `message`, `payment_method` |
 | `payment_opened` / `payment_dismissed` / `payment_failed` | Razorpay flow | `amount`, `stage` |
 | `order_placed` | order confirmed | `payment_method`, `total`, `delivery_type`, `coins_used`, `referral_applied` |
+| `reordered` | "Order again" tapped on My Orders / an order page | `order_id`, `items`, `unavailable` |
+| `whatsapp_chat_opened` | a "Chat on WhatsApp" button tapped | `source` (`product` / `order` / `support` / `account`) |
 | `signed_up` / `signup_error` | signup page | `message` |
 | `logged_in` / `login_error` / `logged_out` | auth | `method`, `message` |
 
