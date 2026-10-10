@@ -81,7 +81,7 @@ function catalogRowToProduct(row: any): Product {
     : rawName;
 
   // Use product_code as the canonical id exposed to the frontend.
-  // product_code is the stable SKU from the Google Sheet (e.g. "PLY-CP-04").
+  // product_code is the stable SKU (e.g. "PLY-CP-04").
   // Falls back to the DB UUID for any legacy rows without a product_code.
   const productCode = (row.product_code as string) || (row.db_id as string);
 
@@ -1286,7 +1286,7 @@ export async function getVariantBySku(sku: string): Promise<ProductVariant | nul
  * public product code used in product URLs (/product/[id],
  * /admin/products/[productCode]/edit). Falls back to the product's UUID for
  * legacy rows without a product_code. Returns null if the SKU has no
- * matching variant (e.g. discontinued or a legacy Google Sheets order).
+ * matching variant (e.g. discontinued or a legacy order).
  */
 export async function getProductCodeByVariantSku(sku: string): Promise<string | null> {
   const sql = getUnpooledClient();

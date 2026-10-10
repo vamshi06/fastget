@@ -7,7 +7,7 @@ Rapid order fulfillment system built with Next.js.
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
-- Google Sheets (MVP database)
+- Neon Postgres
 
 ## Development Commands
 
@@ -45,7 +45,6 @@ Available gstack skills in this project:
 ## Database Strategy
 
 **Current:** Neon Postgres (Production)
-**Legacy:** Google Sheets via Apps Script (Deprecated - Not in use)
 
 All orders are stored in Neon Postgres. The database layer lives in `src/lib/db.ts`.
 

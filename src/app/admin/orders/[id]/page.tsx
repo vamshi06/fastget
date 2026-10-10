@@ -30,7 +30,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   // Resolve each line item's variant SKU to its product code so admins can
   // click through to the product's details page. Items with no matching
-  // variant (e.g. discontinued products, legacy Google Sheets orders)
+  // variant (e.g. discontinued products, legacy orders)
   // resolve to null and render without a link.
   const isOpenOrder = order.status !== 'delivered' && order.status !== 'cancelled';
   const [itemProductCodes, referrer, customer, stockBySku] = await Promise.all([

@@ -52,7 +52,6 @@
 
 ### Integrations
 
-- [ ] Optional Google Sheets export for ops/reporting, one-way only
 - [ ] Email service (Resend or SendGrid)
 - [ ] Error monitoring (Sentry or Railway logs/metrics)
 

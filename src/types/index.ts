@@ -11,7 +11,7 @@ export interface Product {
   stockQuantity?: number;            // actual count, populated by admin/catalog queries
   // Extended fields populated when fetching from the live DB
   brand?: string;
-  productCode?: string; // stable identifier from the Google Sheet (e.g. "PLY-CP-04")
+  productCode?: string; // stable SKU identifier (e.g. "PLY-CP-04")
   sku?: string;
   variantId?: string;
   mrpPrice?: number;   // in rupees

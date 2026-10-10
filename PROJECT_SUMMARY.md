@@ -104,7 +104,6 @@ Mumbai (currently targeting Andheri, Goregaon, Malad based on service area metad
 | Search | ✅ Complete | `src/app/api/products/route.ts` | Full-text ILIKE on name, brand, description |
 | Category images | ✅ Complete | `src/app/page.tsx` | Visual category cards on homepage |
 | Dual catalog source | ✅ Complete | `src/lib/products.ts` | Category-specific tables (primary) + normalized products table (fallback) |
-| Product import from Google Sheets | 🟡 Partial | `scripts/import-sheet.ts` | Script exists; requires `GOOGLE_SHEETS_API_KEY` - operational tool, not runtime |
 | Wishlist UI | ❌ Not Built | `wishlists` table exists in DB | DB schema complete, no frontend |
 
 ---
@@ -372,7 +371,6 @@ wishlists
 | `RAZORPAY_KEY_ID` | Razorpay merchant key (server-only) | Yes |
 | `RAZORPAY_KEY_SECRET` | Razorpay secret (server-only) | Yes |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay public key (browser-safe) | Yes |
-| `GOOGLE_SHEETS_API_KEY` | For catalog import script only | Optional |
 | `DEBUG_CATALOG` | Set to `1` to enable query logging | Optional |
 | `LEGACY_PRODUCTS_TABLE` | Set to `1` to force legacy product table | Optional |
 
@@ -477,14 +475,7 @@ The orange `#F5A623` theme runs throughout: primary buttons, icons, the logo, an
 | **Direct** | Unpooled connection for writes and post-write reads |
 | **Transactions** | Supported via manual BEGIN/COMMIT/ROLLBACK |
 
-### 6.3 Google Sheets (Optional, Admin Only)
-
-- **Purpose:** Bulk product catalog import tool
-- **Script:** `scripts/import-sheet.ts`, run with `npm run import-sheet`
-- **Requirement:** `GOOGLE_SHEETS_API_KEY` environment variable
-- **Status:** Not a runtime dependency. Used by admin staff to populate the product catalog in bulk.
-
-### 6.4 Railway (Deployment)
+### 6.3 Railway (Deployment)
 
 - **Config:** `railway.toml` - Nixpacks build, `next start -p $PORT`
 - **Auto-deploy:** on `git push` to the connected branch
@@ -631,7 +622,7 @@ There are **two ways products are stored**:
 
 The `getProductsFromCategoryTables()` function in [src/lib/products.ts](src/lib/products.ts) is the primary product fetch path. The `getProductCatalog()` function is the fallback. Do not confuse the two. The `products_catalog_view` is a UNION of all category tables and is used for cross-category queries.
 
-When importing new products, they go into the appropriate category table. The `npm run import-sheet` script populates category tables from Google Sheets.
+New products go into the appropriate category table (added via the admin panel).
 
 #### 2. The Two-Token Order System
 

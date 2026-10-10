@@ -9,7 +9,6 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "sync-schema": "tsx --env-file-if-exists=.env.local scripts/sync-schema.ts",
-    "import-sheet": "tsx --env-file-if-exists=.env.local scripts/import-sheet.ts",
     "translate-products": "tsx --env-file-if-exists=.env.local scripts/translate-products.ts",
     "import-translations": "tsx --env-file-if-exists=.env.local scripts/translate-products.ts --import scripts/data/product-translations-hi.json",
     "check-phone-login": "tsx --env-file-if-exists=.env.local scripts/check-phone-login.ts",

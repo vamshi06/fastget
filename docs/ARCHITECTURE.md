@@ -138,7 +138,7 @@ railway run npm run build         # build with Railway's production variables
 | `src/app/order/[token]/page.tsx` | Keep | Same token lookup response shape. |
 | `src/app/agent/[token]/page.tsx` | Keep, tighten later | Needs stronger transition/PIN validation after DB cutover. |
 | `src/lib/sheets.ts` | Replace | It should become `src/lib/orders-db.ts` or equivalent. |
-| `google-apps-script/` | Remove after cutover | No longer part of production architecture. |
+| `google-apps-script/` | Removed | No longer part of production architecture. |
 
 ---
 

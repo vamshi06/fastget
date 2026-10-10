@@ -187,15 +187,6 @@ pg_dump postgresql://user:password@host/neondb > backup.sql
 - Retained for 7 days
 - Access via Neon console → Backups tab
 
-## Important: DO NOT USE GOOGLE SHEETS
-
-⚠️ **Google Sheets is deprecated and should NOT be used for order management.**
-
-- Google Sheets integration was removed from production
-- All orders MUST go through Neon Postgres
-- Any Google Sheets data is stale and unreliable
-- If you accidentally created orders in Sheets, manually migrate them to Neon
-
 ## Monitoring & Alerts
 
 ### Watch for Errors
@@ -225,4 +216,4 @@ If queries are slow:
 ---
 
 **Last Updated:** May 11, 2026  
-**Migration Status:** ✅ Complete - All orders in Neon, Google Sheets legacy removed
+**Migration Status:** ✅ Complete - All orders in Neon

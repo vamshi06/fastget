@@ -13,7 +13,7 @@ Counts at audit time: **6 Critical · 6 High · 7 Medium · 4 Low**
 
 - [x] **C1 · Remove env files from the working tree** - untracked both `.before-neon-test-db` files (local copies kept on disk). Commit `b541948`.
 - [x] **C1 · Fix [.gitignore](.gitignore)** - now `.env*` with `!.env.example` allowlist. Commit `b541948`.
-- [x] **C1 · Scrub the hardcoded Apps Script URL** in [test_apps_script.sh](test_apps_script.sh) - now reads `$GOOGLE_SCRIPT_URL`. Commit `b541948`.
+- [x] **C1 · Scrub the hardcoded Apps Script URL** in `test_apps_script.sh` - now reads `$GOOGLE_SCRIPT_URL`. Commit `b541948`. (Script since deleted - Apps Script no longer used.)
 - [x] **C1 · Rotate every committed secret** - user confirmed rotation done (Neon DB password, Apps Script secret/salt, hosting token check, Razorpay keys). Leaked git-history values are now dead.
   - [ ] *Follow-up:* update new values in [.env.local](.env.local) + Railway variables, then redeploy & verify `npm run dev` connects (do this yourself; don't paste new secrets here)
 - [ ] **C1 · Scrub the secrets from git history.** ⏳ *Needs your go-ahead - rewrites shared history on `origin/intern` and requires a coordinated force-push (every collaborator must re-clone/reset).* `git filter-repo` is the tool; do this only after rotation so leaked values are already dead.
