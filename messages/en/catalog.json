@@ -76,5 +76,11 @@
     "switches": "Switches & Sockets",
     "lighting": "Lighting",
     "mcb": "MCBs & Panels"
-  }
+  },
+  "sortShortRelevance": "Sort",
+  "sortShortPriceAsc": "Price ↑",
+  "sortShortPriceDesc": "Price ↓",
+  "sortShortDiscount": "Discount",
+  "sortTitle": "Sort by",
+  "sortSubtitle": "Choose how products are ordered"
 }

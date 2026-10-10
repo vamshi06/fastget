@@ -68,9 +68,25 @@ export interface DbUserAddress {
   street: string;
   landmark: string | null;
   city: string;
+  pincode?: string | null; // migration 027
   phone: string;
   is_primary: boolean;
   created_at: Date;
+}
+
+/**
+ * Saves an address's pincode (migration 027). Separate and best-effort so
+ * saving an address still works before that migration is applied.
+ */
+async function saveAddressPincode(address: UserAddress, pincode: string | undefined): Promise<UserAddress> {
+  if (!pincode) return address;
+  try {
+    await getClient()`UPDATE user_addresses SET pincode = ${pincode} WHERE id = ${address.id}`;
+    return { ...address, pincode };
+  } catch (error) {
+    logger.error('Users', 'Failed to save address pincode (is migration 027 applied?)', { error: error instanceof Error ? error.message : String(error) });
+    return address;
+  }
 }
 
 // ============================================================================
@@ -484,7 +500,8 @@ export async function createUserAddress(
   city: string,
   phone: string,
   landmark?: string,
-  isPrimary: boolean = false
+  isPrimary: boolean = false,
+  pincode?: string,
 ): Promise<UserAddress | null> {
   const sql = getClient();
   try {
@@ -504,7 +521,7 @@ export async function createUserAddress(
     `;
 
     if (result.length === 0) return null;
-    return dbAddressToUserAddress(result[0] as DbUserAddress);
+    return saveAddressPincode(dbAddressToUserAddress(result[0] as DbUserAddress), pincode);
   } catch (error) {
     logger.error('Users', 'Failed to create user address', { error: error instanceof Error ? error.message : String(error) });
     return null;
@@ -562,6 +579,7 @@ export async function updateUserAddress(
     landmark?: string;
     city?: string;
     phone?: string;
+    pincode?: string;
   }
 ): Promise<UserAddress | null> {
   const sql = getClient();
@@ -579,7 +597,7 @@ export async function updateUserAddress(
     `;
 
     if (result.length === 0) return null;
-    return dbAddressToUserAddress(result[0] as DbUserAddress);
+    return saveAddressPincode(dbAddressToUserAddress(result[0] as DbUserAddress), updates.pincode);
   } catch (error) {
     logger.error('Users', 'Failed to update user address', { error: error instanceof Error ? error.message : String(error) });
     return null;
@@ -1053,6 +1071,7 @@ function dbAddressToUserAddress(dbAddr: DbUserAddress): UserAddress {
     street: dbAddr.street,
     landmark: dbAddr.landmark || undefined,
     city: dbAddr.city,
+    pincode: dbAddr.pincode || undefined,
     phone: dbAddr.phone,
     isPrimary: dbAddr.is_primary,
     createdAt:

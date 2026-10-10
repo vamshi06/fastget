@@ -21,5 +21,6 @@
   "browseProducts": "Browse Products",
   "cancel": "Cancel",
   "delete": "Delete",
-  "deleting": "Deleting…"
+  "deleting": "Deleting…",
+  "offline": "You're offline. Showing what's already loaded - we'll refresh when you're back online."
 }

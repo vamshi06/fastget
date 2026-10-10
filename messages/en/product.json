@@ -77,5 +77,16 @@
   "wishlistEmptyTitle": "Your wishlist is empty",
   "wishlistEmptyMessage": "Tap the heart icon on any product to save it here for later.",
   "browseProducts": "Browse Products",
-  "removeNamedFromWishlist": "Remove {name} from wishlist"
+  "removeNamedFromWishlist": "Remove {name} from wishlist",
+  "zoomImage": "View larger image",
+  "whatsappTitle": "Questions or need a bulk price?",
+  "whatsappSubtitle": "Chat with us on WhatsApp",
+  "whatsappPrefill": "Hi FastGet, I have a question about {name} ({code}).",
+  "chooseSize": "Choose a size",
+  "sizeHeading": "Size",
+  "sizesCount": "{count} sizes",
+  "fromPrefix": "from",
+  "add": "Add",
+  "sheetInCart": "{count} in cart",
+  "sizesLoadFailed": "Couldn't load the sizes. Please try again."
 }

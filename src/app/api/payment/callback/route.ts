@@ -117,6 +117,13 @@ export async function POST(request: NextRequest) {
     statusToken,
     updateToken,
     userId: orderData.userId,
+    referralCode: orderData.referralCode,
+    referrerUserId: orderData.referrerUserId,
+    sitePincode: orderData.sitePincode,
+    siteLat: orderData.siteLat,
+    siteLng: orderData.siteLng,
+    gstin: orderData.gstin,
+    businessName: orderData.businessName,
   };
 
   const dbSuccess = await createOrder(order);

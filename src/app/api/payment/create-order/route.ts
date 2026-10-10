@@ -6,6 +6,7 @@ import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { resolveReferralForOrder } from '@/lib/referral';
 import { logger } from '@/lib/logger';
+import { readSiteDetails } from '@/lib/service-area';
 
 /**
  * POST /api/payment/create-order
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
       coinsRedeemed,
       referralCode: referral.code,
       referrerUserId: referral.referrerId,
+      ...readSiteDetails(formFields),
     });
 
     logger.info('Payment', 'Razorpay order created', {

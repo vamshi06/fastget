@@ -8,6 +8,7 @@ import {
   type StockFilter,
 } from '@/lib/products';
 import { NextRequest, NextResponse } from 'next/server';
+import { linkProducts, OPTION_LABEL_MAX } from '@/lib/product-families';
 import { logger } from '@/lib/logger';
 import { requireRole } from '@/lib/auth';
 import {
@@ -125,6 +126,9 @@ export async function POST(request: NextRequest) {
       patternMsg: 'Product code has an invalid format.',
     });
     const skuInput = optionalString(body.sku, 'SKU', { max: 64 });
+    // "Add another size": link the new product into this product's variant family.
+    const familyOf = optionalString(body.familyOf, 'variant family', { max: 100 });
+    const optionLabel = optionalString(body.optionLabel, 'size option label', { max: OPTION_LABEL_MAX });
 
     // ── Flash sale (optional; all three of price/start/end, or none) ──
     const salePrice = isBlank(body.salePrice) ? undefined : requireNumber(body.salePrice, 'sale price', { min: 0.01 });
@@ -219,6 +223,20 @@ export async function POST(request: NextRequest) {
     if (nameHi) {
       const ok = await saveProductTranslation(productCode, 'hi', nameHi, descriptionHi, true);
       if (!ok) warning = 'Product created, but the Hindi translation could not be saved. Add it from the edit page.';
+    }
+
+    // Family link is separate too - a failure leaves a standalone product the
+    // admin can link from its edit page.
+    if (familyOf) {
+      try {
+        await linkProducts([familyOf, productCode], optionLabel ? { [productCode]: optionLabel } : {});
+      } catch (err) {
+        logger.error('API', 'POST /admin/api/products - family link failed', {
+          productCode, familyOf, error: err instanceof Error ? err.message : String(err),
+        });
+        warning = [warning, 'Product created, but it could not be added to the size family. Link it from its edit page.']
+          .filter(Boolean).join(' ');
+      }
     }
 
     logger.info('Products', 'Product created via admin', { productId: created.productId, productCode, sku });

@@ -28,7 +28,10 @@
     "orders": "ऑर्डर",
     "coins": "कॉइन",
     "wishlist": "विशलिस्ट",
-    "settings": "सेटिंग्स और सहायता"
+    "settings": "सेटिंग्स और सहायता",
+    "whatsapp": "WhatsApp पर चैट करें",
+    "whatsappHint": "स्टॉक, थोक कीमत, उत्पाद से जुड़े सवाल",
+    "whatsappPrefill": "नमस्ते FastGet, मेरा एक सवाल है।"
   },
   "deleteAccount": {
     "label": "खाता हटाएं",
@@ -82,7 +85,8 @@
     "toastRemoveSuccess": "पता हटा दिया गया",
     "toastRemoveError": "पता हटाने में विफल",
     "toastPrimarySuccess": "प्राथमिक पता अपडेट किया गया",
-    "toastPrimaryError": "प्राथमिक पता अपडेट करने में विफल"
+    "toastPrimaryError": "प्राथमिक पता अपडेट करने में विफल",
+    "pincodeLabel": "पिनकोड"
   },
   "coins": {
     "guestHeading": "मेरे कॉइन",

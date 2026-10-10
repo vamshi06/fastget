@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import { isUnoptimizedImage } from '@/lib/remote-images';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowLeft, Clock, Search, X, ChevronRight } from 'lucide-react';
@@ -201,7 +202,7 @@ export function MobileSearchOverlay({ open, onClose }: { open: boolean; onClose:
                     >
                       <div className="relative w-12 h-12 rounded-xl bg-brand-fog flex-shrink-0 overflow-hidden">
                         {product.imageUrl ? (
-                          <Image src={product.imageUrl} alt="" fill sizes="48px" className="object-contain p-1" />
+                          <Image src={product.imageUrl} unoptimized={isUnoptimizedImage(product.imageUrl)} alt="" fill sizes="48px" className="object-contain p-1" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Search className="w-4 h-4 text-brand-steel" />

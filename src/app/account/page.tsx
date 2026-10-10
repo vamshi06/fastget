@@ -29,7 +29,9 @@ import {
   LayoutDashboard,
   Moon,
   Sun,
+  MessageCircle,
 } from 'lucide-react';
+import { WhatsAppChatLink } from '@/components/WhatsAppChatLink';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeContext';
 import { THEME_PREFERENCES } from '@/lib/theme';
@@ -165,6 +167,14 @@ function HelpRows() {
     <>
       <LanguageRow />
       <ThemeRow />
+      <WhatsAppChatLink text={t('menu.whatsappPrefill')} source="account" className={rowCls}>
+        <RowIcon Icon={MessageCircle} />
+        <span className="ml-3 flex-1">
+          <span className="block text-[15px] font-medium text-brand-charcoal">{t('menu.whatsapp')}</span>
+          <span className="block text-xs text-brand-slate">{t('menu.whatsappHint')}</span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-brand-steel" />
+      </WhatsAppChatLink>
       <MenuItem href="/support" label={t('menu.support')} Icon={Headphones} />
       <PoliciesRow />
     </>
@@ -176,7 +186,7 @@ function HelpRows() {
 function GuestAccount() {
   const t = useTranslations('account');
   return (
-    <div className="min-h-screen bg-brand-fog pb-8">
+    <div className="min-h-screen bg-brand-fog pb-8 w-full max-w-2xl mx-auto md:pt-4">
       <SignInPrompt Icon={User} title={t('guest.heading')} subtitle={t('guest.subtitle')} redirect="/account" />
       <MenuGroup title={t('menu.settings')}>
         <MenuItem href="/wishlist" label={t('menu.wishlist')} Icon={Heart} />
@@ -229,7 +239,7 @@ export default function AccountPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-fog pb-8">
+    <div className="min-h-screen bg-brand-fog pb-8 w-full max-w-2xl mx-auto md:pt-4">
 
       {/* Profile card */}
       <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-neutral-100 p-4 flex items-center gap-3.5">

@@ -4,6 +4,7 @@
  */
 
 import type { Order } from '@/types';
+import { formatOrderNumber } from './utils';
 
 const P = '#F5A623'; // brand-primary
 const D = '#DC8A0E'; // brand-dark
@@ -291,7 +292,7 @@ export function orderPlacedStaffEmailTemplate(
     <div style="padding:36px 40px;">
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-size:40px;">🛒</div>
-        <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:${C};">New order placed</h1>
+        <h1 style="margin:8px 0 0;font-size:22px;font-weight:800;color:${C};">New order ${formatOrderNumber(order)}</h1>
         <p style="margin:6px 0 0;font-size:14px;color:${S};">₹${order.total.toLocaleString('en-IN')} &middot; ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} &middot; ${esc(order.paymentMethod.toUpperCase())}</p>
       </div>
       ${stockBanner}

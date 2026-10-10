@@ -81,7 +81,9 @@ function SignupForm() {
 
       track('signed_up', { method: 'email' });
       const email = data.email || formData.email.toLowerCase().trim();
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      router.push(
+        `/verify-email?email=${encodeURIComponent(email)}${redirect && redirect !== '/' ? `&redirect=${encodeURIComponent(redirect)}` : ''}` as any,
+      );
     } catch {
       setError(t('errors.genericSignupError'));
     } finally {

@@ -25,7 +25,8 @@ function LoginForm() {
     : null;
   const { setCurrentUser } = useUser();
 
-  const [email, setEmail] = useState('');
+  // Prefilled after sign-up + email verification.
+  const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);

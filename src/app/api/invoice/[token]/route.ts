@@ -3,6 +3,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import React from 'react';
 import { getOrderByStatusToken } from '@/lib/db';
 import { InvoicePDF } from '@/lib/InvoicePDF';
+import { formatOrderNumber } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="fastget-invoice-${order.statusToken.toUpperCase()}.pdf"`,
+        'Content-Disposition': `attachment; filename="fastget-invoice-${formatOrderNumber(order)}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });

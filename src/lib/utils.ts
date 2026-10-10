@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Order, OrderFormData, OrderItem, OrderStatus, VALID_STATUS_TRANSITIONS } from '@/types';
+import { DELIVERY_ETA_MINUTES, isServiceablePincode, isValidGstin } from './service-area';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -62,48 +63,87 @@ export function generateToken(): string {
 // Built via RegExp(...,'u') so the unicode flag doesn't require a higher TS target.
 export const NAME_REGEX = new RegExp(String.raw`^[\p{L}\p{M}'.\-\s]{2,}$`, 'u');
 
-export function validateOrderForm(data: OrderFormData): string | null {
+// English messages for order-form errors. The API returns these; checkout
+// shows the translated version of the same code (checkout.errors.<code>).
+export const ORDER_FORM_ERRORS = {
+  nameRequired: 'Customer name is required',
+  nameTooLong: 'Name must be at most 120 characters',
+  nameInvalid: 'Please enter a valid name (letters, spaces, apostrophes and hyphens only)',
+  phoneInvalid: 'Please enter a valid 10-digit phone number',
+  addressRequired: 'Site address is required',
+  addressTooShort: 'Site address must be at least 10 characters',
+  addressTooLong: 'Site address must be at most 500 characters',
+  landmarkTooLong: 'Landmark must be at most 200 characters',
+  pincodeInvalid: 'Please enter a valid 6-digit pincode',
+  pincodeNotServed: "We don't deliver to this pincode yet - FastGet currently delivers within Mumbai",
+  gstinInvalid: 'Please enter a valid 15-character GSTIN',
+  deliveryTypeInvalid: 'Please select a valid delivery type',
+  scheduledTimeRequired: 'Please select a delivery time',
+  scheduledTimePast: 'That delivery slot has already started - please pick a later one',
+} as const;
+
+export type OrderFormErrorCode = keyof typeof ORDER_FORM_ERRORS;
+
+export function validateOrderFormCode(data: OrderFormData): OrderFormErrorCode | null {
   // Type-guard fields first: a malformed body (missing/non-string field) must
   // produce a clean validation message, not a .trim()-of-undefined crash.
   if (typeof data?.customerName !== 'string' || !data.customerName.trim()) {
-    return 'Customer name is required';
+    return 'nameRequired';
   }
   const name = data.customerName.trim();
-  if (name.length > 120) {
-    return 'Name must be at most 120 characters';
-  }
-  if (!NAME_REGEX.test(name)) {
-    return 'Please enter a valid name (letters, spaces, apostrophes and hyphens only)';
-  }
+  if (name.length > 120) return 'nameTooLong';
+  if (!NAME_REGEX.test(name)) return 'nameInvalid';
 
   if (typeof data.customerPhone !== 'string' || !validatePhoneNumber(data.customerPhone)) {
-    return 'Please enter a valid 10-digit phone number';
+    return 'phoneInvalid';
   }
 
   // Validate site address
-  if (typeof data.siteAddress !== 'string' || !data.siteAddress.trim()) {
-    return 'Site address is required';
-  }
-  if (data.siteAddress.trim().length < 10) {
-    return 'Site address must be at least 10 characters';
-  }
-  if (data.siteAddress.trim().length > 500) {
-    return 'Site address must be at most 500 characters';
-  }
+  if (typeof data.siteAddress !== 'string' || !data.siteAddress.trim()) return 'addressRequired';
+  if (data.siteAddress.trim().length < 10) return 'addressTooShort';
+  if (data.siteAddress.trim().length > 500) return 'addressTooLong';
 
   if (data.landmark !== undefined && typeof data.landmark === 'string' && data.landmark.length > 200) {
-    return 'Landmark must be at most 200 characters';
+    return 'landmarkTooLong';
+  }
+
+  if (typeof data.sitePincode !== 'string' || !/^\d{6}$/.test(data.sitePincode)) return 'pincodeInvalid';
+  if (!isServiceablePincode(data.sitePincode)) return 'pincodeNotServed';
+
+  // GST details are optional - only checked when given.
+  if (data.gstin !== undefined && data.gstin !== '' && !isValidGstin(String(data.gstin).trim().toUpperCase())) {
+    return 'gstinInvalid';
   }
 
   // Whitelist deliveryType so a bad value can't reach the DB CHECK constraint.
   if (data.deliveryType !== 'urgent' && data.deliveryType !== 'scheduled') {
-    return 'Please select a valid delivery type';
+    return 'deliveryTypeInvalid';
   }
-  if (data.deliveryType === 'scheduled' && !data.scheduledTime) {
-    return 'Please select a delivery time';
+  if (data.deliveryType === 'scheduled') {
+    if (!data.scheduledTime) return 'scheduledTimeRequired';
+    const when = new Date(data.scheduledTime).getTime();
+    if (Number.isNaN(when)) return 'scheduledTimeRequired';
+    // Small grace so a slot picked just before it starts still goes through.
+    if (when < Date.now() - 15 * 60000) return 'scheduledTimePast';
   }
 
   return null;
+}
+
+export function validateOrderForm(data: OrderFormData): string | null {
+  const code = validateOrderFormCode(data);
+  return code ? ORDER_FORM_ERRORS[code] : null;
+}
+
+/**
+ * The order number customers see and quote to support, e.g. "FG-10234".
+ * Orders saved before migration 027 have no order_number - they fall back to
+ * the first 8 characters of the order id (what My Orders always showed).
+ */
+export function formatOrderNumber(order: Pick<Order, 'id' | 'orderNumber'>): string {
+  return order.orderNumber
+    ? `FG-${10000 + Number(order.orderNumber)}`
+    : `FG-${order.id.slice(0, 8).toUpperCase()}`;
 }
 
 export function isValidStatusTransition(
@@ -165,13 +205,8 @@ export function formatDuration(ms: number): string {
   return parts.slice(0, 2).join(' ');
 }
 
+/** Latest delivery time for an urgent order placed now, e.g. "04:35 pm". */
 export function estimateDeliveryTime(): string {
-  const now = new Date();
-  const minMinutes = 30;
-  const maxMinutes = 60;
-  
-  const minDelivery = new Date(now.getTime() + minMinutes * 60000);
-  const maxDelivery = new Date(now.getTime() + maxMinutes * 60000);
-  
-  return `${minDelivery.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} - ${maxDelivery.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+  const by = new Date(Date.now() + DELIVERY_ETA_MINUTES * 60000);
+  return by.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }

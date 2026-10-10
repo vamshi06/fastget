@@ -72,7 +72,7 @@
     "title": "Refund Policy",
     "s1": {
       "heading": "1. Order cancellations",
-      "body": "Because FastGet delivers urgently within 30–60 minutes, orders can typically only be cancelled for a full refund before they are dispatched for delivery. Once an order is out for delivery, it can no longer be cancelled."
+      "body": "Because FastGet delivers urgently within 60 minutes, orders can typically only be cancelled for a full refund before they are dispatched for delivery. Once an order is out for delivery, it can no longer be cancelled."
     },
     "s2": {
       "heading": "2. Damaged, defective, or wrong items",
@@ -99,7 +99,7 @@
     },
     "s2": {
       "heading": "2. Delivery time",
-      "body": "Most orders are delivered within 30–60 minutes of confirmation, subject to traffic, order size, and stock availability. You can track your order's status from <account>Account → Order History</account>."
+      "body": "Most orders are delivered within 60 minutes of confirmation, subject to traffic, order size, and stock availability. You can track your order's status from <account>Account → Order History</account>."
     },
     "s3": {
       "heading": "3. Delivery charges",
@@ -138,7 +138,7 @@
     },
     "s5": {
       "heading": "5. Delivery",
-      "body": "We aim to deliver within 30–60 minutes inside our serviceable areas, depending on order size, traffic, and stock availability. See our Shipping Policy for details."
+      "body": "We aim to deliver within 60 minutes inside our serviceable areas, depending on order size, traffic, and stock availability. See our Shipping Policy for details."
     },
     "s6": {
       "heading": "6. Cancellations and refunds",

@@ -12,6 +12,8 @@ import { haptic } from '@/lib/native-bridge';
 import { track } from '@/lib/analytics';
 import { ProductSection } from '@/components/home/ProductSection';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, Loader2, Tag, Coins } from 'lucide-react';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { QuantityInput } from '@/components/QuantityInput';
 
 export default function CartPage() {
   const {
@@ -42,6 +44,7 @@ export default function CartPage() {
 
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
   const [firstOrderDiscountAmount, setFirstOrderDiscountAmount] = useState(200);
@@ -102,12 +105,18 @@ export default function CartPage() {
     }
   };
 
+  // Confirmed in a modal first, and undoable afterwards - one mis-tap used
+  // to wipe the whole cart.
   const handleClearCart = () => {
-    const count = state.items.length;
+    const snapshot = state.items.map((item) => ({ ...item }));
+    setConfirmClear(false);
     setIsClearing(true);
     try {
       clearCart();
-      showToast(t('itemsCleared', { count }), 'success');
+      showToast(t('itemsCleared', { count: snapshot.length }), 'success', {
+        label: t('undo'),
+        onClick: () => snapshot.forEach((item) => addItem(item.product, item.quantity)),
+      });
     } catch {
       showToast(t('clearFailed'), 'error');
     } finally {
@@ -151,20 +160,22 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-3 md:space-y-4 min-w-0">
             {state.items.map((item) => (
               <div key={item.product.id} className="card p-4 flex gap-4 min-w-0 overflow-hidden">
-                {/* Product image */}
-                <div
-                  className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-                  style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
+                {/* Product image - opens the product */}
+                <Link
+                  href={`/product/${item.product.id}`}
+                  className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-white border border-neutral-100"
                 >
                   {item.product.imageUrl ? (
-                    <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                    <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-contain p-1" />
                   ) : (
                     <Package className="w-8 h-8 text-brand-steel opacity-50" />
                   )}
-                </div>
+                </Link>
 
                 <div className="flex-grow min-w-0">
-                  <h3 className="font-semibold text-brand-charcoal text-sm leading-snug">{item.product.name}</h3>
+                  <Link href={`/product/${item.product.id}`} className="block hover:text-brand-primary transition-colors">
+                    <h3 className="font-semibold text-brand-charcoal text-sm leading-snug hover:text-brand-primary">{item.product.name}</h3>
+                  </Link>
                   <p className="text-xs text-brand-slate mb-2 line-clamp-1">{item.product.description}</p>
                   <p className="text-brand-primary font-bold text-sm">
                     {formatCurrency(getEffectiveUnitPrice(item.product))}{' '}
@@ -234,7 +245,13 @@ export default function CartPage() {
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="w-7 text-center text-sm font-bold text-brand-charcoal">{item.quantity}</span>
+                    <QuantityInput
+                      value={item.quantity}
+                      min={getMinOrderQty(item.product)}
+                      onCommit={(q) => updateQuantity(item.product.id, q)}
+                      ariaLabel={t('quantityAria')}
+                      className="w-12 h-8 text-sm"
+                    />
                     <button
                       onClick={() => { haptic('light'); updateQuantity(item.product.id, item.quantity + 1); }}
                       className="w-8 h-8 rounded-lg bg-brand-primary hover:bg-brand-dark flex items-center justify-center active:scale-95 transition-all"
@@ -250,7 +267,7 @@ export default function CartPage() {
             ))}
 
             <button
-              onClick={handleClearCart}
+              onClick={() => setConfirmClear(true)}
               disabled={isClearing}
               className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -365,6 +382,16 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {confirmClear && (
+        <ConfirmDeleteModal
+          title={t('clearCartTitle')}
+          message={t('clearCartMessage', { count: state.items.length })}
+          confirmLabel={t('clearCartConfirm')}
+          onCancel={() => setConfirmClear(false)}
+          onConfirm={handleClearCart}
+        />
+      )}
 
       {/* ── Pinned checkout bar (phones) ── */}
       {state.items.length > 0 && (

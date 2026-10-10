@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Mail, Phone, FileText, Truck, RefreshCw, Lock } from "lucide-react";
+import { Mail, Phone, FileText, Truck, RefreshCw, Lock, MessageCircle } from "lucide-react";
+import { WhatsAppChatLink } from "@/components/WhatsAppChatLink";
 import { LegalPageLayout, LegalSection } from "@/components/LegalPageLayout";
 
 export const metadata = { title: "Support - FastGet" };
@@ -19,6 +20,17 @@ export default async function SupportPage() {
     <LegalPageLayout title={t("pageTitle")}>
       <LegalSection heading={t("getInTouch.heading")}>
         <div className="space-y-3">
+          <WhatsAppChatLink
+            text={t("whatsapp.prefill")}
+            source="support"
+            className="flex items-center gap-3 text-brand-charcoal hover:text-brand-primary transition-colors"
+          >
+            <MessageCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <span>
+              {t("whatsapp.label")}
+              <span className="block text-xs text-brand-slate">{t("whatsapp.hint")}</span>
+            </span>
+          </WhatsAppChatLink>
           <a
             href="mailto:support@elemantra.in"
             className="flex items-center gap-3 text-brand-charcoal hover:text-brand-primary transition-colors"

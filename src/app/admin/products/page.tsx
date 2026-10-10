@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, ExternalLink, Pencil, Trash2, Archive, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, Archive, RotateCcw, Search, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 
 // Mirrors LOW_STOCK_THRESHOLD in lib/products.ts (not imported: that module is server-only).
@@ -30,6 +30,10 @@ interface Product {
   stockQuantity?: number;
   isFlashSale?: boolean;
   status?: 'active' | 'inactive' | 'discontinued';
+  // Size family (migration 028)
+  familyId?: string;
+  familySize?: number;
+  optionLabel?: string;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -209,10 +213,16 @@ export default function ProductsPage() {
             {search && <span className="ml-1 text-brand-steel">matching &ldquo;{search}&rdquo;</span>}
           </p>
         </div>
-        <Link href="/admin/products/new" className="btn-primary">
-          <Plus className="w-4 h-4" />
-          Add Product
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={'/admin/products/families' as any} className="btn-secondary">
+            <Layers className="w-4 h-4" />
+            Size families
+          </Link>
+          <Link href="/admin/products/new" className="btn-primary">
+            <Plus className="w-4 h-4" />
+            Add Product
+          </Link>
+        </div>
       </div>
 
       {/* ── Search + stock filter ────────────────────────────────── */}
@@ -365,6 +375,16 @@ export default function ProductsPage() {
                             <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
                               🔥 SALE
                             </span>
+                          )}
+                          {product.familyId && (
+                            <Link
+                              href={`/admin/products/${encodeURIComponent(code)}/edit#sizes` as any}
+                              title={`Size "${product.optionLabel}" in a family of ${product.familySize} - edit sizes`}
+                              className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-50 text-brand-dark flex-shrink-0 hover:bg-primary-100"
+                            >
+                              <Layers className="w-3 h-3" />
+                              {product.optionLabel}
+                            </Link>
                           )}
                           {product.status && product.status !== 'active' && (
                             <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 uppercase ${

@@ -11,8 +11,9 @@ import { useToast } from '@/components/ToastContext';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { haptic } from '@/lib/native-bridge';
 import { track } from '@/lib/analytics';
-import { formatCurrency, validateOrderForm, formatPhoneNumber, estimateDeliveryTime } from '@/lib/utils';
-import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift, ShoppingBag } from 'lucide-react';
+import { formatCurrency, validateOrderFormCode, formatPhoneNumber, estimateDeliveryTime, ORDER_FORM_ERRORS, OrderFormErrorCode } from '@/lib/utils';
+import { isServiceablePincode, isValidGstin } from '@/lib/service-area';
+import { MapPin, Phone, User, Clock, Calendar, AlertCircle, ChevronRight, Package, ShieldCheck, Zap, ArrowRight, ClipboardList, Home, Briefcase, MoreHorizontal, ChevronDown, ChevronUp, PenLine, Wallet, Banknote, Coins, Tag, Gift, ShoppingBag, LocateFixed, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { UserAddress, AddressType, PaymentMethod } from '@/types';
 
@@ -21,6 +22,27 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, React.ComponentType<{ className?: 
   work: Briefcase,
   other: MoreHorizontal,
 };
+
+// Scheduled delivery: 2-hour slots, today + the next two days. A slot can be
+// booked until DELIVERY lead time before it starts.
+const SLOT_START_HOURS = [8, 10, 12, 14, 16, 18];
+const SLOT_LEAD_MINUTES = 60;
+const SLOT_DAYS = 3;
+
+function slotStart(dayOffset: number, hour: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + dayOffset);
+  d.setHours(hour, 0, 0, 0);
+  return d;
+}
+
+function isSlotOpen(dayOffset: number, hour: number): boolean {
+  return slotStart(dayOffset, hour).getTime() - Date.now() >= SLOT_LEAD_MINUTES * 60000;
+}
+
+function formatSlotHour(hour: number): string {
+  return slotStart(0, hour).toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true });
+}
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -53,6 +75,13 @@ function CheckoutPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'verifying' | 'failed'>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
+
+  // Validation codes (ours or echoed back by the API) are shown in the
+  // customer's language; anything else is shown as the server sent it.
+  const localizeError = (message: string) => {
+    const code = (Object.keys(ORDER_FORM_ERRORS) as OrderFormErrorCode[]).find((c) => ORDER_FORM_ERRORS[c] === message);
+    return code ? t(`errors.${code}`) : message;
+  };
   const errorRef = useRef<HTMLDivElement>(null);
 
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
@@ -140,8 +169,9 @@ function CheckoutPageContent() {
     }
   }, [isLoaded, currentUser, state.items.length, getTotal]);
 
-  const [useAccountName, setUseAccountName] = useState(false);
-  const [useAccountPhone, setUseAccountPhone] = useState(false);
+  // Name and phone default to the account's - most people order for themselves.
+  const [useAccountName, setUseAccountName] = useState(true);
+  const [useAccountPhone, setUseAccountPhone] = useState(true);
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
@@ -155,9 +185,56 @@ function CheckoutPageContent() {
     customerPhone: '',
     siteAddress: '',
     landmark: '',
+    sitePincode: '',
     deliveryType: 'urgent' as 'urgent' | 'scheduled',
     scheduledTime: '',
   });
+
+  // Optional pin from "Use my current location" - sent with the order so the
+  // delivery team can open the exact site in Maps.
+  const [sitePin, setSitePin] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const handleUseLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setLocationError(t('locationUnavailable'));
+      return;
+    }
+    setLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setSitePin({ lat: Number(pos.coords.latitude.toFixed(6)), lng: Number(pos.coords.longitude.toFixed(6)) });
+        setLocating(false);
+      },
+      (err) => {
+        setLocationError(err.code === err.PERMISSION_DENIED ? t('locationDenied') : t('locationUnavailable'));
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+  // Optional GST details for a GST invoice.
+  const [showGst, setShowGst] = useState(false);
+  const [gstin, setGstin] = useState('');
+  const [businessName, setBusinessName] = useState('');
+
+  // Scheduled delivery slot picker.
+  const [slotDay, setSlotDay] = useState(0);
+
+  const pincodeOk = isServiceablePincode(formData.sitePincode);
+
+  // Prefill name + phone from the account once it's known.
+  useEffect(() => {
+    if (!currentUser) return;
+    setFormData(prev => ({
+      ...prev,
+      customerName: prev.customerName || currentUser.name || '',
+      customerPhone: prev.customerPhone || formatPhoneNumber(currentUser.phone || ''),
+    }));
+  }, [currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUseAccountName = (checked: boolean) => {
     setUseAccountName(checked);
@@ -189,6 +266,7 @@ function CheckoutPageContent() {
       ...prev,
       siteAddress: addr.landmark ? `${addr.street}, ${addr.city}` : `${addr.street}, ${addr.city}`,
       landmark: addr.landmark ?? '',
+      sitePincode: addr.pincode || prev.sitePincode,
       customerPhone: prev.customerPhone || addr.phone,
     }));
   };
@@ -269,6 +347,7 @@ function CheckoutPageContent() {
           type: newAddressType,
           street: formData.siteAddress,
           city: newAddressCity,
+          pincode: formData.sitePincode,
           phone: formatPhoneNumber(formData.customerPhone),
           landmark: formData.landmark || undefined,
           isPrimary: savedAddresses.length === 0,
@@ -278,6 +357,16 @@ function CheckoutPageContent() {
       // Address save is best-effort - don't block order confirmation on it
     }
   };
+
+  // Form fields + site extras, as sent to /api/orders and /api/payment/create-order.
+  const orderFields = () => ({
+    ...formData,
+    customerPhone: formatPhoneNumber(formData.customerPhone),
+    siteLat: sitePin?.lat,
+    siteLng: sitePin?.lng,
+    gstin: showGst && gstin.trim() ? gstin.trim().toUpperCase() : undefined,
+    businessName: showGst && gstin.trim() ? businessName.trim() || undefined : undefined,
+  });
 
   const trackOrderPlaced = (method: PaymentMethod) => {
     track('order_placed', {
@@ -298,8 +387,7 @@ function CheckoutPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          customerPhone: formatPhoneNumber(formData.customerPhone),
+          ...orderFields(),
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
@@ -317,7 +405,7 @@ function CheckoutPageContent() {
         router.push(`/order/${data.statusToken}`);
       } else {
         setIsSubmitting(false);
-        const msg = data.error || t('errorPlaceOrderFailed');
+        const msg = data.error ? localizeError(data.error) : t('errorPlaceOrderFailed');
         setError(msg);
         showToast(msg, 'error');
       }
@@ -333,9 +421,10 @@ function CheckoutPageContent() {
     e.preventDefault();
     setError(null);
 
-    const validationError = validateOrderForm(formData);
+    const fields = orderFields();
+    const validationError = validateOrderFormCode(fields);
     if (validationError) {
-      setError(validationError);
+      setError(t(`errors.${validationError}`));
       return;
     }
 
@@ -363,8 +452,7 @@ function CheckoutPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          customerPhone: formatPhoneNumber(formData.customerPhone),
+          ...orderFields(),
           items: state.items,
           subtotal: getSubtotal(),
           convenienceFee: getConvenienceFee(),
@@ -378,7 +466,7 @@ function CheckoutPageContent() {
 
       if (!createRes.ok) {
         const data = await createRes.json();
-        throw new Error(data.error || t('errorInitiatePayment'));
+        throw new Error(data.error ? localizeError(data.error) : t('errorInitiatePayment'));
       }
 
       const { razorpayOrderId, amount, currency, orderToken } = await createRes.json();
@@ -449,10 +537,36 @@ function CheckoutPageContent() {
     }
   };
 
+  const payableTotal = getTotal() - firstOrderDiscount - coinDiscount;
+
+  // The total is on the button itself, so it's visible at the moment of paying.
+  const submitButton = (className: string) => (
+    <button
+      type="submit"
+      form="checkout-form"
+      disabled={isSubmitting}
+      className={`btn-primary disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      {isSubmitting
+        ? paymentMethod === 'cod'
+          ? t('placingOrder')
+          : paymentState === 'processing'
+            ? t('completePaymentPopup')
+            : paymentState === 'verifying'
+              ? t('verifyingPayment')
+              : t('initiatingPayment')
+        : paymentMethod === 'cod'
+          ? t('placeOrderWithTotal', { total: formatCurrency(payableTotal) })
+          : t('payWithTotal', { total: formatCurrency(payableTotal) })}
+      {!isSubmitting && <ChevronRight className="w-5 h-5" />}
+    </button>
+  );
+
   const inputCls = 'w-full px-4 py-2 border border-neutral-200 rounded-xl bg-brand-fog text-sm text-brand-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary focus:bg-white transition-all duration-200';
 
   return (
-    <div className="min-h-screen bg-brand-fog pt-4 pb-8 md:py-8">
+    // pb-28 on phones keeps the summary clear of the pinned order bar.
+    <div className="min-h-screen bg-brand-fog pt-4 pb-28 md:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* native-title-dup: the app's top bar already has back + title */}
         <div className="native-title-dup flex items-center gap-2 mb-4 md:mb-8">
@@ -473,7 +587,7 @@ function CheckoutPageContent() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2 min-w-0">
-            <form onSubmit={handleSubmitOrder} className="card p-6 space-y-6">
+            <form id="checkout-form" onSubmit={handleSubmitOrder} className="card p-6 space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-brand-charcoal mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-brand-primary" />
@@ -699,6 +813,68 @@ function CheckoutPageContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Pincode (checked against the service area) + optional map pin */}
+                <div className="mt-4 grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="sitePincode" className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                      {t('pincodeLabel')}
+                    </label>
+                    <input
+                      id="sitePincode"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      maxLength={6}
+                      value={formData.sitePincode}
+                      onChange={(e) => setFormData({ ...formData, sitePincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                      className={inputCls}
+                      placeholder={t('pincodePlaceholder')}
+                    />
+                    {formData.sitePincode.length === 6 && (
+                      pincodeOk ? (
+                        <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-green-700">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {t('pincodeServiceable')}
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 text-xs font-medium text-red-600">{t('errors.pincodeNotServed')}</p>
+                      )
+                    )}
+                  </div>
+                  <div>
+                    <span className="hidden sm:block text-xs font-semibold mb-1.5 invisible" aria-hidden="true">-</span>
+                    {sitePin ? (
+                      <div className="flex items-center justify-between gap-2 px-4 py-2 rounded-xl border border-green-200 bg-green-50">
+                        <a
+                          href={`https://maps.google.com/?q=${sitePin.lat},${sitePin.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-sm font-medium text-green-800"
+                        >
+                          <LocateFixed className="w-4 h-4" />
+                          {t('locationAdded')}
+                        </a>
+                        <button type="button" onClick={() => setSitePin(null)} className="text-xs font-semibold text-brand-slate hover:text-red-600">
+                          {t('locationRemove')}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleUseLocation}
+                        disabled={locating}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-brand-primary/40 text-sm font-semibold text-brand-primary hover:bg-primary-50 transition-colors disabled:opacity-60"
+                      >
+                        {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+                        {locating ? t('locating') : t('useCurrentLocation')}
+                      </button>
+                    )}
+                    <p className={`mt-1.5 text-xs ${locationError ? 'text-red-600' : 'text-brand-steel'}`}>
+                      {locationError ?? t('locationHint')}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="border-t border-neutral-100 pt-6">
@@ -750,21 +926,113 @@ function CheckoutPageContent() {
 
                   {formData.deliveryType === 'scheduled' && (
                     <div>
-                      <label className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
-                        <span className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {t('preferredDeliveryTime')}
-                        </span>
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={formData.scheduledTime}
-                        onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
-                        className={inputCls}
-                      />
+                      <p className="text-xs font-semibold text-brand-graphite mb-2 uppercase tracking-wide flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {t('preferredDeliveryTime')}
+                      </p>
+                      <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar">
+                        {Array.from({ length: SLOT_DAYS }).map((_, day) => {
+                          const label = day === 0
+                            ? t('slotDayToday')
+                            : day === 1
+                              ? t('slotDayTomorrow')
+                              : slotStart(day, 0).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => setSlotDay(day)}
+                              className={`shrink-0 px-4 py-2 rounded-full border text-sm font-semibold transition-colors ${
+                                slotDay === day
+                                  ? 'bg-brand-charcoal text-white border-brand-charcoal'
+                                  : 'bg-white text-brand-graphite border-neutral-200 hover:border-brand-primary'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {SLOT_START_HOURS.some((h) => isSlotOpen(slotDay, h)) ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {SLOT_START_HOURS.map((hour) => {
+                            const open = isSlotOpen(slotDay, hour);
+                            const value = slotStart(slotDay, hour).toISOString();
+                            const active = formData.scheduledTime === value;
+                            return (
+                              <button
+                                key={hour}
+                                type="button"
+                                disabled={!open}
+                                onClick={() => setFormData({ ...formData, scheduledTime: value })}
+                                className={`py-2.5 rounded-xl border text-sm font-medium transition-colors disabled:opacity-35 disabled:cursor-not-allowed ${
+                                  active
+                                    ? 'bg-primary-50 border-brand-primary text-brand-charcoal font-semibold'
+                                    : 'bg-white border-neutral-200 text-brand-graphite hover:border-brand-primary'
+                                }`}
+                              >
+                                {formatSlotHour(hour)} – {formatSlotHour(hour + 2)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-brand-slate">{t('noSlotsLeft')}</p>
+                      )}
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Optional GST details - printed on the invoice */}
+              <div className="border-t border-neutral-100 pt-6">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showGst}
+                    onChange={(e) => setShowGst(e.target.checked)}
+                    className="w-4 h-4 accent-brand-primary"
+                  />
+                  <FileText className="w-4 h-4 text-brand-primary" />
+                  <span className="text-sm font-semibold text-brand-charcoal">{t('gstToggle')}</span>
+                </label>
+                {showGst && (
+                  <div className="mt-4 grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="gstin" className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                        {t('gstinLabel')}
+                      </label>
+                      <input
+                        id="gstin"
+                        type="text"
+                        autoCapitalize="characters"
+                        autoComplete="off"
+                        maxLength={15}
+                        value={gstin}
+                        onChange={(e) => setGstin(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 15))}
+                        className={`${inputCls} uppercase tracking-wider`}
+                        placeholder={t('gstinPlaceholder')}
+                      />
+                      {gstin.length === 15 && !isValidGstin(gstin) && (
+                        <p className="mt-1.5 text-xs font-medium text-red-600">{t('errors.gstinInvalid')}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor="businessName" className="block text-xs font-semibold text-brand-graphite mb-1.5 uppercase tracking-wide">
+                        {t('businessNameLabel')}
+                      </label>
+                      <input
+                        id="businessName"
+                        type="text"
+                        maxLength={200}
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        className={inputCls}
+                        placeholder={t('businessNamePlaceholder')}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-neutral-100 pt-6">
@@ -817,28 +1085,8 @@ function CheckoutPageContent() {
                 </div>
               </div>
 
-              {/* Phones: pinned to the bottom of the screen while the form is
-                  in view (sticky footer of the card, bleeding over its p-6). */}
-              <div className="max-md:sticky max-md:bottom-0 max-md:z-30 max-md:-mx-6 max-md:-mb-6 max-md:px-4 max-md:pt-3 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-md:bg-white max-md:border-t max-md:border-neutral-200 max-md:rounded-b-2xl max-md:shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn-primary w-full py-3 max-md:h-12 max-md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting
-                  ? paymentMethod === 'cod'
-                    ? t('placingOrder')
-                    : paymentState === 'processing'
-                      ? t('completePaymentPopup')
-                      : paymentState === 'verifying'
-                        ? t('verifyingPayment')
-                        : t('initiatingPayment')
-                  : paymentMethod === 'cod'
-                    ? t('placeOrderBtn')
-                    : t('proceedToPay')}
-                {!isSubmitting && <ChevronRight className="w-5 h-5" />}
-              </button>
-              </div>
+              {/* Phones use the pinned bar at the bottom of the screen instead. */}
+              <div className="hidden md:block">{submitButton('w-full py-3')}</div>
             </form>
           </div>
 
@@ -1006,12 +1254,17 @@ function CheckoutPageContent() {
               {formData.deliveryType === 'urgent' && (
                 <div className="mt-4 p-4 bg-primary-50 border border-primary-200 rounded-xl">
                   <p className="text-sm text-primary-700 font-semibold mb-1">{t('estimatedDelivery')}</p>
-                  <p className="text-sm text-primary-600">{estimateDeliveryTime()}</p>
+                  <p className="text-sm text-primary-600">{t('estimatedDeliveryBy', { time: estimateDeliveryTime() })}</p>
                 </div>
               )}
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Pinned order bar (phones) ── */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-neutral-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {submitButton('w-full h-12 text-base')}
       </div>
     </div>
   );

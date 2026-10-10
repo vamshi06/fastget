@@ -14,7 +14,7 @@
 import { neon } from '@neondatabase/serverless';
 import { createTranslator } from 'next-intl';
 import { Order, OrderStatus } from '@/types';
-import { formatCurrency } from './utils';
+import { formatCurrency, formatOrderNumber } from './utils';
 import { logger } from './logger';
 import enOrder from '../../messages/en/order.json';
 import hiOrder from '../../messages/hi/order.json';
@@ -153,7 +153,7 @@ export async function notifyStaffOfNewOrderPush(order: Order, stockWarningCount:
     `;
     if (rows.length === 0) return;
 
-    const title = stockWarningCount > 0 ? `🛒 New order - ⚠ check stock` : `🛒 New order placed`;
+    const title = stockWarningCount > 0 ? `🛒 New order ${formatOrderNumber(order)} - ⚠ check stock` : `🛒 New order ${formatOrderNumber(order)}`;
     const body =
       `${formatCurrency(order.total)} · ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} · ` +
       `${order.paymentMethod.toUpperCase()} · ${order.customerName}`;

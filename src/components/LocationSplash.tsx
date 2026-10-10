@@ -2,17 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { MapPin, X, ArrowRight, Loader2, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
+import { MapPin, X, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SERVICE_AREAS, type AreaId } from './LocationSplashContext';
+import { DELIVERY_ETA_MINUTES, isServiceablePincode } from '@/lib/service-area';
 
-// Mumbai city + suburbs pincodes: 400001–400104
-const getAreaForPincode = (pincode: string): AreaId | null => {
-  const n = Number(pincode);
-  return n >= 400001 && n <= 400104 ? 'mumbai' : null;
-};
+const getAreaForPincode = (pincode: string): AreaId | null =>
+  isServiceablePincode(pincode) ? 'mumbai' : null;
 
-type PincodeStatus = 'idle' | 'checking' | 'valid' | 'invalid';
+type PincodeStatus = 'idle' | 'valid' | 'invalid';
 
 interface Props {
   initialSelected: string | null;
@@ -109,20 +107,18 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
     if (val.length > 0) setSelectedArea(null);
   };
 
+  // A local range check - instant, no pretend network wait.
   const handlePincodeCheck = useCallback(() => {
     if (pincode.length !== 6) return;
-    setPincodeStatus('checking');
-    setTimeout(() => {
-      const area = getAreaForPincode(pincode);
-      if (area) {
-        setPincodeStatus('valid');
-        setPincodeArea(area);
-        setSelectedArea(null);
-      } else {
-        setPincodeStatus('invalid');
-        setPincodeArea(null);
-      }
-    }, 450);
+    const area = getAreaForPincode(pincode);
+    if (area) {
+      setPincodeStatus('valid');
+      setPincodeArea(area);
+      setSelectedArea(null);
+    } else {
+      setPincodeStatus('invalid');
+      setPincodeArea(null);
+    }
   }, [pincode]);
 
   const handlePincodeKeyDown = (e: React.KeyboardEvent) => {
@@ -263,7 +259,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
                     'text-xs transition-colors',
                     active ? 'text-primary-600' : 'text-brand-slate',
                   )}>
-                    {area.eta}
+                    {t('eta', { mins: DELIVERY_ETA_MINUTES })}
                   </span>
                 </button>
               );
@@ -306,21 +302,18 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
             />
             <button
               onClick={handlePincodeCheck}
-              disabled={pincode.length !== 6 || pincodeStatus === 'checking'}
+              disabled={pincode.length !== 6}
               aria-label={t('checkPincodeAria')}
               className={cn(
                 'px-4 py-2.5 rounded-xl text-sm font-semibold min-w-[72px]',
                 'transition-all duration-150 active:scale-[0.97]',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
-                pincode.length === 6 && pincodeStatus !== 'checking'
+                pincode.length === 6
                   ? 'bg-brand-primary text-white shadow-brand hover:bg-brand-dark hover:shadow-brand-lg'
                   : 'bg-neutral-100 text-brand-slate',
               )}
             >
-              {pincodeStatus === 'checking'
-                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                : tc('check')
-              }
+              {tc('check')}
             </button>
           </div>
 
@@ -333,7 +326,7 @@ export function LocationSplash({ initialSelected, onConfirm, onClose }: Props) {
                 className="flex items-center gap-1.5 text-xs text-brand-success font-medium animate-fade-in"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                {t('weDeliverTo', { area: getAreaName(pincodeArea), eta: SERVICE_AREAS.find(a => a.id === pincodeArea)?.eta ?? '' })}
+                {t('weDeliverTo', { area: getAreaName(pincodeArea), eta: t('eta', { mins: DELIVERY_ETA_MINUTES }) })}
               </p>
             )}
             {pincodeStatus === 'invalid' && (

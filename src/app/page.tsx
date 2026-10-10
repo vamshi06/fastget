@@ -39,6 +39,7 @@ export default async function Home() {
           title={t('bestDealsTitle')}
           subtitle={t('bestDealsSubtitle')}
           limit={10}
+          sort="discount"
         />
 
         {/* Carpentry section */}

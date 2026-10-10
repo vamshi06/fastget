@@ -12,6 +12,7 @@ import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { resolveReferralForOrder } from '@/lib/referral';
 import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
 import { logger } from '@/lib/logger';
+import { readSiteDetails } from '@/lib/service-area';
 
 /**
  * POST /api/orders
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
       userId: session?.userId,
       referralCode: referral.code,
       referrerUserId: referral.referrerId,
+      ...readSiteDetails(body),
     };
 
     // Save to Neon database

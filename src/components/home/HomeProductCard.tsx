@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { Plus, Minus, Package, Zap } from 'lucide-react';
 import Image from 'next/image';
+import { isUnoptimizedImage } from '@/lib/remote-images';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useCart, getMinOrderQty } from '@/components/CartContext';
 import { WishlistHeart } from '@/components/WishlistHeart';
+import { VariantSheet } from '@/components/VariantSheet';
 import { haptic } from '@/lib/native-bridge';
 import { Product } from '@/types';
 
@@ -23,6 +26,12 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
   const qty = cartItem?.quantity ?? 0;
   const minQty = getMinOrderQty(product);
   const inStock = product.stockStatus !== 'out';
+  // A variant family (several sizes) - + opens the size sheet instead.
+  const isFamily = (product.familySize ?? 1) > 1;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const familyQty = isFamily
+    ? state.items.filter((i) => i.product.familyId === product.familyId).reduce((n, i) => n + i.quantity, 0)
+    : 0;
 
   const hasMrp = product.mrpPrice && product.mrpPrice > product.price;
   const savings = hasMrp ? product.mrpPrice! - product.price : 0;
@@ -54,6 +63,9 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
 
   return (
     // ~2.5 cards visible on a phone so the row clearly scrolls sideways.
+    // The size sheet sits outside the Link: clicks inside a portal still
+    // bubble to React ancestors, which would open the product page.
+    <>
     <Link
       href={`/product/${product.id}`}
       className="pressable snap-start flex-shrink-0 w-[38vw] max-w-[160px] sm:w-[160px] bg-white rounded-2xl border border-neutral-100 overflow-hidden flex flex-col"
@@ -64,6 +76,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
+            unoptimized={isUnoptimizedImage(product.imageUrl)}
             alt={product.name}
             fill
             sizes="160px"
@@ -94,15 +107,30 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
           iconClassName="w-3.5 h-3.5"
         />
 
-        {/* Out of stock overlay */}
-        {!inStock && (
+        {/* Out of stock overlay (a family always has its sizes in the sheet) */}
+        {!inStock && !isFamily && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
             <span className="text-xs font-semibold text-neutral-500">{tc('outOfStock')}</span>
           </div>
         )}
 
         {/* Cart control - overlaid at bottom-right of image */}
-        {inStock && (
+        {isFamily ? (
+          <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheetOpen(true); haptic('light'); }}
+              aria-label={tp('chooseSize')}
+              className="pressable relative w-9 h-9 bg-white border border-brand-primary/40 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary"
+            >
+              <Plus className="w-5 h-5 text-brand-primary" />
+              {familyQty > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center">
+                  {familyQty}
+                </span>
+              )}
+            </button>
+          </div>
+        ) : inStock && (
           <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
             {qty === 0 ? (
               <button
@@ -134,13 +162,16 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
           {product.name}
         </p>
 
-        {/* Unit */}
-        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
-          {minQty > 1 ? tp('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
+        {/* Unit - or how many sizes a family has */}
+        <p className={`text-[11px] mt-0.5 truncate ${isFamily ? 'font-semibold text-brand-primary' : 'text-neutral-400'}`}>
+          {isFamily
+            ? tp('sizesCount', { count: product.familySize! })
+            : minQty > 1 ? tp('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
         </p>
 
         {/* Price row */}
         <div className="flex items-baseline gap-1 flex-wrap mt-1.5">
+          {isFamily && <span className="text-[11px] text-brand-slate">{tp('fromPrefix')}</span>}
           <span className="text-[15px] font-black text-brand-charcoal">
             ₹{product.price.toLocaleString('en-IN')}
           </span>
@@ -159,5 +190,7 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
         )}
       </div>
     </Link>
+    {isFamily && <VariantSheet product={product} open={sheetOpen} onClose={() => setSheetOpen(false)} />}
+    </>
   );
 }

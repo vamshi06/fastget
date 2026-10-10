@@ -12,5 +12,6 @@
   "noDeliveryPincode": "हम अभी इस पिनकोड पर डिलीवरी नहीं करते",
   "confirmDeliveryTo": "{area} में डिलीवरी की पुष्टि करें",
   "selectAreaToContinue": "जारी रखने के लिए एक डिलीवरी क्षेत्र चुनें",
-  "deliverToArea": "{area} में डिलीवर करें"
+  "deliverToArea": "{area} में डिलीवर करें",
+  "eta": "{mins} मिनट में डिलीवरी"
 }

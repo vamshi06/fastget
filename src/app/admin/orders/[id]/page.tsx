@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_DESCRIPTIONS, StatusHistoryEntry } from '@/types';
 import { requireAdminPage } from '@/lib/auth';
-import { formatCurrency, formatDuration, orderCoinDiscount } from '@/lib/utils';
+import { formatCurrency, formatDuration, formatOrderNumber, orderCoinDiscount } from '@/lib/utils';
 import { DeleteOrderButton } from './DeleteOrderButton';
 import { AdminOrderStatusCard } from './AdminOrderStatusCard';
 import { getUserById } from '@/lib/users';
@@ -91,9 +91,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-black text-brand-charcoal">Order Details</h2>
-          <p className="text-brand-slate break-all">
-            Order ID: <span className="font-mono font-semibold text-brand-charcoal">{order.id}</span>
+          <h2 className="text-2xl sm:text-3xl font-black text-brand-charcoal">Order {formatOrderNumber(order)}</h2>
+          <p className="text-xs text-brand-steel break-all">
+            Internal ID: <span className="font-mono">{order.id}</span>
           </p>
         </div>
         <Link href="/admin/orders" className="btn-secondary px-4 py-2 text-sm">
@@ -188,13 +188,32 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   value={
                     <>
                       {order.siteAddress}
+                      {order.sitePincode && <> - {order.sitePincode}</>}
                       {order.landmark && (
                         <span className="block text-sm text-brand-slate font-normal mt-1">Landmark: {order.landmark}</span>
+                      )}
+                      {order.siteLat != null && order.siteLng != null && (
+                        <a
+                          href={`https://maps.google.com/?q=${order.siteLat},${order.siteLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block mt-2 text-sm text-brand-primary hover:underline"
+                        >
+                          📍 Open site location in Maps
+                        </a>
                       )}
                     </>
                   }
                 />
               </div>
+              {order.gstin && (
+                <div className="sm:col-span-2">
+                  <InfoRow
+                    label="GST details"
+                    value={<>{order.businessName && <>{order.businessName} · </>}<span className="font-mono">{order.gstin}</span></>}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

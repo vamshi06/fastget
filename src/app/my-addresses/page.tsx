@@ -44,6 +44,7 @@ interface AddressFormState {
   type: AddressType;
   street: string;
   city: string;
+  pincode: string;
   phone: string;
   landmark: string;
   isPrimary: boolean;
@@ -53,6 +54,7 @@ const EMPTY_FORM: AddressFormState = {
   type: 'home',
   street: '',
   city: '',
+  pincode: '',
   phone: '',
   landmark: '',
   isPrimary: false,
@@ -94,7 +96,7 @@ function AddressForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.street.trim() || !form.city.trim() || !form.phone.trim()) return;
+    if (!form.street.trim() || !form.city.trim() || !form.phone.trim() || !/^\d{6}$/.test(form.pincode)) return;
     onSave(form);
   };
 
@@ -144,7 +146,7 @@ function AddressForm({
         onChange={(e) => set('landmark', e.target.value)}
       />
 
-      {/* City + Phone */}
+      {/* City + Pincode */}
       <div className="grid grid-cols-2 gap-3">
         <FloatingInput
           label={t('addresses.cityLabel')}
@@ -153,6 +155,19 @@ function AddressForm({
           onChange={(e) => set('city', e.target.value)}
           required
         />
+        <FloatingInput
+          label={t('addresses.pincodeLabel')}
+          name="pincode"
+          value={form.pincode}
+          inputMode="numeric"
+          onChange={(e) => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+          required
+          maxLength={6}
+        />
+      </div>
+
+      {/* Phone */}
+      <div>
         <FloatingInput
           label={t('addresses.phoneLabel')}
           name="phone"
@@ -266,7 +281,7 @@ function AddressCard({
       {address.landmark && (
         <p className="ph-no-capture text-brand-slate text-xs mt-0.5">{t('addresses.near', { landmark: address.landmark })}</p>
       )}
-      <p className="ph-no-capture text-brand-slate text-sm mt-0.5">{address.city}</p>
+      <p className="ph-no-capture text-brand-slate text-sm mt-0.5">{address.city}{address.pincode ? ` - ${address.pincode}` : ''}</p>
       <p className="ph-no-capture text-brand-slate text-xs mt-1">{address.phone}</p>
 
       {!address.isPrimary && (
@@ -490,6 +505,7 @@ export default function MyAddressesPage() {
                     type: addr.type,
                     street: addr.street,
                     city: addr.city,
+                    pincode: addr.pincode ?? '',
                     phone: addr.phone,
                     landmark: addr.landmark ?? '',
                     isPrimary: addr.isPrimary,

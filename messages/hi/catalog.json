@@ -76,5 +76,11 @@
     "switches": "स्विच और सॉकेट",
     "lighting": "लाइटिंग",
     "mcb": "एमसीबी और पैनल"
-  }
+  },
+  "sortShortRelevance": "क्रम",
+  "sortShortPriceAsc": "कीमत ↑",
+  "sortShortPriceDesc": "कीमत ↓",
+  "sortShortDiscount": "छूट",
+  "sortTitle": "क्रमबद्ध करें",
+  "sortSubtitle": "चुनें कि उत्पाद किस क्रम में दिखें"
 }

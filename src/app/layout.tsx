@@ -12,6 +12,7 @@ import { ConditionalHeader } from '@/components/ConditionalHeader';
 import { ConditionalFooter } from '@/components/ConditionalFooter';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AnnouncementBar } from '@/components/AnnouncementBar';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { NativeShellBridge } from '@/components/NativeShellBridge';
 import { Analytics } from '@/components/Analytics';
 import { ThemeProvider } from '@/components/ThemeContext';
@@ -89,6 +90,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <CartProvider>
               <ToastProvider>
                 <LocationSplashProvider>
+                  <OfflineBanner />
                   <AnnouncementBar />
                   <ConditionalHeader />
                   <main className="flex-grow flex flex-col" style={{ paddingBottom: 'var(--bottom-nav-space)' }}>

@@ -28,7 +28,10 @@
     "orders": "Orders",
     "coins": "Coins",
     "wishlist": "Wishlist",
-    "settings": "Settings & help"
+    "settings": "Settings & help",
+    "whatsapp": "Chat on WhatsApp",
+    "whatsappHint": "Stock, bulk prices, product questions",
+    "whatsappPrefill": "Hi FastGet, I have a question."
   },
   "deleteAccount": {
     "label": "Delete Account",
@@ -82,7 +85,8 @@
     "toastRemoveSuccess": "Address removed",
     "toastRemoveError": "Failed to delete address",
     "toastPrimarySuccess": "Primary address updated",
-    "toastPrimaryError": "Failed to update primary address"
+    "toastPrimaryError": "Failed to update primary address",
+    "pincodeLabel": "Pincode"
   },
   "coins": {
     "guestHeading": "My Coins",

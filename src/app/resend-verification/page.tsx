@@ -37,7 +37,10 @@ function ResendVerificationForm() {
         return;
       }
       // Redirect back to OTP entry page
-      router.push(`/verify-email?email=${encodeURIComponent(email.toLowerCase().trim())}`);
+      const redirect = searchParams.get('redirect');
+      router.push(
+        `/verify-email?email=${encodeURIComponent(email.toLowerCase().trim())}${redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''}` as any,
+      );
     } catch {
       setError(t('common.networkError'));
       setState('idle');

@@ -12,5 +12,6 @@
   "noDeliveryPincode": "We don't deliver to this pincode yet",
   "confirmDeliveryTo": "Confirm delivery to {area}",
   "selectAreaToContinue": "Select a delivery area to continue",
-  "deliverToArea": "Deliver to {area}"
+  "deliverToArea": "Deliver to {area}",
+  "eta": "Delivery in {mins} min"
 }

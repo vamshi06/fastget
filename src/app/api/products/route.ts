@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductsFromCategoryTables, getProductCatalog } from '@/lib/products';
+import { getProductsFromCategoryTables, getProductCatalog, CATALOG_SORTS, CatalogSort } from '@/lib/products';
 import { logger } from '@/lib/logger';
 import { isLocale } from '@/i18n/config';
+import { findSubcategoryTile, tileNamePattern } from '@/lib/category-tiles';
 
 // Public browse endpoint: sanitize/clamp query params rather than reject, so a
 // malformed param degrades gracefully instead of breaking the catalog.
@@ -31,6 +32,8 @@ function clampPrice(raw: string | null): number | undefined {
  *   q         – free-text search
  *   limit     – max results (default 500, max 500)
  *   offset    – pagination offset (default 0)
+ *   sort      – relevance (default) | price_asc | price_desc | discount
+ *   sub       – sub-category tile key within `category` (src/lib/category-tiles.ts)
  *   lang      – locale for product names (e.g. "hi"); English when absent.
  *               A query param rather than the locale cookie, because this
  *               response is publicly cached by URL.
@@ -45,6 +48,11 @@ export async function GET(request: NextRequest) {
     const offset   = clampInt(sp.get('offset'), 0, 0, 1_000_000);
     const langRaw  = sp.get('lang') ?? undefined;
     const locale   = isLocale(langRaw) ? langRaw : undefined;
+    // Sub-category tile (?sub=taps) - only meaningful inside its category.
+    const subTile  = category ? findSubcategoryTile(category, sp.get('sub') ?? '') : undefined;
+    const namePattern = subTile ? tileNamePattern(subTile) ?? undefined : undefined;
+    const sortRaw  = sp.get('sort');
+    const sort     = (CATALOG_SORTS as readonly string[]).includes(sortRaw ?? '') ? (sortRaw as CatalogSort) : undefined;
     let   minPrice = clampPrice(sp.get('min_price'));
     let   maxPrice = clampPrice(sp.get('max_price'));
     // Drop an inverted range rather than silently returning nothing.
@@ -63,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Use category tables by default; fall back to legacy products table
     const useLegacy = process.env.LEGACY_PRODUCTS_TABLE === '1';
     const fetchFn   = useLegacy ? getProductCatalog : getProductsFromCategoryTables;
-    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset, minPrice, maxPrice, locale });
+    const { products, total } = await fetchFn({ categorySlug: category, search, limit, offset, minPrice, maxPrice, locale, sort, namePattern });
 
     if (process.env.DEBUG_CATALOG === '1') {
       console.debug('[api/products] returned count:', products.length, '/ total in DB:', total);

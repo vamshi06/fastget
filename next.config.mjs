@@ -18,7 +18,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://images.weserv.nl https://*.razorpay.com",
   "connect-src 'self' https://*.razorpay.com https://lumberjack.razorpay.com",
   "frame-src 'self' https://*.razorpay.com",
   // PostHog session replay compresses recordings in a blob: web worker.
@@ -58,6 +58,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
+      },
+      // Image proxy some product URLs go through. Other hosts still work -
+      // they're shown unoptimised (src/lib/remote-images.ts keeps this list too).
+      {
+        protocol: 'https',
+        hostname: 'images.weserv.nl',
       },
     ],
   },

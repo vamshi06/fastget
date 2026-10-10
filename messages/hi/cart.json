@@ -23,5 +23,10 @@
   "coinsDiscount": "कॉइन छूट",
   "total": "कुल राशि",
   "proceedToCheckout": "चेकआउट के लिए आगे बढ़ें",
-  "payOnDeliveryNote": "💳 डिलीवरी पर भुगतान उपलब्ध"
+  "payOnDeliveryNote": "💳 डिलीवरी पर भुगतान उपलब्ध",
+  "clearCartTitle": "क्या कार्ट खाली करना है?",
+  "clearCartMessage": "{count, plural, one {आपके कार्ट से # आइटम हटा दिया जाएगा।} other {आपके कार्ट से सभी # आइटम हटा दिए जाएंगे।}}",
+  "clearCartConfirm": "कार्ट खाली करें",
+  "clearCartCancel": "आइटम रखें",
+  "quantityAria": "मात्रा"
 }

@@ -6,6 +6,7 @@ import { Product } from '@/types';
 import { useCart, getMinOrderQty } from './CartContext';
 import { useToast } from './ToastContext';
 import { WishlistHeart } from './WishlistHeart';
+import { VariantSheet } from './VariantSheet';
 import { formatCurrency } from '@/lib/utils';
 import { haptic } from '@/lib/native-bridge';
 import { Plus, Minus, Package, Loader2, Tag } from 'lucide-react';
@@ -32,6 +33,12 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
     ? Math.round(((product.mrpPrice! - product.price) / product.mrpPrice!) * 100)
     : 0;
   const savings  = hasMrp ? product.mrpPrice! - product.price : 0;
+  // A variant family (several sizes) - + opens the size sheet instead.
+  const isFamily = (product.familySize ?? 1) > 1;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const familyQty = isFamily
+    ? state.items.filter((i) => i.product.familyId === product.familyId).reduce((n, i) => n + i.quantity, 0)
+    : 0;
 
   const handleIncrement = () => {
     haptic('light');
@@ -71,6 +78,8 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   /* ── Compact (Zepto-style) ────────────────────────────────────────────── */
   if (compact) {
     return (
+      // Size sheet outside the Link - portal clicks bubble to React ancestors.
+      <>
       <Link href={`/product/${product.id}`} className="pressable block">
         <div className="product-card h-full flex flex-col">
 
@@ -99,14 +108,29 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               </span>
             )}
 
-            {product.stockStatus === 'out' && (
+            {product.stockStatus === 'out' && !isFamily && (
               <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                 <span className="text-xs font-semibold text-neutral-500">{tc('outOfStock')}</span>
               </div>
             )}
 
             {/* Cart control - overlaid bottom-right of image */}
-            {product.stockStatus !== 'out' && (
+            {isFamily ? (
+              <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheetOpen(true); haptic('light'); }}
+                  aria-label={t('chooseSize')}
+                  className="pressable relative w-9 h-9 bg-white border border-brand-primary/40 rounded-xl flex items-center justify-center shadow-sm hover:border-brand-primary"
+                >
+                  <Plus className="w-5 h-5 text-brand-primary" />
+                  {familyQty > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center">
+                      {familyQty}
+                    </span>
+                  )}
+                </button>
+              </div>
+            ) : product.stockStatus !== 'out' && (
               <div className="absolute bottom-1.5 right-1.5" onClick={e => e.preventDefault()}>
                 {quantity === 0 ? (
                   <button
@@ -135,10 +159,13 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
             <p className="text-[13px] font-medium text-brand-charcoal line-clamp-2 leading-snug min-h-[2.5em]">
               {product.name}
             </p>
-            <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
-              {minQty > 1 ? t('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
+            <p className={`text-[11px] mt-0.5 truncate ${isFamily ? 'font-semibold text-brand-primary' : 'text-neutral-400'}`}>
+              {isFamily
+                ? t('sizesCount', { count: product.familySize! })
+                : minQty > 1 ? t('minOrder', { moq: minQty, unit: product.unit }) : product.unit}
             </p>
             <div className="flex items-baseline gap-1 flex-wrap mt-1.5">
+              {isFamily && <span className="text-[11px] text-brand-slate">{t('fromPrefix')}</span>}
               <span className="text-[15px] font-black text-brand-charcoal">{formatCurrency(product.price)}</span>
               {hasMrp && <span className="text-[11px] text-neutral-400 line-through">{formatCurrency(product.mrpPrice!)}</span>}
             </div>
@@ -149,6 +176,8 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
 
         </div>
       </Link>
+      {isFamily && <VariantSheet product={product} open={sheetOpen} onClose={() => setSheetOpen(false)} />}
+      </>
     );
   }
 

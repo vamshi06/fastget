@@ -108,7 +108,79 @@ export interface CatalogParams {
   includeInactive?: boolean;
   /** Admin only: just ACTIVE products that are out of stock / low on stock. */
   stockFilter?: StockFilter;
+  /** Storefront sort order; default is brand + name. */
+  sort?: CatalogSort;
+  /** Sub-category filter: a Postgres regex on the (English) product name - see tileNamePattern. */
+  namePattern?: string;
+  /**
+   * Storefront: show each variant family (product_family_members) as one
+   * product - its cheapest in-stock size - instead of one card per size.
+   * Defaults to on for the storefront, off for admin listings.
+   */
+  groupFamilies?: boolean;
 }
+
+// ── Variant families (migration 028) ─────────────────────────────────────────
+// Sizes of the same item (e.g. Telescopic Channel 12" / 18" / 24") stay
+// separate products - own code, price, stock, cart line - and are linked by a
+// shared family_id in product_family_members, managed from the admin.
+
+/** True when product_family_members doesn't exist yet (migration 028 not run). */
+export function isMissingFamiliesTable(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes('product_family_members') && msg.includes('does not exist');
+}
+
+/** "Telescopic Channel (18\")" -> "Telescopic Channel" - the family's shared name. */
+export function familyBaseName(name: string): string {
+  return name.replace(/\s*\([^()]*\)\s*$/, '').trim() || name;
+}
+
+/**
+ * Fills in familyId / familySize / optionLabel on `products` from
+ * product_family_members, counting only members the storefront can show
+ * (active). With `asFamilyCards`, family products are renamed to the shared
+ * family name ("from ₹X" cards). Non-fatal: products are left as they are on
+ * any error (e.g. before migration 028).
+ */
+async function attachFamilyInfo(products: Product[], asFamilyCards: boolean): Promise<void> {
+  if (products.length === 0) return;
+  try {
+    const rows = await getUnpooledClient().query(
+      `SELECT fm.product_code, fm.family_id, fm.option_label,
+              (SELECT COUNT(*) FROM product_family_members m2
+                 JOIN products_catalog_view cv ON cv.product_code = m2.product_code
+                WHERE m2.family_id = fm.family_id) AS family_size
+         FROM product_family_members fm
+        WHERE fm.product_code = ANY($1::text[])`,
+      [products.map((p) => p.id)],
+    ) as any[];
+    const byCode = new Map(rows.map((r: any) => [r.product_code as string, r]));
+    for (const p of products) {
+      const r = byCode.get(p.id);
+      if (!r) continue;
+      p.familyId = r.family_id;
+      p.optionLabel = r.option_label;
+      p.familySize = Number(r.family_size) || 1;
+      if (asFamilyCards && p.familySize > 1) p.name = familyBaseName(p.name);
+    }
+  } catch (error) {
+    if (!isMissingFamiliesTable(error)) {
+      logger.warn('Products', 'attachFamilyInfo failed', { error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+}
+
+export const CATALOG_SORTS = ['relevance', 'price_asc', 'price_desc', 'discount'] as const;
+export type CatalogSort = typeof CATALOG_SORTS[number];
+
+// Fixed SQL per sort key (never built from user input). Prices are in paise.
+const CATALOG_SORT_SQL: Record<CatalogSort, string> = {
+  relevance:  'brand ASC, name ASC',
+  price_asc:  'price ASC, name ASC',
+  price_desc: 'price DESC, name ASC',
+  discount:   'CASE WHEN mrp_price > price THEN (mrp_price - price)::float / mrp_price ELSE 0 END DESC, name ASC',
+};
 
 /** Available stock (stock - reserved) at or below this counts as "low". Matches the admin/storefront badges. */
 export const LOW_STOCK_THRESHOLD = 10;
@@ -230,7 +302,7 @@ const CATEGORY_TABLE_COLUMNS = `product_code, name, brand, description, price, m
   sale_price, sale_starts_at, sale_ends_at, sale_min_order_paise`;
 
 /** Every category table's rows regardless of status (the view only has active ones). */
-const ALL_CATEGORY_ROWS_SQL = `(${CATEGORY_TABLES
+export const ALL_CATEGORY_ROWS_SQL = `(${CATEGORY_TABLES
   .map((t) => `SELECT ${CATEGORY_TABLE_COLUMNS} FROM ${t}`)
   .join(' UNION ALL ')}) all_category_rows`;
 
@@ -301,12 +373,21 @@ function categoryTableRowToProduct(row: any): Product {
  * Queries the specific category table when categorySlug is provided,
  * otherwise queries the products_catalog_view UNION for all categories.
  */
+// When a query finds product_family_members missing, grouping is skipped for
+// a minute instead of failing first on every request - then checked again, so
+// running migration 028 takes effect without restarting the server.
+const FAMILIES_RECHECK_MS = 60_000;
+let familiesMissingSince = 0;
+
 export async function getProductsFromCategoryTables(
   params: CatalogParams = {},
 ): Promise<CatalogResult> {
   const sqlClient = getUnpooledClient();
-  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale, includeInactive, stockFilter } = params;
+  const { categorySlug, search, limit = 500, offset = 0, minPrice, maxPrice, locale, includeInactive, stockFilter, sort = 'relevance', namePattern,
+    groupFamilies = !includeInactive && !stockFilter } = params;
   const translate = wantsTranslation(locale);
+  // Turned off (and the query retried) if migration 028 hasn't run yet.
+  const useFamilies = groupFamilies && Date.now() - familiesMissingSince > FAMILIES_RECHECK_MS;
 
   try {
     // Resolve which table/view to query
@@ -346,6 +427,11 @@ export async function getProductsFromCategoryTables(
       // so the stock filter always narrows to active ones.
       const clauses: string[] = [includeInactive && !stockFilter ? 'TRUE' : `status = 'active'`];
       if (stockFilter) clauses.push(STOCK_FILTER_SQL[stockFilter]);
+      // Sub-category (kept in the typo-tolerant fallback too).
+      if (namePattern) {
+        args.push(namePattern);
+        clauses.push(`name ~* $${args.length}`);
+      }
 
       if (includeSearch && search?.trim()) {
         const pat = `%${search.trim()}%`;
@@ -379,8 +465,32 @@ export async function getProductsFromCategoryTables(
     const countArgs  = [...filterArgs];
     const limitIdx   = rowsArgs.length - 1;
     const offsetIdx  = rowsArgs.length;
-    const rowsQuery  = `SELECT * FROM ${source} WHERE ${whereStr} ORDER BY brand ASC, name ASC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-    const countQuery = `SELECT COUNT(*) AS total FROM ${source} WHERE ${whereStr}`;
+    const orderBy    = CATALOG_SORT_SQL[sort] ?? CATALOG_SORT_SQL.relevance;
+    // Grouped: filter first, then keep one row per family - the cheapest size
+    // that's in stock (cheapest overall if none are) - and count families.
+    const rowsQuery  = useFamilies
+      ? `WITH filtered AS (SELECT * FROM ${source} WHERE ${whereStr}),
+         ranked AS (
+           SELECT f.*,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY COALESCE(fm.family_id::text, f.product_code)
+                    ORDER BY (COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) <= 0),
+                             CASE WHEN f.sale_price IS NOT NULL AND NOW() BETWEEN f.sale_starts_at AND f.sale_ends_at
+                                  THEN f.sale_price ELSE f.price END,
+                             f.product_code
+                  ) AS family_rank
+             FROM filtered f
+             LEFT JOIN product_family_members fm ON fm.product_code = f.product_code
+             LEFT JOIN inventory inv ON inv.variant_id = f.variant_id
+         )
+         SELECT * FROM ranked WHERE family_rank = 1
+         ORDER BY ${orderBy} LIMIT $${limitIdx} OFFSET $${offsetIdx}`
+      : `SELECT * FROM ${source} WHERE ${whereStr} ORDER BY ${orderBy} LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+    const countQuery = useFamilies
+      ? `SELECT COUNT(DISTINCT COALESCE(fm.family_id::text, f.product_code)) AS total
+           FROM (SELECT * FROM ${source} WHERE ${whereStr}) f
+           LEFT JOIN product_family_members fm ON fm.product_code = f.product_code`
+      : `SELECT COUNT(*) AS total FROM ${source} WHERE ${whereStr}`;
 
     // Debug logging (set DEBUG_CATALOG=1 to enable)
     if (process.env.DEBUG_CATALOG === '1') {
@@ -427,33 +537,18 @@ export async function getProductsFromCategoryTables(
       console.debug('[catalog] returned:', products.length, 'of total', total);
     }
 
-    // Batch-fetch stock quantities from product_variants for all products that
-    // have a variant_id. One query, no N+1 problem.
-    const variantIds = products.map(p => p.variantId).filter(Boolean) as string[];
-    if (variantIds.length > 0) {
-      try {
-        const stockRows = await sqlClient.query(
-          `SELECT pv.id, COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
-           FROM product_variants pv
-           LEFT JOIN inventory inv ON inv.variant_id = pv.id
-           WHERE pv.id = ANY($1::uuid[])`,
-          [variantIds] as any[],
-        ) as any[];
-        const stockMap = new Map(stockRows.map((r: any) => [r.id as string, Number(r.stock_quantity)]));
-        products.forEach(p => {
-          if (p.variantId) {
-            const qty = stockMap.get(p.variantId) ?? 0;
-            p.stockQuantity = qty;
-            p.stockStatus   = qty > 10 ? 'in_stock' : qty > 0 ? 'low' : 'out';
-          }
-        });
-      } catch {
-        // Stock fetch failure is non-fatal; products still returned without quantity
-      }
-    }
+    // Batch-fetch stock quantities for all products in one query.
+    await attachStock(products);
+
+    await attachFamilyInfo(products, useFamilies);
 
     return { products, total };
   } catch (error) {
+    if (useFamilies && isMissingFamiliesTable(error)) {
+      logger.warn('Products', 'product_family_members missing (run migration 028) - catalog not grouped');
+      familiesMissingSince = Date.now();
+      return getProductsFromCategoryTables(params);
+    }
     if (translate && isMissingTranslationsTable(error)) {
       logger.warn('Products', 'product_translations missing (run migration 021) - serving English');
       return getProductsFromCategoryTables({ ...params, locale: undefined });
@@ -608,6 +703,69 @@ export async function getTrustedPricingInfo(
     // Return whatever we have; unmatched codes cause the caller to reject.
   }
   return out;
+}
+
+/**
+ * Every active size in `productCode`'s variant family, each a full Product
+ * (own price, stock, flash sale) with its optionLabel, in natural size order
+ * ("4mm, 6mm, 12mm"). Just that product when it has no family; [] if it
+ * doesn't exist.
+ */
+export async function getFamilyProducts(productCode: string, locale?: Locale): Promise<Product[]> {
+  const sql = getUnpooledClient();
+  const translate = wantsTranslation(locale);
+  try {
+    const rows = await sql.query(
+      `SELECT cv.*, fm.family_id, fm.option_label${translate ? ', t.name AS name_i18n, t.description AS description_i18n' : ''}
+         FROM products_catalog_view cv
+         JOIN product_family_members fm ON fm.product_code = cv.product_code
+         ${translate ? 'LEFT JOIN product_translations t ON t.product_code = cv.product_code AND t.locale = $2' : ''}
+        WHERE fm.family_id = (SELECT family_id FROM product_family_members WHERE product_code = $1)`,
+      translate ? [productCode, locale] : [productCode],
+    ) as any[];
+
+    const products = rows.map((r: any) => ({
+      ...categoryTableRowToProduct(r),
+      familyId: r.family_id,
+      optionLabel: r.option_label,
+      familySize: rows.length,
+    }));
+    await attachStock(products);
+    return products.sort((a, b) =>
+      (a.optionLabel ?? '').localeCompare(b.optionLabel ?? '', 'en', { numeric: true, sensitivity: 'base' }),
+    );
+  } catch (error) {
+    if (translate && isMissingTranslationsTable(error)) return getFamilyProducts(productCode);
+    if (!isMissingFamiliesTable(error)) {
+      logger.error('Products', 'getFamilyProducts failed', { error: error instanceof Error ? error.message : String(error) });
+    }
+    return [];
+  }
+}
+
+/** Fills stockQuantity / stockStatus from inventory (non-fatal). */
+async function attachStock(products: Product[]): Promise<void> {
+  const variantIds = products.map(p => p.variantId).filter(Boolean) as string[];
+  if (variantIds.length === 0) return;
+  try {
+    const stockRows = await getUnpooledClient().query(
+      `SELECT pv.id, COALESCE(inv.stock_quantity - inv.reserved_quantity, 0) AS stock_quantity
+       FROM product_variants pv
+       LEFT JOIN inventory inv ON inv.variant_id = pv.id
+       WHERE pv.id = ANY($1::uuid[])`,
+      [variantIds] as any[],
+    ) as any[];
+    const stockMap = new Map(stockRows.map((r: any) => [r.id as string, Number(r.stock_quantity)]));
+    products.forEach(p => {
+      if (p.variantId) {
+        const qty = stockMap.get(p.variantId) ?? 0;
+        p.stockQuantity = qty;
+        p.stockStatus   = qty > 10 ? 'in_stock' : qty > 0 ? 'low' : 'out';
+      }
+    });
+  } catch {
+    // Stock fetch failure is non-fatal
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer';
 import { Order } from '@/types';
+import { formatOrderNumber, orderCoinDiscount } from './utils';
 import path from 'path';
 
 const DARK = '#3D3D28';
@@ -274,6 +275,8 @@ function fmtTime(dateStr: string) {
 
 export function InvoicePDF({ order }: { order: Order }) {
   const logoPath = path.join(process.cwd(), 'public', 'fastget-logo-clear.png');
+  const coinsUsed = orderCoinDiscount(order);
+  const isPaid = order.paymentMethod === 'razorpay' && order.paymentStatus === 'captured';
 
   return (
     <Document>
@@ -305,14 +308,18 @@ export function InvoicePDF({ order }: { order: Order }) {
             <View style={styles.billTo}>
               <Text style={styles.infoLabel}>BILL TO:</Text>
               <Text style={styles.partyName}>{order.customerName}</Text>
-              <Text style={styles.partyLine}>{order.siteAddress}</Text>
+              {order.businessName ? <Text style={styles.partyLine}>{order.businessName}</Text> : null}
+              <Text style={styles.partyLine}>
+                {order.siteAddress}{order.sitePincode ? ` - ${order.sitePincode}` : ''}
+              </Text>
               {order.landmark ? (
                 <Text style={styles.partyLine}>Landmark: {order.landmark}</Text>
               ) : null}
               <Text style={styles.partyLine}>{order.customerPhone}</Text>
+              {order.gstin ? <Text style={styles.partyLine}>GSTIN: {order.gstin}</Text> : null}
             </View>
             <View style={styles.metaBlock}>
-              <Text style={styles.metaNum}>#{order.statusToken.toUpperCase()}</Text>
+              <Text style={styles.metaNum}>{formatOrderNumber(order)}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaKey}>Issue Date:</Text>
                 <Text style={styles.metaVal}>{fmtDate(order.createdAt)}</Text>
@@ -330,7 +337,7 @@ export function InvoicePDF({ order }: { order: Order }) {
               ) : null}
               <View style={styles.metaDividerLine} />
               <View style={styles.metaRow}>
-                <Text style={styles.metaKey}>Total Amount Due:</Text>
+                <Text style={styles.metaKey}>{isPaid ? 'Total Amount Paid:' : 'Total Amount Due:'}</Text>
                 <Text style={styles.metaVal}>{fmt(order.total)}</Text>
               </View>
             </View>
@@ -374,7 +381,7 @@ export function InvoicePDF({ order }: { order: Order }) {
           {/* Payment + Totals */}
           <View style={styles.bottomRow}>
             <View style={styles.paymentBlock}>
-              <Text style={styles.paymentTitle}>Our Payment Methods:</Text>
+              <Text style={styles.paymentTitle}>Payment Method:</Text>
               {order.paymentMethod === 'razorpay' ? (
                 <>
                   <Text style={styles.paymentLine}>Online Payment (Razorpay)</Text>
@@ -398,8 +405,14 @@ export function InvoicePDF({ order }: { order: Order }) {
                   <Text style={styles.totalsValue}>-{fmt(order.discount)}</Text>
                 </View>
               )}
+              {coinsUsed > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>FastGet Coins Used</Text>
+                  <Text style={styles.totalsValue}>-{fmt(coinsUsed)}</Text>
+                </View>
+              )}
               <View style={[styles.totalsRow, styles.totalsRowGrand]}>
-                <Text style={styles.totalsGrandLabel}>Total Due</Text>
+                <Text style={styles.totalsGrandLabel}>{isPaid ? 'Total Paid' : 'Total Due'}</Text>
                 <Text style={styles.totalsGrandValue}>{fmt(order.total)}</Text>
               </View>
             </View>

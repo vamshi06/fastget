@@ -52,6 +52,14 @@ const ALLOWED_EXTERNAL_SCHEMES = [
   'bhim://',
 ];
 
+const WHATSAPP_HOSTS = new Set(['wa.me', 'api.whatsapp.com']);
+
+function isWhatsAppUrl(url: string): boolean {
+  if (url.toLowerCase().startsWith('whatsapp://')) return true;
+  const match = /^https:\/\/([^/?#]+)/i.exec(url);
+  return !!match && WHATSAPP_HOSTS.has(match[1].toLowerCase());
+}
+
 // A page-supplied URL (e.g. the invoice PDF) may only be opened externally if it
 // belongs to our own origin - blocks file://, javascript:, data: and third-party
 // links. Checking the APP_URL prefix + '/' avoids the fastget.in.evil.com bypass.
@@ -79,8 +87,12 @@ function playHaptic(style: unknown) {
 // Tells the site this app draws its own chrome (native shell). Runs at page
 // start; the cookie is what the site's head script reads on later loads, as
 // this isn't guaranteed to run before it on Android. See src/lib/shell-routes.ts.
+// __FASTGET_CAPS__ lists what this build can do beyond the shell, so the site
+// only offers those features here (e.g. 'whatsapp' = wa.me links open
+// WhatsApp - see handleShouldStartLoadWithRequest; src/lib/contact.ts).
 const SHELL_BOOTSTRAP = `
   window.__FASTGET_SHELL__ = 2;
+  window.__FASTGET_CAPS__ = ['whatsapp'];
   document.cookie = 'fg_shell=2; path=/; max-age=2592000; SameSite=Lax';
   true;
 `;
@@ -329,6 +341,14 @@ export default function WebViewScreen() {
       return true;
     }
 
+    // "Chat on WhatsApp" links: hand to Android, which opens WhatsApp (or the
+    // browser if it isn't installed) - inside the WebView they'd only show
+    // WhatsApp's web page.
+    if (isWhatsAppUrl(url)) {
+      Linking.openURL(url).catch(() => {});
+      return false;
+    }
+
     if (
       url.startsWith('http://') ||
       url.startsWith('https://') ||
@@ -451,6 +471,9 @@ export default function WebViewScreen() {
               onMessage={(event) => handleMessage(event.nativeEvent.data)}
               javaScriptEnabled
               domStorageEnabled
+              // Checkout's "Use my current location" (site pin for the driver).
+              // Android asks the customer for location permission on first use.
+              geolocationEnabled
               // Pull-to-refresh inside the WebView
               pullToRefreshEnabled
               // Android: no blue edge-glow when scrolling past the top/bottom

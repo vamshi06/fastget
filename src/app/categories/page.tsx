@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CATEGORY_GROUPS } from '@/lib/category-tiles';
 
-function CategoryTile({ slug, name, img, keyword }: { slug: string; name: string; img: string; keyword: string }) {
-  const href = `/catalog?category=${slug}&q=${encodeURIComponent(keyword)}`;
+function CategoryTile({ slug, name, img, tileKey }: { slug: string; name: string; img: string; tileKey: string }) {
+  const href = `/catalog?category=${slug}&sub=${encodeURIComponent(tileKey)}`;
   return (
     <Link href={href as any} className="pressable flex flex-col items-center gap-2 group">
       <div
@@ -36,7 +36,8 @@ export default function CategoriesPage() {
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      <div className="px-4 pt-4 space-y-8">
+      {/* Capped width + more columns on wide screens, so tiles stay tile-sized */}
+      <div className="max-w-5xl mx-auto px-4 pt-4 md:pt-8 space-y-8">
         {CATEGORY_GROUPS.map((group) => {
           const groupTitle = group.titleCategorySlug
             ? tCategories(`${group.titleCategorySlug}.full`)
@@ -44,14 +45,14 @@ export default function CategoriesPage() {
           return (
             <section key={groupTitle}>
               <h2 className="text-xl font-black text-brand-charcoal mb-4">{groupTitle}</h2>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
                 {group.categories.map((cat) => (
                   <CategoryTile
                     key={`${cat.slug}-${cat.img}`}
                     slug={cat.slug}
                     name={t(`categoryTiles.${cat.tileKey}`)}
                     img={cat.img}
-                    keyword={cat.keyword}
+                    tileKey={cat.tileKey}
                   />
                 ))}
               </div>

@@ -77,5 +77,16 @@
   "wishlistEmptyTitle": "आपकी विशलिस्ट खाली है",
   "wishlistEmptyMessage": "किसी भी प्रोडक्ट पर दिल के आइकन को टैप करके उसे यहां सेव करें।",
   "browseProducts": "प्रोडक्ट देखें",
-  "removeNamedFromWishlist": "{name} को विशलिस्ट से हटाएं"
+  "removeNamedFromWishlist": "{name} को विशलिस्ट से हटाएं",
+  "zoomImage": "बड़ी इमेज देखें",
+  "whatsappTitle": "कोई सवाल है या थोक कीमत चाहिए?",
+  "whatsappSubtitle": "WhatsApp पर हमसे चैट करें",
+  "whatsappPrefill": "नमस्ते FastGet, {name} ({code}) के बारे में मेरा एक सवाल है।",
+  "chooseSize": "साइज़ चुनें",
+  "sizeHeading": "साइज़",
+  "sizesCount": "{count} साइज़",
+  "fromPrefix": "शुरुआती",
+  "add": "जोड़ें",
+  "sheetInCart": "कार्ट में {count}",
+  "sizesLoadFailed": "साइज़ लोड नहीं हो सके। कृपया दोबारा कोशिश करें।"
 }

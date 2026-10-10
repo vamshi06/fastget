@@ -15,6 +15,7 @@
  */
 
 import { Order } from '@/types';
+import { formatOrderNumber } from './utils';
 import { getStaffForOrderNotifications } from './users';
 import { sendTelegramMessage } from './telegram';
 import { notifyStaffOfNewOrderPush } from './push';
@@ -33,12 +34,15 @@ function telegramText(order: Order, appUrl: string, stockWarnings: Map<string, s
     .map((i) => `• ${i.name} ×${i.quantity}${stockWarnings.has(i.sku) ? ` ⚠ <b>${escapeHtml(stockWarnings.get(i.sku)!)}</b>` : ''}`)
     .join('\n');
   return (
-    `🛒 <b>New order placed</b>\n\n` +
+    `🛒 <b>New order ${formatOrderNumber(order)}</b>\n\n` +
     (stockWarnings.size > 0
       ? `⚠ <b>Stock check:</b> ${stockWarnings.size} item${stockWarnings.size !== 1 ? 's' : ''} without enough stock - check before confirming.\n\n`
       : '') +
     `<b>₹${order.total.toLocaleString('en-IN')}</b> - ${order.deliveryType === 'urgent' ? 'Urgent' : 'Scheduled'} - ${order.paymentMethod.toUpperCase()}\n\n` +
-    `<b>${order.customerName}</b>\n${order.customerPhone}\n${order.siteAddress}\n\n` +
+    `<b>${order.customerName}</b>\n${order.customerPhone}\n${order.siteAddress}${order.sitePincode ? ` - ${order.sitePincode}` : ''}\n` +
+    (order.siteLat != null && order.siteLng != null ? `📍 https://maps.google.com/?q=${order.siteLat},${order.siteLng}\n` : '') +
+    (order.gstin ? `GSTIN: ${order.gstin}\n` : '') +
+    `\n` +
     `${itemLines}\n\n` +
     (order.referralCode ? `🎁 Referral code: <b>${order.referralCode}</b> (pay referrer after delivery)\n\n` : '') +
     `${appUrl}/admin/orders/${order.id}`

@@ -8,9 +8,21 @@
     "coins": "10% back in coins"
   },
   "heroSlides": [
-    { "title": "Construction Materials", "highlight": "Delivered in 60 Min", "description": "Carpentry, Plumbing, Hardware, Electrical & more - everything your site needs, delivered same-day." },
-    { "title": "Keep Your Project", "highlight": "Moving Without Stops", "description": "Plywood, hinges, CPVC fittings, wires, bolts - urgent materials to your Mumbai site before work stops." },
-    { "title": "Carpentry, Plumbing,", "highlight": "Hardware & More", "description": "From plywood boards to CPVC fittings, electrical accessories to adhesives - your one-stop site store." }
+    {
+      "title": "Construction Materials",
+      "highlight": "Delivered in 60 Min",
+      "description": "Carpentry, Plumbing, Hardware, Electrical & more - everything your site needs, delivered to your site in 60 minutes."
+    },
+    {
+      "title": "Keep Your Project",
+      "highlight": "Moving Without Stops",
+      "description": "Plywood, hinges, CPVC fittings, wires, bolts - urgent materials to your Mumbai site before work stops."
+    },
+    {
+      "title": "Carpentry, Plumbing,",
+      "highlight": "Hardware & More",
+      "description": "From plywood boards to CPVC fittings, electrical accessories to adhesives - your one-stop site store."
+    }
   ],
   "slide": "Slide {n}",
   "bestDealsTitle": "Best Deals",
@@ -32,5 +44,7 @@
   "grabItNow": "Grab It Now",
   "offLabel": "{pct}% OFF",
   "amountOffLabel": "₹{amount} OFF",
-  "dealLabel": "₹{price} DEAL"
+  "dealLabel": "₹{price} DEAL",
+  "sectionLoadFailed": "Couldn't load these products.",
+  "retry": "Retry"
 }

@@ -13,8 +13,16 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const prefillEmail = searchParams.get('email') || '';
+  // Where the customer was headed before signing up (e.g. /checkout) - carried
+  // through to login so they land back there. Same-site paths only.
+  const redirectParam = searchParams.get('redirect');
+  const redirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null;
 
   const [email, setEmail] = useState(prefillEmail);
+  const loginParams = new URLSearchParams();
+  if (email) loginParams.set('email', email.toLowerCase().trim());
+  if (redirect && redirect !== '/') loginParams.set('redirect', redirect);
+  const loginHref = `/login${loginParams.toString() ? `?${loginParams}` : ''}`;
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -69,7 +77,7 @@ function VerifyEmailContent() {
       const data = await res.json();
       if (data.success) {
         setState('success');
-        setTimeout(() => router.push('/login'), 2500);
+        setTimeout(() => router.push(loginHref as any), 2500);
       } else {
         setErrorMsg(data.error || t('common.verificationFailed'));
         setState('error');
@@ -89,7 +97,7 @@ function VerifyEmailContent() {
           <CheckCircle2 className="w-14 h-14 text-green-500 mb-4" />
           <p className="text-sm text-brand-slate">{t('verifyEmail.successMessage')}</p>
           <Link
-            href="/login"
+            href={loginHref as any}
             className="mt-6 inline-flex w-full items-center justify-center py-3 bg-brand-primary hover:bg-brand-dark text-white font-semibold rounded-full text-sm transition-colors"
           >
             {t('common.goToLogin')}
@@ -166,7 +174,7 @@ function VerifyEmailContent() {
         <p className="mt-4 text-center text-sm text-brand-slate">
           {t('common.didntReceiveCode')}{' '}
           <Link
-            href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}` as any}
+            href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ''}${redirect ? `${email ? '&' : '?'}redirect=${encodeURIComponent(redirect)}` : ''}` as any}
             className="text-brand-primary font-semibold hover:text-brand-dark"
           >
             {t('common.resend')}

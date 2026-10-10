@@ -95,6 +95,42 @@ export interface DbOrder {
   referral_paid_by: string | null;
   referral_payout_amount: number | null;
   referral_payout_ref: string | null;
+  // Migration 027 - absent until it's run
+  order_number?: number | string | null;
+  site_pincode?: string | null;
+  site_lat?: number | null;
+  site_lng?: number | null;
+  gstin?: string | null;
+  business_name?: string | null;
+}
+
+/**
+ * Saves an order's delivery-site extras (pincode, map pin, GST details -
+ * migration 027) and reads back its order number onto `order`, so the staff
+ * alerts sent right after can quote it. Separate from the main INSERT and
+ * best-effort, so an order is never lost because this migration hasn't
+ * reached the database yet.
+ */
+async function saveOrderSiteDetails(order: Order): Promise<void> {
+  const sql = getClient();
+  try {
+    const rows = await sql`
+      UPDATE orders SET
+        site_pincode = ${order.sitePincode || null},
+        site_lat = ${order.siteLat ?? null},
+        site_lng = ${order.siteLng ?? null},
+        gstin = ${order.gstin || null},
+        business_name = ${order.businessName || null}
+      WHERE id = ${order.id}
+      RETURNING order_number
+    `;
+    if (rows[0]?.order_number != null) order.orderNumber = Number(rows[0].order_number);
+  } catch (error) {
+    logger.error('DB', 'Failed to save order site details (is migration 027 applied?)', {
+      orderId: order.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**
@@ -706,6 +742,7 @@ export async function createOrder(order: Order): Promise<boolean> {
       )
     `;
     logger.info('DB', 'Order created successfully', { orderId: order.id });
+    await saveOrderSiteDetails(order);
     return true;
   } catch (error) {
     logger.error('DB', 'Failed to create order', {
@@ -738,6 +775,7 @@ export async function createOrder(order: Order): Promise<boolean> {
           )
         `;
         logger.info('DB', 'Order created successfully (unattributed)', { orderId: order.id });
+        await saveOrderSiteDetails(order);
         return true;
       } catch (retryError) {
         logger.error('DB', 'Failed to create order unattributed after FK violation', {
@@ -769,6 +807,7 @@ export async function createOrder(order: Order): Promise<boolean> {
             ${initialHistory}
           )
         `;
+        await saveOrderSiteDetails(order);
         return true;
       } catch (initError) {
         logger.error('DB', 'Failed to initialize database and retry order creation', { error: initError instanceof Error ? initError.message : String(initError) });
@@ -990,7 +1029,10 @@ export async function searchOrdersForAdmin(
   const status = filters.status ?? null;
   const payment = filters.payment ?? null;
   const q = filters.q?.trim() ? `%${escapeLike(filters.q.trim())}%` : null;
-  const idPrefix = filters.q?.trim() ? `${escapeLike(filters.q.trim().toLowerCase())}%` : null;
+  // "FG-10234" (order number) or "FG-1a2b3c4d" (older orders' id prefix) - see formatOrderNumber.
+  const idQuery = filters.q?.trim().replace(/^fg-/i, '') ?? '';
+  const idPrefix = idQuery ? `${escapeLike(idQuery.toLowerCase())}%` : null;
+  const orderNumber = /^\d{5,}$/.test(idQuery) ? String(Number(idQuery) - 10000) : null;
   const dateFrom = filters.dateFrom || null;
   const dateTo = filters.dateTo || null;
   try {
@@ -1002,7 +1044,9 @@ export async function searchOrdersForAdmin(
         AND (${q}::text IS NULL
              OR customer_name ILIKE ${q}
              OR customer_phone LIKE ${q}
-             OR id::text LIKE ${idPrefix})
+             OR id::text LIKE ${idPrefix}
+             -- via jsonb so this still runs before migration 027 adds the column
+             OR to_jsonb(orders.*)->>'order_number' = ${orderNumber})
         AND (${dateFrom}::date IS NULL
              OR created_at >= (${dateFrom}::date)::timestamp AT TIME ZONE 'Asia/Kolkata')
         AND (${dateTo}::date IS NULL
@@ -1109,6 +1153,13 @@ function dbOrderToOrder(dbOrder: DbOrder): Order {
     referralPaidAt: dbOrder.referral_paid_at ? toIso(dbOrder.referral_paid_at) : undefined,
     referralPayoutAmount: dbOrder.referral_payout_amount ?? undefined,
     referralPayoutRef: dbOrder.referral_payout_ref || undefined,
+    // BIGSERIAL comes back from Neon as a string
+    orderNumber: dbOrder.order_number != null ? Number(dbOrder.order_number) : undefined,
+    sitePincode: dbOrder.site_pincode || undefined,
+    siteLat: dbOrder.site_lat ?? undefined,
+    siteLng: dbOrder.site_lng ?? undefined,
+    gstin: dbOrder.gstin || undefined,
+    businessName: dbOrder.business_name || undefined,
   };
 }
 

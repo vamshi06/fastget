@@ -22,6 +22,8 @@ export type AnalyticsEvent =
   | 'added_to_cart'
   | 'removed_from_cart'
   | 'cart_viewed'
+  | 'reordered'
+  | 'whatsapp_chat_opened'
   | 'checkout_login_required'
   | 'checkout_started'
   | 'checkout_error'

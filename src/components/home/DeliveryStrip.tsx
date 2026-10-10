@@ -2,6 +2,7 @@
 
 import { Zap, ChevronRight, MapPin } from 'lucide-react';
 import { useLocationSplash, SERVICE_AREAS } from '@/components/LocationSplashContext';
+import { DELIVERY_ETA_MINUTES } from '@/lib/service-area';
 
 export function DeliveryStrip() {
   const { selectedLocation, openSplash } = useLocationSplash();
@@ -19,10 +20,7 @@ export function DeliveryStrip() {
       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
       <Zap className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
       <span className="text-sm font-semibold text-green-700">
-        {area
-          ? `Delivering to ${area.name} in ${area.eta}`
-          : 'Delivering to Mumbai in 30–60 mins'
-        }
+        {`Delivering to ${area?.name ?? 'Mumbai'} in ${DELIVERY_ETA_MINUTES} mins`}
       </span>
       <span className="text-xs text-green-500 font-medium hidden sm:inline">
         · Tap to change

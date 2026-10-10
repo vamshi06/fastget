@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { isUnoptimizedImage } from "@/lib/remote-images";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -61,6 +62,7 @@ import { MobileSearchOverlay } from "./MobileSearchOverlay";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { DELIVERY_ETA_MINUTES } from "@/lib/service-area";
 import { Product } from "@/types";
 
 const SUGGESTION_MIN_CHARS = 2;
@@ -107,6 +109,7 @@ function SearchSuggestions({
                     {product.imageUrl ? (
                       <Image
                         src={product.imageUrl}
+                        unoptimized={isUnoptimizedImage(product.imageUrl)}
                         alt={product.name}
                         fill
                         sizes="36px"
@@ -345,7 +348,7 @@ export function Header() {
               {t("header.deliveryIn")}
             </p>
             <p className="text-[26px] font-black text-brand-charcoal leading-tight tracking-tight">
-              {t("header.eta", { mins: 60 })}
+              {t("header.eta", { mins: DELIVERY_ETA_MINUTES })}
             </p>
             <p className="flex items-center gap-0.5 text-sm font-semibold text-brand-charcoal/85 leading-none">
               <MapPin className="w-3.5 h-3.5 mr-0.5" />
@@ -442,7 +445,7 @@ export function Header() {
           >
             {/* Green badge - matches mobile */}
             <div className="bg-green-700 text-white rounded-lg px-2 py-1 flex flex-col items-center min-w-[46px]">
-              <span className="text-[13px] font-black leading-none">~60</span>
+              <span className="text-[13px] font-black leading-none">{DELIVERY_ETA_MINUTES}</span>
               <span className="text-[8px] font-bold leading-none uppercase tracking-wide opacity-90">
                 {tc("mins")}
               </span>

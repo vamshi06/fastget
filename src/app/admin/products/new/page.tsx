@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, FormEvent, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ImageUrlPreview } from '@/components/ImageUrlPreview';
 
@@ -28,7 +28,20 @@ const inputCls =
 const labelCls = 'block text-xs font-semibold text-brand-graphite uppercase tracking-wide';
 
 export default function NewProductPage() {
+  return (
+    <Suspense>
+      <NewProductForm />
+    </Suspense>
+  );
+}
+
+function NewProductForm() {
   const router = useRouter();
+  // "Add another size" from a product's edit page: prefill from that product
+  // and link the new one into its size family on save.
+  const familyOf = useSearchParams().get('familyOf') || '';
+  const [familyOfName, setFamilyOfName] = useState('');
+  const [optionLabel, setOptionLabel] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState(false);
@@ -67,11 +80,36 @@ export default function NewProductPage() {
       .then((data) => {
         if (data.success && data.data?.categories?.length) {
           setCategories(data.data.categories);
-          setFormData((prev) => ({ ...prev, categorySlug: data.data.categories[0].slug }));
+          // Keep a category prefilled from the size family, if it arrived first.
+          setFormData((prev) => ({ ...prev, categorySlug: prev.categorySlug || data.data.categories[0].slug }));
         }
       })
       .catch(() => {/* categories stay empty, dropdown shows fallback */});
   }, []);
+
+  // Prefill shared details from the product this is another size of.
+  useEffect(() => {
+    if (!familyOf) return;
+    fetch(`/admin/api/products/${encodeURIComponent(familyOf)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) return;
+        const d = data.data;
+        setFamilyOfName(d.name ?? familyOf);
+        setFormData((prev) => ({
+          ...prev,
+          name:         d.name        ?? prev.name,
+          brand:        d.brand       ?? prev.brand,
+          description:  d.description ?? prev.description,
+          uom:          d.uom         ?? prev.uom,
+          imageUrl:     d.imageUrl    ?? prev.imageUrl,
+          moq:          String(d.moq ?? prev.moq),
+          colour:       d.colour      ?? prev.colour,
+          categorySlug: d.currentCategory || prev.categorySlug,
+        }));
+      })
+      .catch(() => {});
+  }, [familyOf]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -151,6 +189,8 @@ export default function NewProductPage() {
         saleMinOrder:  allSale && formData.saleMinOrder ? parseFloat(formData.saleMinOrder) : undefined,
         nameHi:        formData.nameHi.trim()        || undefined,
         descriptionHi: formData.descriptionHi.trim() || undefined,
+        familyOf:      familyOf || undefined,
+        optionLabel:   familyOf ? optionLabel.trim() || formData.size.trim() || undefined : undefined,
       };
 
       const response = await fetch('/admin/api/products', {
@@ -166,12 +206,14 @@ export default function NewProductPage() {
       }
 
       setSuccess(true);
+      // A new size goes back to the family it joined.
+      const next = familyOf ? `/admin/products/${encodeURIComponent(familyOf)}/edit#sizes` : '/admin/products';
       if (data.warning) {
         // Leave the message up instead of redirecting straight away
         setWarning(data.warning);
-        setTimeout(() => router.push('/admin/products'), 5000);
+        setTimeout(() => router.push(next as any), 5000);
       } else {
-        setTimeout(() => router.push('/admin/products'), 1500);
+        setTimeout(() => router.push(next as any), 1500);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -185,8 +227,12 @@ export default function NewProductPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-brand-charcoal">Add New Product</h1>
-          <p className="mt-1 text-sm text-brand-slate">Fill in the details to add a product to the database</p>
+          <h1 className="text-2xl font-black text-brand-charcoal">{familyOf ? 'Add Another Size' : 'Add New Product'}</h1>
+          <p className="mt-1 text-sm text-brand-slate">
+            {familyOf
+              ? <>New size of <span className="font-semibold">{familyOfName || familyOf}</span>. Details are copied - change the size, price, MRP and stock.</>
+              : 'Fill in the details to add a product to the database'}
+          </p>
         </div>
         <Link href="/admin/products" className="text-brand-steel hover:text-brand-charcoal transition-colors text-lg">
           ✕
@@ -227,6 +273,11 @@ export default function NewProductPage() {
                 placeholder="e.g., Teak Wood Plank"
                 className={inputCls} disabled={loading} required
               />
+              {familyOf && (
+                <p className="mt-1 text-xs text-yellow-700">
+                  Update the size in brackets, e.g. Telescopic Channel (24&quot;).
+                </p>
+              )}
             </div>
 
             <div className="sm:col-span-1">
@@ -389,6 +440,10 @@ export default function NewProductPage() {
                 className={inputCls} disabled={loading}
               >
                 <option value="">Select unit…</option>
+                {/* A unit copied from the family that isn't in the usual list */}
+                {formData.uom && !UOM_OPTIONS.includes(formData.uom) && (
+                  <option value={formData.uom}>{formData.uom}</option>
+                )}
                 {UOM_OPTIONS.map((u) => (
                   <option key={u} value={u}>{u}</option>
                 ))}
@@ -425,6 +480,21 @@ export default function NewProductPage() {
                 className={inputCls} disabled={loading}
               />
             </div>
+            {familyOf && (
+              <div className="sm:col-span-2">
+                <label htmlFor="optionLabel" className={labelCls}>Size label customers see</label>
+                <input
+                  type="text" id="optionLabel"
+                  value={optionLabel} onChange={(e) => setOptionLabel(e.target.value)}
+                  placeholder={formData.size || 'e.g. 24", 4 Litre'}
+                  maxLength={100}
+                  className={inputCls} disabled={loading}
+                />
+                <p className="mt-1 text-xs text-brand-steel">
+                  The button on the product page and in the size list. Leave blank to use the Size above.
+                </p>
+              </div>
+            )}
             <div>
               <label htmlFor="colour" className={labelCls}>Colour / Finish</label>
               <input

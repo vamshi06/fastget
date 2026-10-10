@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { SignInPrompt } from '@/components/SignInPrompt';
 import { Order, OrderStatus } from '@/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatOrderNumber } from '@/lib/utils';
+import { useReorder } from '@/lib/use-reorder';
 import { OrderReviewPanel } from '@/components/OrderReviewPanel';
-import { ArrowRight, CheckCircle, ChevronRight, ClipboardList, Clock, MapPin, Package, RefreshCw, ShoppingBag, Truck, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, ChevronRight, ClipboardList, Clock, MapPin, Package, RefreshCw, RotateCcw, ShoppingBag, Truck, XCircle } from 'lucide-react';
 
 /* ─── Status helpers ────────────────────────────────────────────────────── */
 
@@ -59,6 +60,7 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { reorder, reorderingId } = useReorder();
 
   const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     received: t('statusLabels.received'),
@@ -176,7 +178,7 @@ export default function MyOrdersPage() {
                         {formatOrderTime(order.createdAt)}
                       </p>
                       <p className="text-xs text-brand-steel mt-0.5 font-mono">
-                        #{order.id.slice(0, 8).toUpperCase()}
+                        {formatOrderNumber(order)}
                       </p>
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${statusColors[order.status]}`}>
@@ -217,17 +219,28 @@ export default function MyOrdersPage() {
                     </div>
                   </div>
 
-                  <Link
-                    href={`/order/${order.statusToken}`}
-                    className="flex items-center justify-between px-5 py-3 bg-brand-fog hover:bg-primary-50 border-t border-neutral-100 transition-colors group"
-                  >
-                    <span className="text-sm font-medium text-brand-primary">
-                      {order.status === 'delivered' || order.status === 'cancelled'
-                        ? t('viewOrderDetails')
-                        : t('trackOrder')}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
+                  <div className="flex items-stretch bg-brand-fog border-t border-neutral-100">
+                    <Link
+                      href={`/order/${order.statusToken}`}
+                      className="flex-1 flex items-center justify-between px-5 py-3 hover:bg-primary-50 transition-colors group"
+                    >
+                      <span className="text-sm font-medium text-brand-primary">
+                        {order.status === 'delivered' || order.status === 'cancelled'
+                          ? t('viewOrderDetails')
+                          : t('trackOrder')}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => reorder(order)}
+                      disabled={reorderingId === order.id}
+                      className="flex items-center gap-1.5 px-5 py-3 border-l border-neutral-100 text-sm font-semibold text-brand-charcoal hover:bg-primary-50 transition-colors disabled:opacity-50"
+                    >
+                      <RotateCcw className="w-4 h-4 text-brand-primary" />
+                      {reorderingId === order.id ? t('reordering') : t('reorder')}
+                    </button>
+                  </div>
 
                   {order.status === 'delivered' && <OrderReviewPanel orderId={order.id} />}
                 </div>

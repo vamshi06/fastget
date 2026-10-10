@@ -7,7 +7,8 @@ import { useCart } from "@/components/CartContext";
 import { useToast } from "@/components/ToastContext";
 import Link from "next/link";
 import { Order, OrderStatus } from "@/types";
-import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, formatOrderNumber, orderCoinDiscount } from "@/lib/utils";
+import { useReorder } from "@/lib/use-reorder";
 import { copyText } from "@/lib/clipboard";
 import {
   Package,
@@ -23,7 +24,10 @@ import {
   Copy,
   RefreshCw,
   Download,
+  RotateCcw,
+  MessageCircle,
 } from "lucide-react";
+import { WhatsAppChatLink } from "@/components/WhatsAppChatLink";
 
 const statusIcons: Record<
   OrderStatus,
@@ -76,6 +80,7 @@ export default function OrderStatusPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const { reorder, reorderingId } = useReorder();
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -123,7 +128,7 @@ export default function OrderStatusPage() {
   };
 
   const handleCopyToken = async () => {
-    if (!(await copyText(token))) return;
+    if (!order || !(await copyText(formatOrderNumber(order)))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -185,6 +190,9 @@ export default function OrderStatusPage() {
   }
 
   const StatusIcon = statusIcons[order.status];
+  const orderNumber = formatOrderNumber(order);
+  const coinsUsed = orderCoinDiscount(order);
+  const isPaid = order.paymentMethod === "razorpay" && order.paymentStatus === "captured";
 
   const statusSequence: OrderStatus[] = [
     "received",
@@ -237,7 +245,7 @@ export default function OrderStatusPage() {
         <div className="card p-6 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div className="min-w-0">
-              <h1 className="text-2xl font-black text-brand-charcoal break-all">{t('orderNumber', { token: order.statusToken.toUpperCase() })}</h1>
+              <h1 className="text-2xl font-black text-brand-charcoal">{t('orderNumber', { number: orderNumber })}</h1>
               <p className="text-brand-slate mt-1 text-sm">
                 {t('placedOn', { date: formatDate(order.createdAt), time: formatTime(order.createdAt) })}
               </p>
@@ -354,6 +362,9 @@ export default function OrderStatusPage() {
                   <MapPin className="w-5 h-5 text-brand-steel mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-brand-charcoal font-medium">{order.siteAddress}</p>
+                    {order.sitePincode && (
+                      <p className="text-brand-slate text-sm mt-1">{t('pincodeLine', { pincode: order.sitePincode })}</p>
+                    )}
                     {order.landmark && (
                       <p className="text-brand-slate text-sm mt-1">
                         {t('landmarkPrefix', { landmark: order.landmark })}
@@ -420,8 +431,14 @@ export default function OrderStatusPage() {
                     <span className="font-medium">−{formatCurrency(order.discount)}</span>
                   </div>
                 )}
+                {coinsUsed > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>{t('coinsUsed')}</span>
+                    <span className="font-medium">−{formatCurrency(coinsUsed)}</span>
+                  </div>
+                )}
                 <div className="border-t border-neutral-100 pt-3 flex justify-between">
-                  <span className="font-bold text-brand-charcoal">{t('totalAmount')}</span>
+                  <span className="font-bold text-brand-charcoal">{isPaid ? t('totalPaid') : t('totalAmount')}</span>
                   <span className="text-xl font-black text-brand-primary">{formatCurrency(order.total)}</span>
                 </div>
               </div>
@@ -444,6 +461,14 @@ export default function OrderStatusPage() {
             <div className="card p-6">
               <h3 className="font-bold text-brand-charcoal mb-3">{t('quickActions')}</h3>
               <div className="space-y-2">
+                <button
+                  onClick={() => reorder(order)}
+                  disabled={reorderingId === order.id}
+                  className="btn-primary w-full py-2.5 text-sm disabled:opacity-60"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {reorderingId === order.id ? t('reordering') : t('reorder')}
+                </button>
                 <button
                   onClick={handleCopyToken}
                   className="btn-secondary w-full py-2.5 text-sm"
@@ -493,6 +518,19 @@ export default function OrderStatusPage() {
                 <Phone className="w-4 h-4" />
                 {t('callSupport')}
               </a>
+              {/* Delays, changing the time/address, wrong or damaged items
+                  (photos), payment/refund questions - quoting the order number. */}
+              <WhatsAppChatLink
+                text={t('whatsappOrderPrefill', { number: orderNumber })}
+                source="order"
+                className="mt-2 w-full px-3 py-2.5 flex flex-col items-center gap-1 rounded-xl border border-green-300 bg-white hover:bg-green-50 transition-colors text-center"
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold text-green-800">
+                  <MessageCircle className="w-4 h-4" />
+                  {t('whatsappOrder')}
+                </span>
+                <span className="text-xs text-brand-slate">{t('whatsappOrderHint')}</span>
+              </WhatsAppChatLink>
             </div>
           </div>
         </div>
@@ -524,14 +562,16 @@ export default function OrderStatusPage() {
           <div className="inv-bill-to">
             <p className="inv-info-label">{t('billTo')}</p>
             <p className="inv-party-name">{order.customerName}</p>
-            <p className="inv-party-line">{order.siteAddress}</p>
+            {order.businessName && <p className="inv-party-line">{order.businessName}</p>}
+            <p className="inv-party-line">{order.siteAddress}{order.sitePincode ? ` - ${order.sitePincode}` : ''}</p>
             {order.landmark && (
               <p className="inv-party-line">{t('landmarkPrefix', { landmark: order.landmark })}</p>
             )}
             <p className="inv-party-line">{order.customerPhone}</p>
+            {order.gstin && <p className="inv-party-line">{t('gstinLine', { gstin: order.gstin })}</p>}
           </div>
           <div className="inv-meta-block">
-            <p className="inv-meta-num">#{order.statusToken.toUpperCase()}</p>
+            <p className="inv-meta-num">{orderNumber}</p>
             <div className="inv-meta-row">
               <span className="inv-meta-key">{t('issueDate')}</span>
               <span className="inv-meta-val">{formatDate(order.createdAt)}</span>
@@ -549,7 +589,7 @@ export default function OrderStatusPage() {
             ) : null}
             <hr className="inv-meta-divider" />
             <div className="inv-meta-row inv-meta-total">
-              <span className="inv-meta-key">{t('totalAmountDue')}</span>
+              <span className="inv-meta-key">{isPaid ? t('totalAmountPaid') : t('totalAmountDue')}</span>
               <span className="inv-meta-val">{formatCurrency(order.total)}</span>
             </div>
           </div>
@@ -613,8 +653,14 @@ export default function OrderStatusPage() {
                 <span className="inv-totals-value">−{formatCurrency(order.discount)}</span>
               </div>
             )}
+            {coinsUsed > 0 && (
+              <div className="inv-totals-row">
+                <span className="inv-totals-label">{t('coinsUsed')}</span>
+                <span className="inv-totals-value">−{formatCurrency(coinsUsed)}</span>
+              </div>
+            )}
             <div className="inv-totals-row inv-totals-grand">
-              <span className="inv-totals-label">{t('totalDue')}</span>
+              <span className="inv-totals-label">{isPaid ? t('totalPaid') : t('totalDue')}</span>
               <span className="inv-totals-value">{formatCurrency(order.total)}</span>
             </div>
           </div>
@@ -638,7 +684,7 @@ export default function OrderStatusPage() {
             </div>
 
             <p className="text-brand-slate text-sm mb-3">
-              {t('cancelModalMessage', { token: order.statusToken.toUpperCase() })}
+              {t('cancelModalMessage', { number: orderNumber })}
             </p>
 
             {order.paymentMethod === 'razorpay' && order.paymentStatus === 'captured' && (

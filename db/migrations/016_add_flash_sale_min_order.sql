@@ -6,6 +6,11 @@
 -- src/lib/order-pricing.ts) add up to that amount.
 -- NULL means "no minimum" (existing sales keep working unchanged).
 --
+-- This is the ONLY definition of products_catalog_view (008 and 012 no longer
+-- create it). To expose a new column, add a migration that does
+-- CREATE OR REPLACE VIEW with this full column list plus the new column at the
+-- end of each SELECT - Postgres can add columns to a view but never drop them.
+--
 -- Safe to run multiple times (all statements are idempotent).
 
 ALTER TABLE carpentry              ADD COLUMN IF NOT EXISTS sale_min_order_paise INTEGER;

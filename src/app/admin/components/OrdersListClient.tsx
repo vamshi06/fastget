@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { Order, OrderStatus, PaymentMethod, ORDER_STATUS_LABELS } from '@/types';
 import type { AdminOrderFilters } from '@/lib/db';
 import { adminOrderFiltersToQuery } from '@/lib/admin-order-filters';
+import { formatOrderNumber } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
@@ -186,7 +187,7 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
                     className="border-b border-neutral-100 hover:bg-primary-50 transition-colors duration-200 group"
                   >
                     <td className="px-6 py-4 text-sm font-mono font-semibold text-brand-charcoal group-hover:text-brand-primary transition-colors" title={order.id}>
-                      {order.id.slice(0, 8).toUpperCase()}
+                      {formatOrderNumber(order)}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="font-medium text-brand-charcoal">{order.customerName}</div>

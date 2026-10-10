@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unlinkProduct } from '@/lib/product-families';
 import {
   getProductRawRow,
   updateProductInCategoryTable,
@@ -402,6 +403,9 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     if (!ok) {
       return NextResponse.json({ success: false, error: 'Failed to delete product' }, { status: 500 });
     }
+
+    // A deleted product leaves its size family (dissolving a family of one).
+    await unlinkProduct(productCode).catch(() => {});
 
     logger.info('API', `DELETE /admin/api/products/${productCode} - deleted`);
     return NextResponse.json({ success: true, productCode });

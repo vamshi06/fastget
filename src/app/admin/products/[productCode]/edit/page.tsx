@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ImageUrlPreview } from '@/components/ImageUrlPreview';
+import { FamilyEditor } from '../../FamilyEditor';
 
 const inputCls =
   'mt-1.5 w-full rounded-xl border border-neutral-200 bg-brand-fog px-4 py-2.5 text-sm text-brand-charcoal placeholder-brand-steel transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:bg-white disabled:opacity-50';
@@ -568,6 +569,9 @@ export default function EditProductPage() {
           </button>
         </div>
       </form>
+
+      {/* Sizes - outside the form: it saves on its own, not with "Save Changes" */}
+      <FamilyEditor productCode={productCode} />
     </div>
   );
 }

@@ -119,6 +119,10 @@ export function getOriginalUnitPrice(product: Product): number {
 // Must stay in sync with order-pricing.FLASH_SALE_QTY_PER_ORDER (server pricing).
 export const FLASH_SALE_QTY_PER_ORDER = 1;
 
+// Most units of one product per order. Must stay in sync with
+// order-pricing.MAX_QTY_PER_ITEM (the server rejects more).
+export const MAX_QTY_PER_LINE = 1000;
+
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'ADD_ITEM': {
@@ -130,7 +134,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         const newItems = [...state.items];
         newItems[existingIndex] = {
           ...newItems[existingIndex],
-          quantity: newItems[existingIndex].quantity + action.payload.quantity,
+          quantity: Math.min(MAX_QTY_PER_LINE, newItems[existingIndex].quantity + action.payload.quantity),
         };
         return { ...state, items: newItems };
       }
@@ -143,7 +147,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           ...state.items,
           {
             product: action.payload.product,
-            quantity: Math.max(action.payload.quantity, getMinOrderQty(action.payload.product)),
+            quantity: Math.min(MAX_QTY_PER_LINE, Math.max(action.payload.quantity, getMinOrderQty(action.payload.product))),
           },
         ],
       };
@@ -169,7 +173,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         items: state.items.map(item =>
           item.product.id === action.payload.productId
-            ? { ...item, quantity: action.payload.quantity }
+            ? { ...item, quantity: Math.min(MAX_QTY_PER_LINE, action.payload.quantity) }
             : item
         ),
       };

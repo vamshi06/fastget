@@ -8,6 +8,7 @@ import {
   optionalEnum,
   requirePhone10,
 } from '@/lib/validation';
+import { optionalPincode } from '@/lib/service-area';
 
 const ADDRESS_TYPES = ['home', 'work', 'other'] as const;
 
@@ -36,6 +37,7 @@ export async function PUT(
       city: optionalString(body.city, 'city', { max: 100 }),
       phone: isBlank(body.phone) ? undefined : requirePhone10(body.phone),
       landmark: optionalString(body.landmark, 'landmark', { max: 200 }),
+      pincode: optionalPincode(body.pincode),
     };
 
     const address = await updateUserAddress(params.id, auth.session.userId, updates);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { HomeProductCard } from './HomeProductCard';
 import { Product } from '@/types';
@@ -15,6 +15,8 @@ interface ProductSectionProps {
   seeAllHref?: string;
   limit?: number;
   accentColor?: string;
+  /** Catalog sort (see /api/products ?sort=). */
+  sort?: 'relevance' | 'price_asc' | 'price_desc' | 'discount';
 }
 
 // Same footprint as HomeProductCard so nothing shifts when products arrive.
@@ -39,38 +41,58 @@ export function ProductSection({
   seeAllHref,
   limit = 8,
   accentColor = 'brand-primary',
+  sort,
 }: ProductSectionProps) {
   const t = useTranslations('home');
   const tc = useTranslations('common');
   const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  // Bumped by Retry and by the connection coming back, to refetch.
+  const [attempt, setAttempt] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (category) params.set('category', category);
     if (searchQuery) params.set('q', searchQuery);
+    if (sort) params.set('sort', sort);
     params.set('limit', String(limit));
     params.set('lang', locale);
 
+    setLoading(true);
+    setFailed(false);
     fetch(`/api/products?${params.toString()}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setProducts(data.data.products);
+        else setFailed(true);
       })
-      .catch(() => {})
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false));
-  }, [category, searchQuery, limit, locale]);
+  }, [category, searchQuery, sort, limit, locale, attempt]);
+
+  // A section that failed (e.g. offline) tries again once the phone is back online.
+  useEffect(() => {
+    if (!failed) return;
+    const onOnline = () => setAttempt((n) => n + 1);
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [failed]);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollBy({ left: dir === 'right' ? 320 : -320, behavior: 'smooth' });
   };
 
-  if (!loading && products.length === 0) return null;
+  // Nothing to show and nothing went wrong (e.g. an empty category) - hide.
+  if (!loading && !failed && products.length === 0) return null;
 
-  const catalogHref = seeAllHref ?? (category ? `/catalog?category=${category}` : '/catalog');
+  const catalogQuery = new URLSearchParams();
+  if (category) catalogQuery.set('category', category);
+  if (sort && sort !== 'relevance') catalogQuery.set('sort', sort);
+  const catalogHref = seeAllHref ?? `/catalog${catalogQuery.toString() ? `?${catalogQuery}` : ''}`;
 
   return (
     <section>
@@ -103,6 +125,19 @@ export function ProductSection({
           <ChevronLeft className="w-4 h-4" />
         </button>
 
+        {failed && products.length === 0 ? (
+          <div className="flex items-center justify-between gap-3 px-4 py-4 rounded-2xl bg-white border border-neutral-100 text-sm text-brand-slate">
+            <span>{t('sectionLoadFailed')}</span>
+            <button
+              type="button"
+              onClick={() => setAttempt((n) => n + 1)}
+              className="flex items-center gap-1.5 font-semibold text-brand-primary shrink-0"
+            >
+              <RefreshCw className="w-4 h-4" />
+              {t('retry')}
+            </button>
+          </div>
+        ) : (
         <div
           ref={scrollRef}
           // Phones: row bleeds to the screen edges (cards slide off-screen like
@@ -116,6 +151,7 @@ export function ProductSection({
               ))
           }
         </div>
+        )}
 
         {/* Right arrow */}
         <button

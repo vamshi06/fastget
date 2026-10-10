@@ -1,7 +1,9 @@
 import crypto from 'crypto';
 import { OrderItem } from '@/types';
+import type { SiteDetails } from './service-area';
 
-export interface OrderTokenData {
+// Site details are optional here: tokens signed before they existed have none.
+export interface OrderTokenData extends Partial<SiteDetails> {
   razorpayOrderId: string;
   customerName: string;
   customerPhone: string;

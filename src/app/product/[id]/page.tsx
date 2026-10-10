@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER, productProps } from '@/components/CartContext';
 import { track } from '@/lib/analytics';
@@ -11,12 +11,16 @@ import { HomeProductCard } from '@/components/home/HomeProductCard';
 import { WishlistHeart } from '@/components/WishlistHeart';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductDetailSkeleton } from '@/components/Skeletons';
+import { QuantityInput } from '@/components/QuantityInput';
+import { useLockBodyScroll } from '@/lib/use-back-to-close';
+import { useNativeBackHandler } from '@/lib/native-bridge';
 import { haptic, useNativeTitle } from '@/lib/native-bridge';
 import { Product } from '@/types';
 import {
   ArrowLeft, Plus, Minus, ShoppingCart,
-  AlertCircle, Package, Loader2, Tag, ChevronRight,
+  AlertCircle, Package, Loader2, Tag, ChevronRight, X, ZoomIn, MessageCircle,
 } from 'lucide-react';
+import { WhatsAppChatLink } from '@/components/WhatsAppChatLink';
 import Link from 'next/link';
 
 // ── Variant type (returned by API) ────────────────────────────────────────────
@@ -36,7 +40,8 @@ interface ProductWithVariants extends Product {
 
 export default function ProductDetailPage() {
   const params    = useParams();
-  const productId = params.id as string;
+  const productId = decodeURIComponent(params.id as string);
+  const router    = useRouter();
 
   const { state, addItem, updateQuantity, removeItem } = useCart();
   const { showToast } = useToast();
@@ -49,8 +54,14 @@ export default function ProductDetailPage() {
   const [error,             setError]             = useState<string | null>(null);
   const [selectedVariant,   setSelectedVariant]   = useState<Variant | null>(null);
   const [relatedProducts,   setRelatedProducts]   = useState<Product[]>([]);
+  // Other sizes of this item (variant family) - each its own product page.
+  const [family,            setFamily]            = useState<Product[]>([]);
   const [quantity,          setQuantity]          = useState(1);
   const [isAdding,          setIsAdding]          = useState(false);
+  // Full-screen image viewer (tap the photo to zoom in on details).
+  const [zoomOpen,          setZoomOpen]          = useState(false);
+  useLockBodyScroll(zoomOpen);
+  useNativeBackHandler(zoomOpen, () => setZoomOpen(false));
 
   // App top bar shows the product name once it's loaded.
   useNativeTitle(product?.name);
@@ -61,7 +72,7 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/products/${productId}?lang=${locale}`)
+    fetch(`/api/products/${encodeURIComponent(productId)}?lang=${locale}`)
       .then((r) => r.json())
       .then((json) => {
         if (!json.success) throw new Error(json.error || t('productNotFoundTitle'));
@@ -75,6 +86,25 @@ export default function ProductDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, locale]);
 
+  // ── Sizes in this product's family (none for a standalone product) ────────
+  useEffect(() => {
+    if (!productId) return;
+    fetch(`/api/products/${encodeURIComponent(productId)}/family?lang=${locale}`)
+      .then((r) => r.json())
+      .then((json) => setFamily(json.success ? (json.data.products as Product[]) : []))
+      .catch(() => setFamily([]));
+  }, [productId, locale]);
+
+  const familyEntry = family.find((p) => p.id === productId);
+
+  // Switching size opens that size's own page - replace, so Back leaves the
+  // product instead of stepping through every size tried.
+  const selectSize = (code: string) => {
+    if (code === productId) return;
+    haptic('light');
+    router.replace(`/product/${encodeURIComponent(code)}` as any, { scroll: false });
+  };
+
   // ── Fetch related products when category is known ─────────────────────────
   useEffect(() => {
     if (!product?.category) return;
@@ -83,12 +113,15 @@ export default function ProductDetailPage() {
       .then((json) => {
         if (json.success) {
           setRelatedProducts(
-            (json.data.products as Product[]).filter((p) => p.id !== productId).slice(0, 8),
+            (json.data.products as Product[])
+              // Not this product, nor another size of it (those are the size buttons).
+              .filter((p) => p.id !== productId && !(familyEntry?.familyId && p.familyId === familyEntry.familyId))
+              .slice(0, 8),
           );
         }
       })
       .catch(() => {/* ignore related products error */});
-  }, [product?.category, productId, locale]);
+  }, [product?.category, productId, locale, familyEntry?.familyId]);
 
   // Keep local quantity in sync with cart, respecting the variant's MOQ
   const cartItem     = product ? state.items.find((i) => i.product.id === product.id) : undefined;
@@ -122,6 +155,10 @@ export default function ProductDetailPage() {
         sku:       selectedVariant?.sku ?? product.sku,
         unit:      selectedVariant?.attributes?.uom ?? product.unit,
         moq,       // the selected variant's minimum, so the cart enforces it too
+        // Lets catalog cards count this line under the family's + badge.
+        familyId:    familyEntry?.familyId,
+        familySize:  familyEntry?.familySize,
+        optionLabel: familyEntry?.optionLabel,
       };
       const safeQuantity = Math.max(moq, quantity);
       haptic('success');
@@ -155,7 +192,8 @@ export default function ProductDetailPage() {
   };
 
   // ── Loading ───────────────────────────────────────────────────────────────
-  if (loading) {
+  // Switching size keeps the current page up while the next one loads.
+  if (loading && !product) {
     return <ProductDetailSkeleton />;
   }
 
@@ -220,14 +258,24 @@ export default function ProductDetailPage() {
               iconClassName="w-5 h-5"
             />
             {product.imageUrl ? (
-              // Phones: square and contained, so the whole product shows
-              // without pushing the price below the fold.
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-full aspect-square md:aspect-auto md:h-[500px] object-contain md:object-cover rounded-xl"
-                loading="lazy"
-              />
+              // Always contained (never cropped) - the whole product shows.
+              // Tap opens the full-screen viewer.
+              <button
+                type="button"
+                onClick={() => setZoomOpen(true)}
+                aria-label={t('zoomImage')}
+                className="relative w-full cursor-zoom-in"
+              >
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-full aspect-square md:aspect-auto md:h-[500px] object-contain rounded-xl"
+                  loading="lazy"
+                />
+                <span className="absolute bottom-2 right-2 w-9 h-9 rounded-full bg-white/90 shadow flex items-center justify-center">
+                  <ZoomIn className="w-4 h-4 text-brand-charcoal" />
+                </span>
+              </button>
             ) : (
               <Package className="w-20 h-20 text-brand-steel opacity-40" />
             )}
@@ -278,6 +326,44 @@ export default function ProductDetailPage() {
                   original: formatCurrency(getOriginalUnitPrice(product)),
                 })}
               </p>
+            )}
+
+            {/* Size buttons - each size of the family is its own product */}
+            {family.length > 1 && (
+              <div className="border-t border-neutral-100 pt-5">
+                <h3 className="text-sm font-semibold text-brand-graphite mb-3 uppercase tracking-wide">
+                  {t('sizeHeading')}
+                  {familyEntry?.optionLabel && (
+                    <span className="ml-2 normal-case tracking-normal font-bold text-brand-charcoal">{familyEntry.optionLabel}</span>
+                  )}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {family.map((size) => {
+                    const active = size.id === productId;
+                    const out = size.stockStatus === 'out';
+                    return (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => selectSize(size.id)}
+                        aria-pressed={active}
+                        className={`pressable min-w-[4.5rem] px-3 py-2 rounded-xl border text-left transition-colors ${
+                          active
+                            ? 'border-brand-primary bg-primary-50 ring-1 ring-brand-primary'
+                            : 'border-neutral-200 bg-white hover:border-brand-primary'
+                        } ${out ? 'opacity-50' : ''}`}
+                      >
+                        <span className={`block text-sm font-semibold ${out ? 'line-through text-brand-steel' : 'text-brand-charcoal'}`}>
+                          {size.optionLabel ?? size.name}
+                        </span>
+                        <span className="block text-xs text-brand-slate">
+                          {out ? tc('outOfStock') : formatCurrency(size.price)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Variant selector */}
@@ -358,6 +444,20 @@ export default function ProductDetailPage() {
               )}
             </div>
 
+            {/* Pre-order questions (stock, bulk price, photos) */}
+            <WhatsAppChatLink
+              text={t('whatsappPrefill', { name: product.name, code: product.id })}
+              source="product"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5 text-green-700 flex-shrink-0" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold text-green-900">{t('whatsappTitle')}</span>
+                <span className="block text-xs text-green-800">{t('whatsappSubtitle')}</span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-green-700 flex-shrink-0" />
+            </WhatsAppChatLink>
+
             {/* Purchase Controls - desktop; phones get the pinned bar below */}
             <div className="hidden md:block border-t border-neutral-100 pt-5 space-y-4">
               <div>
@@ -373,9 +473,13 @@ export default function ProductDetailPage() {
                     >
                       <Minus className="w-4 h-4" />
                     </button>
-                    <span className="w-12 text-center text-brand-charcoal font-bold text-lg">
-                      {quantity}
-                    </span>
+                    <QuantityInput
+                      value={quantity}
+                      min={moq}
+                      onCommit={setQuantity}
+                      ariaLabel={t('quantity')}
+                      className="w-14 h-10 text-lg"
+                    />
                     <button
                       onClick={() => setQuantity(quantity + 1)}
                       className="w-10 h-10 rounded-lg bg-brand-primary hover:bg-brand-dark flex items-center justify-center transition-all"
@@ -465,6 +569,35 @@ export default function ProductDetailPage() {
         )}
       </div>
 
+      {/* ── Full-screen image viewer ── */}
+      {zoomOpen && product.imageUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={product.name}
+          className="fixed inset-0 z-[80] bg-black/95 flex items-center justify-center"
+          onClick={() => setZoomOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomOpen(false)}
+            aria-label={tc('close')}
+            className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {/* Pinch-zoom works natively on the image; scroll if it's larger than the screen. */}
+          <div className="w-full h-full overflow-auto flex items-center justify-center p-4" style={{ touchAction: 'pinch-zoom pan-x pan-y' }}>
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="max-w-none w-full md:w-auto md:max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── Pinned action bar (phones) ── */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-neutral-200 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {product.stockStatus === 'out' ? (
@@ -504,7 +637,13 @@ export default function ProductDetailPage() {
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="min-w-[2rem] text-center font-bold text-brand-charcoal">{quantity}</span>
+                <QuantityInput
+                  value={quantity}
+                  min={moq}
+                  onCommit={setQuantity}
+                  ariaLabel={t('quantity')}
+                  className="w-12 h-10"
+                />
                 <button
                   onClick={() => { setQuantity(quantity + 1); haptic('light'); }}
                   aria-label={t('increaseQuantity')}

@@ -23,5 +23,10 @@
   "coinsDiscount": "Coins discount",
   "total": "Total",
   "proceedToCheckout": "Proceed to Checkout",
-  "payOnDeliveryNote": "💳 Pay on delivery available"
+  "payOnDeliveryNote": "💳 Pay on delivery available",
+  "clearCartTitle": "Clear your cart?",
+  "clearCartMessage": "{count, plural, one {# item will be removed from your cart.} other {All # items will be removed from your cart.}}",
+  "clearCartConfirm": "Clear cart",
+  "clearCartCancel": "Keep items",
+  "quantityAria": "Quantity"
 }

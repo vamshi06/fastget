@@ -6,8 +6,9 @@ import { LocationSplash } from './LocationSplash';
 import { isStaffRoute } from '@/lib/staff-routes';
 import { useNativeBackHandler } from '@/lib/native-bridge';
 
+// The delivery time shown for an area is DELIVERY_ETA_MINUTES (service-area.ts).
 export const SERVICE_AREAS = [
-  { id: 'mumbai', name: 'Mumbai', eta: '2–4 hrs' },
+  { id: 'mumbai', name: 'Mumbai' },
 ] as const;
 
 export type AreaId = typeof SERVICE_AREAS[number]['id'];
@@ -29,33 +30,34 @@ export function useLocationSplash() {
 export function LocationSplashProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  // FastGet serves one area today, so nobody has to pick it before shopping -
+  // the picker only opens when the customer taps the location in the header.
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(SERVICE_AREAS[0].id);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('selectedLocation');
-    const seen = localStorage.getItem('splashSeen');
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('selectedLocation'); } catch {}
     if (saved) {
       // Migrate legacy area ids (andheri/goregaon/malad) to the current service area
       const valid = SERVICE_AREAS.some(a => a.id === saved);
       const area = valid ? saved : SERVICE_AREAS[0].id;
       setSelectedLocation(area);
-      if (!valid) localStorage.setItem('selectedLocation', area);
+      if (!valid) {
+        try { localStorage.setItem('selectedLocation', area); } catch {}
+      }
     }
-    if (!seen) setIsOpen(true);
   }, []);
 
   const openSplash = useCallback(() => setIsOpen(true), []);
 
   const handleConfirm = useCallback((area: string) => {
     setSelectedLocation(area);
-    localStorage.setItem('selectedLocation', area);
-    localStorage.setItem('splashSeen', '1');
+    try { localStorage.setItem('selectedLocation', area); } catch {}
   }, []);
 
   const handleClose = useCallback(() => {
-    localStorage.setItem('splashSeen', '1');
     setIsOpen(false);
   }, []);
 

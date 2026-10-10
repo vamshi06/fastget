@@ -8,6 +8,7 @@ import {
   requireEnum,
   requirePhone10,
 } from '@/lib/validation';
+import { optionalPincode } from '@/lib/service-area';
 
 const ADDRESS_TYPES = ['home', 'work', 'other'] as const;
 
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     const phone = requirePhone10(body.phone);
     const landmark = optionalString(body.landmark, 'landmark', { max: 200 });
     const isPrimary = body.isPrimary === true;
+    const pincode = optionalPincode(body.pincode);
 
     const address = await createUserAddress(
       auth.session.userId,
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
       phone,
       landmark,
       isPrimary,
+      pincode,
     );
     if (!address) return NextResponse.json({ error: 'Failed to create address' }, { status: 500 });
 

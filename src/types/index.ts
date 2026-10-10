@@ -26,6 +26,10 @@ export interface Product {
   // can fall back to it when saleMinOrderRupees isn't met.
   saleOriginalPriceRupees?: number;
   saleMinOrderRupees?: number; // cart must reach this (at original prices) to unlock the sale price
+  // Variant family (migration 028): sizes of one item, each still its own product.
+  familyId?: string;
+  familySize?: number;   // active sizes in the family (1 = standalone)
+  optionLabel?: string;  // this size's label, e.g. '18"', '4 Litre'
 }
 
 export type CategoryId =
@@ -117,6 +121,13 @@ export interface Order {
   referralPaidAt?: string;
   referralPayoutAmount?: number;
   referralPayoutRef?: string;
+  // Migration 027 - short display number + delivery-site details.
+  orderNumber?: number;
+  sitePincode?: string;
+  siteLat?: number;
+  siteLng?: number;
+  gstin?: string;
+  businessName?: string;
 }
 
 export interface OrderFormData {
@@ -124,6 +135,8 @@ export interface OrderFormData {
   customerPhone: string;
   siteAddress: string;
   landmark?: string;
+  sitePincode?: string;
+  gstin?: string;
   deliveryType: DeliveryType;
   scheduledTime?: string;
 }
@@ -183,6 +196,7 @@ export interface UserAddress {
   street: string;
   landmark?: string;
   city: string;
+  pincode?: string;
   phone: string;
   isPrimary: boolean;
   createdAt: string;

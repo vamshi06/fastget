@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { isUnoptimizedImage } from '@/lib/remote-images';
 import { useTranslations } from 'next-intl';
 import { Zap, ArrowRight, Package } from 'lucide-react';
 import type { ActiveFlashSale } from '@/lib/products';
@@ -80,6 +81,7 @@ export function FlashSaleBanner({ sale, onExpire }: FlashSaleBannerProps) {
             {sale.imageUrl ? (
               <Image
                 src={sale.imageUrl}
+                unoptimized={isUnoptimizedImage(sale.imageUrl)}
                 alt={sale.name}
                 fill
                 sizes="64px"
