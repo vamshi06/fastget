@@ -37,6 +37,8 @@
   "wishlistSaved": "विशलिस्ट में सेव किया गया",
   "wishlistRemoved": "विशलिस्ट से हटाया गया",
   "viewWishlist": "विशलिस्ट देखें",
+  "wishlistSaveFailed": "विशलिस्ट में सेव नहीं हो सका। फिर से कोशिश करें।",
+  "wishlistRemoveFailed": "विशलिस्ट से हटाया नहीं जा सका। फिर से कोशिश करें।",
   "offBadge": "{discount}% छूट",
   "savingsOff": "₹{amount} की बचत",
   "minOrder": "न्यूनतम ऑर्डर: {moq} {unit}",

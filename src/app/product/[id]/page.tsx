@@ -7,6 +7,7 @@ import { useCart, getOriginalUnitPrice, getMinOrderQty, FLASH_SALE_QTY_PER_ORDER
 import { useToast } from '@/components/ToastContext';
 import { formatCurrency } from '@/lib/utils';
 import { HomeProductCard } from '@/components/home/HomeProductCard';
+import { WishlistHeart } from '@/components/WishlistHeart';
 import { ProductReviews } from '@/components/ProductReviews';
 import { ProductDetailSkeleton } from '@/components/Skeletons';
 import { haptic, useNativeTitle } from '@/lib/native-bridge';
@@ -208,9 +209,14 @@ export default function ProductDetailPage() {
 
           {/* Image */}
           <div
-            className="card p-3 md:p-6 flex items-center justify-center md:min-h-[300px]"
+            className="card relative p-3 md:p-6 flex items-center justify-center md:min-h-[300px]"
             style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
           >
+            <WishlistHeart
+              product={product}
+              className="absolute top-5 right-5 md:top-8 md:right-8 w-10 h-10"
+              iconClassName="w-5 h-5"
+            />
             {product.imageUrl ? (
               // Phones: square and contained, so the whole product shows
               // without pushing the price below the fold.

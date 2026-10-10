@@ -4,17 +4,16 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Heart, ShoppingBag, ArrowRight, Trash2, LogIn } from 'lucide-react';
+import { Heart, ShoppingBag, ArrowRight, LogIn } from 'lucide-react';
 import { useWishlist } from '@/components/WishlistContext';
 import { useCart, getMinOrderQty } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/components/ToastContext';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductSection } from '@/components/home/ProductSection';
-import { Product } from '@/types';
 
 export default function WishlistPage() {
-  const { wishlistItems, removeFromWishlist, wishlistCount, isLoaded } = useWishlist();
+  const { wishlistItems, wishlistCount, isLoaded } = useWishlist();
   const { addItem } = useCart();
   const { currentUser, isLoaded: userIsLoaded } = useUser();
   const { showToast } = useToast();
@@ -32,11 +31,6 @@ export default function WishlistPage() {
       label: tc('viewCart'),
       href: '/cart',
     });
-  };
-
-  const handleRemove = async (product: Product) => {
-    await removeFromWishlist(product.id);
-    showToast(t('removedFromWishlistNamed', { name: product.name }), 'success');
   };
 
   return (
@@ -139,19 +133,9 @@ export default function WishlistPage() {
             </button>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {/* The card's filled heart removes the item, so no extra button */}
               {wishlistItems.map(product => (
-                <div key={product.id} className="relative group">
-                  <ProductCard product={product} compact />
-                  {/* Remove from wishlist button - overlaid top-right */}
-                  <button
-                    onClick={() => handleRemove(product)}
-                    aria-label={t('removeNamedFromWishlist', { name: product.name })}
-                    className="absolute top-1.5 right-1.5 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm border border-neutral-200 rounded-full flex items-center justify-center shadow-sm
-                               opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:border-red-200"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </button>
-                </div>
+                <ProductCard key={product.id} product={product} compact />
               ))}
             </div>
           </>

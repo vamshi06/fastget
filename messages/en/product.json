@@ -37,6 +37,8 @@
   "wishlistSaved": "Saved to wishlist",
   "wishlistRemoved": "Removed from wishlist",
   "viewWishlist": "View Wishlist",
+  "wishlistSaveFailed": "Couldn't save to wishlist. Try again.",
+  "wishlistRemoveFailed": "Couldn't remove from wishlist. Try again.",
   "offBadge": "{discount}% OFF",
   "savingsOff": "₹{amount} OFF",
   "minOrder": "Min. order: {moq} {unit}",

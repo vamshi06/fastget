@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useCart, getMinOrderQty } from '@/components/CartContext';
+import { WishlistHeart } from '@/components/WishlistHeart';
 import { haptic } from '@/lib/native-bridge';
 import { Product } from '@/types';
 
@@ -86,6 +87,12 @@ export function HomeProductCard({ product }: HomeProductCardProps) {
             {t('offLabel', { pct: discountPct })}
           </div>
         )}
+
+        <WishlistHeart
+          product={product}
+          className="absolute top-1.5 right-1.5 w-7 h-7"
+          iconClassName="w-3.5 h-3.5"
+        />
 
         {/* Out of stock overlay */}
         {!inStock && (

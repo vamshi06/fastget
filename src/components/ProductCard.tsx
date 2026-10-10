@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import { Product } from '@/types';
 import { useCart, getMinOrderQty } from './CartContext';
 import { useToast } from './ToastContext';
-import { useWishlist } from './WishlistContext';
+import { WishlistHeart } from './WishlistHeart';
 import { formatCurrency } from '@/lib/utils';
 import { haptic } from '@/lib/native-bridge';
-import { Plus, Minus, Package, Loader2, Tag, Heart } from 'lucide-react';
+import { Plus, Minus, Package, Loader2, Tag } from 'lucide-react';
 import Link from 'next/link';
 
 interface ProductCardProps {
@@ -19,23 +19,9 @@ interface ProductCardProps {
 export function ProductCard({ product, compact = false }: ProductCardProps) {
   const { state, addItem, updateQuantity, removeItem } = useCart();
   const { showToast } = useToast();
-  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const [isAdding, setIsAdding] = useState(false);
   const t = useTranslations('product');
   const tc = useTranslations('common');
-
-  const wishlisted = isInWishlist(product.id);
-
-  const handleWishlistToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (wishlisted) {
-      await removeFromWishlist(product.id);
-      showToast(t('wishlistRemoved'), 'success');
-    } else {
-      await addToWishlist(product);
-      showToast(t('wishlistSaved'), 'success', { label: t('viewWishlist'), href: '/wishlist' });
-    }
-  };
 
   const cartItem = state.items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
@@ -105,14 +91,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               </div>
             )}
 
-            {/* Wishlist heart - compact card */}
-            <button
-              onClick={handleWishlistToggle}
-              aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
-              className="absolute top-1.5 right-1.5 z-10 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 active:scale-90 transition-transform"
-            >
-              <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
-            </button>
+            <WishlistHeart product={product} className="absolute top-1.5 right-1.5 w-8 h-8" />
 
             {discount > 0 && (
               <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
@@ -191,14 +170,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
               {t('percentOff', { discount })}
             </span>
           )}
-          {/* Wishlist heart - full card */}
-          <button
-            onClick={handleWishlistToggle}
-            aria-label={wishlisted ? t('removeFromWishlist') : t('addToWishlist')}
-            className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm border border-neutral-100 hover:scale-110 transition-transform"
-          >
-            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`} />
-          </button>
+          <WishlistHeart product={product} className="absolute top-2 right-2 w-8 h-8" />
           {product.stockStatus === 'out' && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
               <span className="text-xs font-semibold text-neutral-500 bg-white px-2.5 py-1 rounded-full border border-neutral-200">{tc('outOfStock')}</span>
