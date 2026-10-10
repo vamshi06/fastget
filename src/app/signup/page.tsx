@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AuthHero } from '@/components/AuthHero';
 import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AuthField, authSubmitClass } from '@/components/AuthField';
+import { AlertCircle, Lock, Mail, Phone, User } from 'lucide-react';
 import { track } from '@/lib/analytics';
 
 
@@ -24,8 +25,6 @@ function SignupForm() {
     password: '',
     confirmPassword: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -95,7 +94,7 @@ function SignupForm() {
     <div className="flex-1 flex flex-col md:items-center md:justify-center md:bg-brand-fog md:py-12 md:px-6">
       <div className="flex-1 flex flex-col md:flex-none md:flex-row md:w-full md:max-w-4xl md:rounded-[2rem] md:shadow-2xl md:overflow-hidden md:bg-white">
       <AuthHero title={tc('signup')} />
-      <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-5 pb-4 shadow-xl flex flex-col justify-center overflow-hidden md:w-[58%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:overflow-visible md:px-14 md:py-10">
+      <div className="auth-panel flex-1 bg-gradient-to-b from-primary-50 via-white to-white rounded-t-3xl -mt-5 relative z-10 px-6 pt-7 pb-6 shadow-xl flex flex-col md:w-[55%] md:mt-0 md:rounded-none md:shadow-none md:bg-none md:bg-white md:justify-center md:px-14 md:py-10">
       {/* Phone signup happens in the login flow (an unknown number continues
           to a short name step) - only offered when phone login is on. */}
       {PHONE_LOGIN_ENABLED && (
@@ -106,120 +105,85 @@ function SignupForm() {
           {t('phone.signupWithPhone')}
         </Link>
       )}
-      <p className="text-sm text-brand-slate mb-3 md:text-base md:mb-6">{t('signup.subtitle')}</p>
+      <p className="text-sm text-brand-slate mb-6 md:text-base md:mb-8">{t('signup.subtitle')}</p>
 
       {error && (
-        <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
           <p className="text-red-800 text-sm">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-2.5 md:space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            {t('signup.fullNameLabel')}
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder={t('signup.fullNamePlaceholder')}
-            className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <AuthField
+          id="name"
+          name="name"
+          autoComplete="name"
+          icon={User}
+          label={t('signup.fullNameLabel')}
+          value={formData.name}
+          onChange={handleChange}
+          placeholder={t('signup.fullNamePlaceholder')}
+        />
 
-        <div>
-          <label htmlFor="email" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            {t('signup.emailLabel')}
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder={t('signup.emailPlaceholder')}
-            className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-          />
-        </div>
+        <AuthField
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          icon={Mail}
+          label={t('signup.emailLabel')}
+          value={formData.email}
+          onChange={handleChange}
+          placeholder={t('signup.emailPlaceholder')}
+        />
 
-        <div>
-          <label htmlFor="phone" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            {t('signup.phoneLabel')}
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder={t('signup.phonePlaceholder')}
-            maxLength={10}
-            className="w-full px-4 py-2.5 md:py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-          />
-        </div>
+        <AuthField
+          id="phone"
+          name="phone"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          maxLength={10}
+          icon={Phone}
+          label={t('signup.phoneLabel')}
+          value={formData.phone}
+          onChange={handleChange}
+          placeholder={t('signup.phonePlaceholder')}
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            {t('signup.passwordLabel')}
-          </label>
-          <div className="relative">
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleChange}
-              placeholder={t('signup.passwordPlaceholder')}
-              className="w-full px-4 py-2.5 md:py-3 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((s) => !s)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-steel hover:text-brand-charcoal transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-            </button>
-          </div>
-        </div>
+        <AuthField
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          icon={Lock}
+          label={t('signup.passwordLabel')}
+          value={formData.password}
+          onChange={handleChange}
+          placeholder={t('signup.passwordPlaceholder')}
+        />
 
-        <div>
-          <label htmlFor="confirmPassword" className="block text-xs font-semibold text-brand-graphite mb-1 md:mb-1.5">
-            {t('signup.confirmPasswordLabel')}
-          </label>
-          <div className="relative">
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder={t('signup.confirmPasswordPlaceholder')}
-              className="w-full px-4 py-2.5 md:py-3 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((s) => !s)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-steel hover:text-brand-charcoal transition-colors"
-            >
-              {showConfirmPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-            </button>
-          </div>
-        </div>
+        <AuthField
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          icon={Lock}
+          label={t('signup.confirmPasswordLabel')}
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          placeholder={t('signup.confirmPasswordPlaceholder')}
+        />
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-3 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
-        >
+        <button type="submit" disabled={isLoading} className={authSubmitClass}>
           {isLoading ? t('signup.submitting') : tc('signup')}
         </button>
       </form>
 
-      <p className="text-center text-sm text-brand-slate mt-3 md:mt-6">
+      <div className="flex-1 min-h-6 md:hidden" />
+
+      <p className="text-center text-sm text-brand-slate pb-2 md:pb-0 md:mt-8">
         {t('signup.haveAccount')}{' '}
         <Link
           href={redirect && redirect !== '/' ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}

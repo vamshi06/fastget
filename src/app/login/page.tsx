@@ -10,7 +10,8 @@ import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { useUser } from '@/components/UserContext';
 import { isStaffRoute } from '@/lib/staff-routes';
 import { track } from '@/lib/analytics';
-import { AlertCircle, Eye, EyeOff, Mail } from 'lucide-react';
+import { AuthField, authSubmitClass } from '@/components/AuthField';
+import { AlertCircle, Lock, Mail } from 'lucide-react';
 
 
 function LoginForm() {
@@ -28,7 +29,6 @@ function LoginForm() {
   // Prefilled after sign-up + email verification.
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   // With phone login on, the email form is the secondary option.
@@ -191,42 +191,27 @@ function LoginForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-xs font-semibold text-brand-graphite mb-1.5">
-            {t('login.emailLabel')}
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t('login.emailPlaceholder')}
-            className="w-full px-4 py-3.5 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-          />
-        </div>
+        <AuthField
+          id="email"
+          type="email"
+          autoComplete="email"
+          icon={Mail}
+          label={t('login.emailLabel')}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t('login.emailPlaceholder')}
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-xs font-semibold text-brand-graphite mb-1.5">
-            {t('login.passwordLabel')}
-          </label>
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={t('login.passwordPlaceholder')}
-              className="w-full px-4 py-3.5 pr-11 rounded-2xl border border-neutral-200 bg-white text-sm text-brand-charcoal focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((s) => !s)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-steel hover:text-brand-charcoal transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-            </button>
-          </div>
-        </div>
+        <AuthField
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          icon={Lock}
+          label={t('login.passwordLabel')}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={t('login.passwordPlaceholder')}
+        />
 
         <div className="flex justify-end -mt-1">
           <Link
@@ -237,11 +222,7 @@ function LoginForm() {
           </Link>
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-full text-sm disabled:opacity-50 transition-colors"
-        >
+        <button type="submit" disabled={isLoading} className={authSubmitClass}>
           {isLoading ? t('login.submitting') : tc('login')}
         </button>
       </form>
