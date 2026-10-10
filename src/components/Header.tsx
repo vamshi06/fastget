@@ -56,6 +56,7 @@ import {
 import { useWishlist } from "./WishlistContext";
 import { DeleteAccountButton } from "./DeleteAccountButton";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { MobileSearchOverlay } from "./MobileSearchOverlay";
 import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -499,6 +500,7 @@ export function Header() {
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 ml-auto md:ml-0 shrink-0">
             <LanguageSwitcher />
+            <ThemeToggle />
             {/* Wishlist */}
             <Link
               href={"/wishlist" as any}

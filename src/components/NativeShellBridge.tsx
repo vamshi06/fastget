@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCart } from '@/components/CartContext';
 import { useUser } from '@/components/UserContext';
+import { useTheme } from '@/components/ThemeContext';
 import { formatCurrency } from '@/lib/utils';
 import { getPageTitle, isNativeApp, postToNative, setPushToken } from '@/lib/native-bridge';
 import { getRouteKind, SHELL_COOKIE, SHELL_VERSION } from '@/lib/shell-routes';
@@ -15,7 +16,8 @@ import { getRouteKind, SHELL_COOKIE, SHELL_VERSION } from '@/lib/shell-routes';
  *
  *   site -> app: SHELL_CONFIG (tab labels; also tells the app this site
  *                supports the shell), ROUTE (path + top-bar title),
- *                CART_COUNT (floating cart pill: count, total, nudge)
+ *                CART_COUNT (floating cart pill: count, total, nudge),
+ *                THEME (light/dark, so the bars match the page)
  *   app -> site: `fastget:navigate` event -> client-side router.push
  */
 export function NativeShellBridge() {
@@ -24,6 +26,7 @@ export function NativeShellBridge() {
   const locale = useLocale();
   const { getItemCount, getTotal, isLoaded } = useCart();
   const { currentUser } = useUser();
+  const { resolvedTheme, isLoaded: themeLoaded } = useTheme();
   const t = useTranslations('nav');
   const tc = useTranslations('common');
   const itemCount = getItemCount();
@@ -99,6 +102,11 @@ export function NativeShellBridge() {
       cta: t('shellCart.viewCart'),
     });
   }, [itemCount, total, isLoaded, firstOrder, locale, t]);
+
+  // The app colours its own bars to match the page (light/dark).
+  useEffect(() => {
+    if (themeLoaded) postToNative({ type: 'THEME', theme: resolvedTheme });
+  }, [resolvedTheme, themeLoaded]);
 
   // Push notifications: once signed in, ask the app for its push token and
   // register it against this account (order status pushes, src/lib/push.ts).

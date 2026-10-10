@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TABS, TabKey } from './routes';
-import { colors } from './theme';
+import { ShellColors, useShellColors } from './theme';
 
 type Props = {
   active: TabKey | null;
@@ -15,6 +16,8 @@ type Props = {
  * accent line above it; the rest are thin grey outlines.
  */
 export default function TabBar({ active, labels, onPress }: Props) {
+  const colors = useShellColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.bar} accessibilityRole="tablist">
       {TABS.map((tab) => {
@@ -47,6 +50,8 @@ export default function TabBar({ active, labels, onPress }: Props) {
 }
 
 export function CountBadge({ count, style }: { count: number; style?: ViewStyle }) {
+  const colors = useShellColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   if (count <= 0) return null;
   return (
     <View style={[styles.countBadge, style]} pointerEvents="none">
@@ -55,7 +60,7 @@ export function CountBadge({ count, style }: { count: number; style?: ViewStyle 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ShellColors) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     height: 64,

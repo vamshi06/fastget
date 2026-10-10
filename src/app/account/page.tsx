@@ -27,8 +27,12 @@ import {
   Heart,
   Languages,
   LayoutDashboard,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/ThemeContext';
+import { THEME_PREFERENCES } from '@/lib/theme';
 
 /* ─── Shared menu rows ──────────────────────────────────────────────────── */
 
@@ -91,6 +95,38 @@ function LanguageRow() {
   );
 }
 
+const THEME_LABEL_KEYS = {
+  light: 'menu.themeLight',
+  dark: 'menu.themeDark',
+  system: 'menu.themeSystem',
+} as const;
+
+function ThemeRow() {
+  const t = useTranslations('account');
+  const { preference, resolvedTheme, setPreference } = useTheme();
+
+  return (
+    <div className="flex items-center px-4 py-3.5">
+      <RowIcon Icon={resolvedTheme === 'dark' ? Moon : Sun} />
+      <span className="ml-3 text-[15px] font-medium flex-1 text-brand-charcoal">{t('menu.theme')}</span>
+      <span role="radiogroup" aria-label={t('menu.theme')} className="flex items-center rounded-full bg-brand-fog p-0.5 text-xs font-semibold">
+        {THEME_PREFERENCES.map((p) => (
+          <button
+            key={p}
+            type="button"
+            role="radio"
+            aria-checked={preference === p}
+            onClick={() => setPreference(p)}
+            className={cn('pressable px-2.5 py-1 rounded-full', preference === p ? 'bg-white shadow-sm text-brand-charcoal' : 'text-brand-slate')}
+          >
+            {t(THEME_LABEL_KEYS[p])}
+          </button>
+        ))}
+      </span>
+    </div>
+  );
+}
+
 const POLICY_ITEMS = [
   { href: '/shipping-policy', labelKey: 'menu.shippingPolicy', Icon: Truck     },
   { href: '/refund-policy',   labelKey: 'menu.refundPolicy',   Icon: RefreshCw },
@@ -128,6 +164,7 @@ function HelpRows() {
   return (
     <>
       <LanguageRow />
+      <ThemeRow />
       <MenuItem href="/support" label={t('menu.support')} Icon={Headphones} />
       <PoliciesRow />
     </>
@@ -236,7 +273,7 @@ export default function AccountPage() {
       {/* Refer & Earn */}
       <Link
         href={'/refer' as any}
-        className="pressable mx-4 mt-3 flex items-center px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FEF3DC] to-[#FDE3B0] border border-primary-200"
+        className="pressable mx-4 mt-3 flex items-center px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#FEF3DC] to-[#FDE3B0] dark:from-brand-light dark:to-primary-200 border border-primary-200"
       >
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0">
           <Gift className="w-5 h-5 text-brand-dark" />

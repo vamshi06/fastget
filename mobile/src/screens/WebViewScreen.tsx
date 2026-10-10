@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, Keyboard, Linking, Platform, Share, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Easing, Keyboard, Linking, Platform, Share, StyleSheet, useColorScheme, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../shell/theme';
+import { darkColors, lightColors, ShellColorsContext } from '../shell/theme';
 import * as Haptics from 'expo-haptics';
 import { getPushToken, listenForNotificationTaps } from '../notifications';
 import WebView, { WebViewNavigation } from 'react-native-webview';
@@ -103,6 +105,12 @@ export default function WebViewScreen() {
   const [cart, setCart] = useState<CartSummary | null>(null);
   const cartCount = cart?.count ?? 0;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  // Light/dark: what the page is showing (THEME message - the user may have
+  // picked Dark on a light phone), else the phone setting until it reports.
+  const systemScheme = useColorScheme();
+  const [siteTheme, setSiteTheme] = useState<'light' | 'dark' | null>(null);
+  const isDark = (siteTheme ?? systemScheme) === 'dark';
+  const colors = isDark ? darkColors : lightColors;
   const pathRef = useRef<string | null>(null);
   // How the next path change happened, for the transition. Unset = the page
   // navigated itself (a link tap), which is a forward push.
@@ -277,6 +285,9 @@ export default function WebViewScreen() {
           });
         }
         break;
+      case 'THEME':
+        if (msg.theme === 'light' || msg.theme === 'dark') setSiteTheme(msg.theme);
+        break;
       case 'HAPTIC':
         playHaptic(msg.style);
         break;
@@ -383,10 +394,15 @@ export default function WebViewScreen() {
     // With the native shell the WebView stops above the system nav bar (the
     // bottom edge is ours: tab bar or white inset). Without it - a site from
     // before the shell - the page runs edge-to-edge and manages that itself.
-    <SafeAreaView style={styles.container} edges={shellReady ? ['bottom'] : []}>
-      {/* Status-bar strip: brand orange over the tab screens' orange header,
-          white over the white native top bar (and over the pre-shell site). */}
-      <View style={{ height: insets.top, backgroundColor: routeKind === 'tab' ? colors.headerTop : '#FFFFFF' }} />
+    <ShellColorsContext.Provider value={colors}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.surface }]} edges={shellReady ? ['bottom'] : []}>
+      {/* Status-bar strip: brand orange over the tab screens' orange header
+          (orange in both themes), else the native top bar's surface colour. */}
+      <StatusBar style={routeKind === 'tab' || !isDark ? 'dark' : 'light'} />
+      {/* System nav bar buttons/gesture handle: follow the page, not the phone,
+          so Dark on a light phone doesn't leave dark buttons on a dark bar. */}
+      <NavigationBar style={isDark ? 'light' : 'dark'} />
+      <View style={{ height: insets.top, backgroundColor: routeKind === 'tab' ? colors.headerTop : colors.surface }} />
       {hasError ? (
         <ErrorScreen onRetry={handleRetry} />
       ) : (
@@ -406,7 +422,7 @@ export default function WebViewScreen() {
             <WebView
               ref={webViewRef}
               source={webViewSource}
-              style={styles.webView}
+              style={[styles.webView, { backgroundColor: colors.page }]}
               userAgent={Platform.OS === 'android' ? ANDROID_UA : undefined}
               injectedJavaScript={injectedJavaScript}
               injectedJavaScriptBeforeContentLoaded={SHELL_BOOTSTRAP}
@@ -470,15 +486,14 @@ export default function WebViewScreen() {
         </>
       )}
     </SafeAreaView>
+    </ShellColorsContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  // Fills the status-bar strip (and, with the shell, the bottom inset) - white
-  // to match the site's header and the native bars (dark icons, App.tsx).
+  // Background (colors.surface) fills the bottom inset under the native bars.
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   webViewContainer: {
     flex: 1,

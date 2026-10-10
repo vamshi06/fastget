@@ -1,15 +1,17 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useShellColors } from '../shell/theme';
 
 interface ErrorScreenProps {
   onRetry: () => void;
 }
 
 export default function ErrorScreen({ onRetry }: ErrorScreenProps) {
+  const colors = useShellColors();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.page }]}>
       <Text style={styles.icon}>📶</Text>
-      <Text style={styles.title}>No Connection</Text>
-      <Text style={styles.message}>
+      <Text style={[styles.title, { color: colors.charcoal }]}>No Connection</Text>
+      <Text style={[styles.message, { color: colors.slate }]}>
         Unable to reach FastGet. Please check your internet connection and try again.
       </Text>
       <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={0.8}>

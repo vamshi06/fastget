@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from './theme';
+import { ShellColors, useShellColors } from './theme';
 import { CountBadge } from './TabBar';
 
 type Props = {
@@ -13,13 +14,15 @@ type Props = {
 
 /** Material-style top app bar for sub-pages: back arrow, title, cart shortcut. */
 export default function TopBar({ title, cartCount, showCart, onBack, onCart }: Props) {
+  const colors = useShellColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.bar}>
       <Pressable
         onPress={onBack}
         accessibilityRole="button"
         accessibilityLabel="Back"
-        android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: true, radius: 22 }}
+        android_ripple={{ color: colors.ripple, borderless: true, radius: 22 }}
         style={styles.iconButton}
         hitSlop={6}
       >
@@ -35,7 +38,7 @@ export default function TopBar({ title, cartCount, showCart, onBack, onCart }: P
           onPress={onCart}
           accessibilityRole="button"
           accessibilityLabel={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
-          android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: true, radius: 22 }}
+          android_ripple={{ color: colors.ripple, borderless: true, radius: 22 }}
           style={styles.iconButton}
           hitSlop={6}
         >
@@ -49,7 +52,7 @@ export default function TopBar({ title, cartCount, showCart, onBack, onCart }: P
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ShellColors) => StyleSheet.create({
   bar: {
     height: 56,
     flexDirection: 'row',

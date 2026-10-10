@@ -21,6 +21,8 @@ type NativeMessage =
       hint?: string;
       cta: string;
     }
+  // What the page is showing, so the native bars match. Older app builds ignore it.
+  | { type: 'THEME'; theme: 'light' | 'dark' }
   | { type: 'SHARE_TEXT'; text: string }
   | { type: 'DOWNLOAD_PDF'; url: string }
   // Signed in: ask the app for its push token (it may show Android's

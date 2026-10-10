@@ -13,6 +13,8 @@ import { ConditionalFooter } from '@/components/ConditionalFooter';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { AnnouncementBar } from '@/components/AnnouncementBar';
 import { NativeShellBridge } from '@/components/NativeShellBridge';
+import { ThemeProvider } from '@/components/ThemeContext';
+import { THEME_SCRIPT } from '@/lib/theme';
 import { SHELL_COOKIE, SHELL_VERSION, TAB_ROOTS } from '@/lib/shell-routes';
 import { STAFF_ROUTE_PREFIXES } from '@/lib/staff-routes';
 
@@ -76,9 +78,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: IN_APP_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider>
           <UserProvider>
             <WishlistProvider>
             <CartProvider>
@@ -99,6 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </CartProvider>
             </WishlistProvider>
           </UserProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from './theme';
+import { ShellColors, useShellColors } from './theme';
 
 export type CartSummary = {
   count: number;
@@ -21,6 +21,8 @@ export const CART_PILL_SPACE = 84;
  * and translated from the site (CART_COUNT message).
  */
 export default function CartPill({ summary, onPress }: { summary: CartSummary; onPress: () => void }) {
+  const colors = useShellColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   // Slide up on first appearance; bump when the count changes.
   const rise = useRef(new Animated.Value(40)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -62,14 +64,14 @@ export default function CartPill({ summary, onPress }: { summary: CartSummary; o
         </View>
         <View style={styles.cta}>
           <Text style={styles.ctaText}>{summary.cta}</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.charcoal} />
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.onPrimary} />
         </View>
       </Pressable>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ShellColors) => StyleSheet.create({
   wrap: {
     position: 'absolute',
     left: 12,
@@ -79,7 +81,7 @@ const styles = StyleSheet.create({
   pill: {
     height: 60,
     borderRadius: 16,
-    backgroundColor: colors.charcoal,
+    backgroundColor: colors.pill,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 10,
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   ctaText: {
-    color: colors.charcoal,
+    color: colors.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
