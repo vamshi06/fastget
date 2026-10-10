@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { logger } from '@/lib/logger';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // Home-screen banner carousel (db/migrations/024_create_home_banners.sql),
 // managed from /admin/banners.
@@ -91,7 +92,7 @@ export function parseBannerInput(body: unknown): { ok: true; value: BannerInput 
     return { ok: false, error: 'Image URL must be a valid https:// link' };
   }
   const rawLink = typeof b.linkUrl === 'string' ? b.linkUrl.trim() : '';
-  if (rawLink && (!rawLink.startsWith('/') || rawLink.startsWith('//') || rawLink.length > 500)) {
+  if (rawLink && (!safeRedirectPath(rawLink) || rawLink.length > 500)) {
     return { ok: false, error: 'Link must be a page in the app, starting with / (e.g. /catalog?category=paints)' };
   }
   const altText = typeof b.altText === 'string' ? b.altText.trim().slice(0, 200) : '';

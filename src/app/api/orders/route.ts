@@ -6,7 +6,8 @@ import {
   formatPhoneNumber,
   validateOrderForm,
 } from '@/lib/utils';
-import { createOrder, debitCoins } from '@/lib/db';
+import { createOrder, debitCoins, hasOtherOrder } from '@/lib/db';
+import { deleteOrder } from '@/lib/payment-db';
 import { getSession } from '@/lib/auth';
 import { priceOrderFromCatalog } from '@/lib/order-pricing';
 import { resolveReferralForOrder } from '@/lib/referral';
@@ -111,17 +112,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info('Orders', 'Order created', { orderId, itemCount: order.items.length, total: order.total, deliveryType: order.deliveryType });
-
-    // Debit redeemed coins now that the order is confirmed saved. Best-effort:
-    // the order itself is already placed at the discounted total, so a debit
-    // failure here is a reconciliation issue to log, not a reason to fail the order.
-    if (session?.userId && coinsRedeemed > 0) {
-      const debited = await debitCoins(session.userId, coinsRedeemed, orderId);
-      if (!debited) {
-        logger.error('API', 'POST /api/orders - coin debit failed after order creation', { orderId, userId: session.userId, coinsRedeemed });
-      }
+    // The first-order discount and coin balance were checked at pricing time;
+    // re-check now that the order is saved so two checkouts sent together
+    // can't both use them. The order is removed if either was already taken.
+    // (Debit needs the saved order - coin_transactions.order_id is a FK.)
+    const rejectOrder = async (reason: string, error: string) => {
+      await deleteOrder(orderId);
+      logger.warn('API', `POST /api/orders - rejected after save: ${reason}`, { orderId, userId: session?.userId });
+      logger.api('POST', '/api/orders', 409, Date.now() - start);
+      return NextResponse.json({ error }, { status: 409 });
+    };
+    if (session?.userId && discount > 0 && (await hasOtherOrder(session.userId, orderId))) {
+      return rejectOrder('first-order discount already used', 'The first-order offer has already been used. Please review your cart and try again.');
     }
+    if (session?.userId && coinsRedeemed > 0 && !(await debitCoins(session.userId, coinsRedeemed, orderId))) {
+      return rejectOrder('coin debit failed', 'Your coin balance has changed. Please review your cart and try again.');
+    }
+
+    logger.info('Orders', 'Order created', { orderId, itemCount: order.items.length, total: order.total, deliveryType: order.deliveryType });
 
     // Best-effort staff alert (Telegram + email) - never blocks/fails the order response.
     await notifyStaffOfNewOrder(order);

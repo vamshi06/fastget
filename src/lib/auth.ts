@@ -8,18 +8,54 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
+import { getUnpooledConnection } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { verifySessionToken, SESSION_COOKIE_NAME, type SessionPayload } from '@/lib/session';
 
 export type Role = 'customer' | 'agent' | 'admin';
 
 /**
  * Read and verify the current session from the request cookies.
- * Returns null when there is no cookie or the signature/expiry is invalid.
+ * Returns null when there is no cookie, the signature/expiry is invalid, or
+ * the session was revoked (see checkSessionAgainstDb).
  */
 export async function getSession(): Promise<SessionPayload | null> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  const session = await verifySessionToken(token);
+  if (!session) return null;
+  return checkSessionAgainstDb(session);
+}
+
+/**
+ * Signed tokens can't be recalled on their own, so check them against the
+ * user row: the account must still exist, the token must not predate
+ * users.sessions_valid_after (set on password reset - migration 029), and the
+ * role comes from the DB so a demoted admin loses access immediately.
+ *
+ * Fails OPEN to the signed token on a DB error (including migration 029 not
+ * run yet) - the signature is still verified, and the route's own queries
+ * will fail anyway if the DB is really down.
+ */
+async function checkSessionAgainstDb(session: SessionPayload): Promise<SessionPayload | null> {
+  try {
+    // db.ts's client - it disables Next's fetch cache for Neon queries, which
+    // would otherwise serve one user's row for another's lookup.
+    const sql = getUnpooledConnection();
+    const rows = (await sql`
+      SELECT role, FLOOR(EXTRACT(EPOCH FROM sessions_valid_after))::bigint AS valid_after
+      FROM users WHERE id = ${session.userId} LIMIT 1
+    `) as { role: string; valid_after: string | number | null }[];
+    if (rows.length === 0) return null;
+    const { role, valid_after } = rows[0];
+    if (valid_after != null && (session.iat ?? 0) < Number(valid_after)) return null;
+    return { ...session, role };
+  } catch (error) {
+    logger.error('Auth', 'session DB check failed - using signed token only', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return session;
+  }
 }
 
 /**

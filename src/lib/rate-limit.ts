@@ -105,10 +105,39 @@ export async function rateLimit(
   }
 }
 
-/** Best-effort client IP from proxy headers (the hosting proxy sets x-forwarded-for). */
+// Proxy hops that are never the real client: Railway's internal range
+// (100.0.0.0/8), private/loopback ranges, and their IPv6 equivalents.
+function isProxyHop(ip: string): boolean {
+  const v = ip.toLowerCase();
+  return (
+    /^(10|100|127)\./.test(v) ||
+    /^192\.168\./.test(v) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(v) ||
+    v === '::1' ||
+    /^f[cd][0-9a-f]{2}:/.test(v) ||
+    /^fe80:/.test(v)
+  );
+}
+
+/**
+ * Best-effort client IP for rate-limit buckets.
+ *
+ * The LEFTMOST x-forwarded-for entry is whatever the caller sent, so trusting
+ * it let anyone pick a fresh IP per request and dodge the per-IP limits.
+ * Proxies append, so walk from the right and take the first entry that isn't
+ * one of our own proxy hops - correct whether Railway's edge overwrites the
+ * header or appends to it. x-real-ip is not used while x-forwarded-for exists
+ * (Railway has been seen forwarding a client-supplied copy of it).
+ */
 export function getClientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0].trim();
+  if (xff) {
+    const hops = xff.split(',').map((s) => s.trim()).filter(Boolean);
+    for (let i = hops.length - 1; i >= 0; i--) {
+      if (!isProxyHop(hops[i])) return hops[i];
+    }
+    if (hops.length > 0) return hops[0];
+  }
   return request.headers.get('x-real-ip') || 'unknown';
 }
 

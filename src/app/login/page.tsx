@@ -9,6 +9,7 @@ import { PhoneLogin } from '@/components/PhoneLogin';
 import { PHONE_LOGIN_ENABLED } from '@/lib/feature-flags';
 import { useUser } from '@/components/UserContext';
 import { isStaffRoute } from '@/lib/staff-routes';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 import { track } from '@/lib/analytics';
 import { AuthField, authSubmitClass } from '@/components/AuthField';
 import { AlertCircle, Lock, Mail } from 'lucide-react';
@@ -19,11 +20,8 @@ function LoginForm() {
   const tc = useTranslations('common');
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Only same-site paths - "//evil.com" or "https://..." would send the user off-site.
-  const redirectParam = searchParams.get('redirect');
-  const redirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
-    ? redirectParam
-    : null;
+  // Only same-site paths - "//evil.com", "/\evil.com" or "https://..." would send the user off-site.
+  const redirect = safeRedirectPath(searchParams.get('redirect'));
   const { setCurrentUser } = useUser();
 
   // Prefilled after sign-up + email verification.

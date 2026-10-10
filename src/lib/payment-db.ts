@@ -108,6 +108,56 @@ export async function deleteOrder(orderId: string): Promise<void> {
 }
 
 /**
+ * The status_token of the order already holding this Razorpay payment, or null.
+ * One payment pays for exactly one order - a replayed verify/callback request
+ * gets the existing order back instead of creating another (migration 029 adds
+ * the matching unique index).
+ */
+export async function getStatusTokenByPaymentId(razorpayPaymentId: string): Promise<string | null> {
+  await ensurePaymentColumns();
+  const sql = getUnpooledConnection();
+  try {
+    const result = await sql`
+      SELECT status_token FROM orders WHERE razorpay_payment_id = ${razorpayPaymentId} LIMIT 1
+    `;
+    return result.length > 0 ? (result[0] as { status_token: string }).status_token : null;
+  } catch (error) {
+    logger.error('DB', 'Failed to look up order by payment id', {
+      razorpayPaymentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+/**
+ * Cancels a paid order that failed a post-payment check (coins already spent,
+ * first-order offer already used). The row is kept - with its payment ids - so
+ * staff can see the refund (or chase it if paymentStatus is 'refund_failed').
+ */
+export async function cancelRejectedPaidOrder(
+  orderId: string,
+  paymentStatus: 'refunded' | 'refund_failed',
+): Promise<void> {
+  const sql = getUnpooledConnection();
+  const historyAppend = JSON.stringify([{ status: 'cancelled', timestamp: new Date().toISOString() }]);
+  try {
+    await sql`
+      UPDATE orders
+      SET status = 'cancelled',
+          payment_status = ${paymentStatus},
+          status_history = COALESCE(status_history, '[]'::jsonb) || ${historyAppend}::jsonb
+      WHERE id = ${orderId}
+    `;
+  } catch (error) {
+    logger.error('DB', 'Failed to cancel rejected paid order', {
+      orderId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
  * Fetches the status_token for a given order ID (needed to redirect after payment).
  */
 export async function getStatusToken(orderId: string): Promise<string | null> {

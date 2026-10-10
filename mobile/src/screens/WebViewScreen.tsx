@@ -468,7 +468,13 @@ export default function WebViewScreen() {
               }}
               onNavigationStateChange={handleNavigationStateChange}
               onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-              onMessage={(event) => handleMessage(event.nativeEvent.data)}
+              // Only our own pages may talk to the shell - other https pages
+              // can load in this WebView (e.g. Razorpay), and must not be able
+              // to ask for this device's push token or drive the native UI.
+              onMessage={(event) => {
+                const { url, data } = event.nativeEvent;
+                if (url === APP_URL || url.startsWith(`${APP_URL}/`)) handleMessage(data);
+              }}
               javaScriptEnabled
               domStorageEnabled
               // Checkout's "Use my current location" (site pin for the driver).

@@ -9,6 +9,7 @@ import { useTheme } from '@/components/ThemeContext';
 import { formatCurrency } from '@/lib/utils';
 import { getPageTitle, isNativeApp, postToNative, setPushToken } from '@/lib/native-bridge';
 import { getRouteKind, SHELL_COOKIE, SHELL_VERSION } from '@/lib/shell-routes';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 
 /**
  * Keeps the Android app's native chrome (tab bar, top bar - mobile/src/shell)
@@ -134,8 +135,9 @@ export function NativeShellBridge() {
     const onNavigate = (e: Event) => {
       const path = (e as CustomEvent<{ path?: unknown }>).detail?.path;
       // Same-origin paths only.
-      if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) {
-        router.push(path as any);
+      const safe = safeRedirectPath(path);
+      if (safe) {
+        router.push(safe as any);
       }
     };
     window.addEventListener('fastget:navigate', onNavigate);

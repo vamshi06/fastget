@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
-import { confirmOrderPayment, deleteOrder } from '@/lib/payment-db';
 import { verifyOrderToken } from '@/lib/order-token';
-import { createOrder } from '@/lib/db';
-import { generateUUID, generateToken } from '@/lib/utils';
-import { Order } from '@/types';
+import { createPaidOrder } from '@/lib/paid-order';
 import { logger } from '@/lib/logger';
 
 /**
@@ -93,58 +90,22 @@ export async function POST(request: NextRequest) {
     return redirectError(`Payment was not completed (status: ${payment.status}). Please try again.`);
   }
 
-  // Payment confirmed - create the order in the DB
-  const orderId = generateUUID();
-  const statusToken = generateToken();
-  const updateToken = generateToken();
-
-  const order: Order = {
-    id: orderId,
-    createdAt: new Date().toISOString(),
-    customerName: orderData.customerName,
-    customerPhone: orderData.customerPhone,
-    siteAddress: orderData.siteAddress,
-    landmark: orderData.landmark,
-    deliveryType: orderData.deliveryType,
-    scheduledTime: orderData.scheduledTime,
-    items: orderData.items,
-    subtotal: orderData.subtotal,
-    convenienceFee: orderData.convenienceFee,
-    discount: orderData.discount || 0,
-    total: orderData.total,
-    paymentMethod: 'razorpay',
-    status: 'received',
-    statusToken,
-    updateToken,
-    userId: orderData.userId,
-    referralCode: orderData.referralCode,
-    referrerUserId: orderData.referrerUserId,
-    sitePincode: orderData.sitePincode,
-    siteLat: orderData.siteLat,
-    siteLng: orderData.siteLng,
-    gstin: orderData.gstin,
-    businessName: orderData.businessName,
-  };
-
-  const dbSuccess = await createOrder(order);
-  if (!dbSuccess) {
-    logger.error('Payment', 'callback - DB write failed', { orderId });
-    return redirectError('Failed to save order. Please contact support.');
+  // Payment confirmed - create the order. Same path as verify-payment (coins
+  // debited, staff alerted, idempotent per payment).
+  let result;
+  try {
+    result = await createPaidOrder(orderData, {
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      signature: razorpay_signature,
+    });
+  } catch (err) {
+    logger.error('Payment', 'callback - order creation threw', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return redirectError('Payment received but the order could not be saved. Please contact support.');
   }
+  if (!result.ok) return redirectError(result.error);
 
-  const confirmed = await confirmOrderPayment(
-    orderId,
-    razorpay_payment_id,
-    razorpay_order_id,
-    razorpay_signature,
-  );
-
-  if (!confirmed) {
-    logger.error('Payment', 'callback - payment confirmation DB update failed', { orderId });
-    await deleteOrder(orderId);
-    return redirectError('Payment recorded but order save failed. Please contact support.');
-  }
-
-  logger.info('Payment', 'callback - payment confirmed and order created', { orderId, razorpay_payment_id });
-  return NextResponse.redirect(`${origin}/order/${statusToken}`, 303);
+  return NextResponse.redirect(`${origin}/order/${result.statusToken}`, 303);
 }

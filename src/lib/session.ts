@@ -19,6 +19,8 @@ export function sessionMaxAge(role: string): number {
 export interface SessionPayload {
   userId: string;
   role: string;
+  /** Issued-at (unix seconds) - set on verified tokens, ignored when creating one. */
+  iat?: number;
 }
 
 function b64urlEncode(buf: ArrayBuffer | Uint8Array): string {
@@ -119,7 +121,11 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     // expired, forcing a one-time re-login.
     const now = Math.floor(Date.now() / 1000);
     if (typeof parsed.exp !== 'number' || parsed.exp <= now) return null;
-    return { userId: parsed.userId as string, role: parsed.role as string };
+    return {
+      userId: parsed.userId as string,
+      role: parsed.role as string,
+      iat: typeof parsed.iat === 'number' ? parsed.iat : undefined,
+    };
   } catch {
     return null;
   }

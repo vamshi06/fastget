@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email';
 import { passwordChangedTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 import { ValidationError, requirePassword } from '@/lib/validation';
+import { getClientIp, limitOrResponse } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/reset-password
@@ -27,6 +28,17 @@ export async function POST(request: NextRequest) {
     }
 
     const password = requirePassword(body.password);
+
+    // Token guessing is already infeasible (64-hex tokens only - see
+    // isSecureToken in lib/users), but cap attempts per IP anyway.
+    const limited = await limitOrResponse([
+      { key: `resetpw:ip:${getClientIp(request)}`, limit: 10, windowSec: 900 },
+    ]);
+    if (limited) {
+      logger.warn('Auth', 'reset-password - rate limited');
+      logger.api('POST', '/api/auth/reset-password', 429, Date.now() - start);
+      return limited;
+    }
 
     const token = body.token.trim();
 

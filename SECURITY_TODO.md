@@ -117,6 +117,26 @@ Counts at audit time: **6 Critical · 6 High · 7 Medium · 4 Low**
 
 ---
 
+## Round 2 audit (2026-10-10)
+
+Re-audit after the referral / coins / reviews / push / phone-login / banners work. **Needs migration 029 (`npm run sync-schema`) before deploy.**
+
+- [x] **R2-1 · Critical · Reset-code account takeover.** The 6-digit reset OTP sat in `reset_password_token`, and `/api/auth/reset-password` looked that column up with no rate limit or email binding, so the OTP could be brute-forced there, skipping `verify-reset-otp`'s attempt cap (admins included). Token lookups now only accept 64-hex tokens (`isSecureToken` in [users.ts](src/lib/users.ts)); reset-password is IP rate-limited.
+- [x] **R2-2 · High · Payment replay → duplicate orders.** Re-sending a verified payment to verify-payment/callback created a new paid order each time. Shared [paid-order.ts](src/lib/paid-order.ts) is idempotent per `razorpay_payment_id`; migration 029 adds the unique index that closes the race.
+- [x] **R2-3 · High · Coins / first-order discount double-spend.** Orders were saved at the discounted price and a failed coin debit was only logged; parallel checkouts could reuse coins and the ₹200 coupon. Now re-checked after save: COD orders are removed (409), paid orders are refunded via Razorpay and cancelled (`payment_status` `refunded` / `refund_failed`).
+  - Also fixed: the mobile `/api/payment/callback` path **never debited redeemed coins** and sent no staff alert - it now shares the same code as verify-payment.
+- [x] **R2-4 · High · `/api/auth/delete` took `userId` from the body** with no session or rate limit - unlimited password guessing against any account. Now session-derived, per-account limited, clears the cookie.
+- [x] **R2-5 · Medium · Public reviews exposed `userId` + `orderId`** (fed R2-4). Stripped from `GET /api/reviews`.
+- [x] **R2-6 · Medium · Open redirect** - `/\evil.com` passed the `startsWith('/') && !startsWith('//')` check (browsers read it as `//evil.com`). New [safe-redirect.ts](src/lib/safe-redirect.ts) used by login, verify-email, middleware, NativeShellBridge, banner links.
+- [~] **R2-7 · Dependencies** - `npm audit fix` applied (prod: 7 → 2). Remaining: `next` (critical, image-optimizer DoS) + its bundled `postcss` need the Next 16 major upgrade - not done (breaking).
+- [x] **R2-8 · Medium · Spoofable rate-limit IP** - `getClientIp` trusted the caller-controlled leftmost `X-Forwarded-For`. Now walks right-to-left skipping Railway-internal/private hops.
+- [x] **R2-9 · Low · Sessions not revocable** - `getSession` now checks the user row: deleted user → rejected, token older than `users.sessions_valid_after` (set on password reset) → rejected, role read from DB (demoted admin loses access at once). Fails open on DB error. Logout still only clears the current device.
+- [x] **R2-10 · Low · Mobile WebView** accepted bridge messages (incl. push-token requests) from any loaded page - now own-origin only. *Needs a new EAS build.*
+- [ ] **R2-11 · Low · CSP still Report-Only** - not flipped: admin product/banner images can be any https host, so enforcing `img-src` (and an unreviewed `connect-src`) would break prod. Review violation reports first.
+- [ ] **C1 git-history scrub** (above) - still needs your go-ahead for the force-push.
+
+---
+
 ## Verified clean (no action needed)
 - SQL injection - all queries use parameterized `@neondatabase/serverless` tagged templates
 - XSS - no `dangerouslySetInnerHTML`; React escapes rendered fields

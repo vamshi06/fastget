@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
-import { confirmOrderPayment, deleteOrder } from '@/lib/payment-db';
 import { verifyOrderToken } from '@/lib/order-token';
-import { createOrder, debitCoins } from '@/lib/db';
-import { generateUUID, generateToken } from '@/lib/utils';
-import { notifyStaffOfNewOrder } from '@/lib/order-notifications';
-import { Order } from '@/types';
+import { createPaidOrder } from '@/lib/paid-order';
 import { logger } from '@/lib/logger';
 
 /**
@@ -101,76 +97,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Payment confirmed - now create the order in the DB
-    const orderId = generateUUID();
-    const statusToken = generateToken();
-    const updateToken = generateToken();
-
-    const order: Order = {
-      id: orderId,
-      createdAt: new Date().toISOString(),
-      customerName: orderData.customerName,
-      customerPhone: orderData.customerPhone,
-      siteAddress: orderData.siteAddress,
-      landmark: orderData.landmark,
-      deliveryType: orderData.deliveryType,
-      scheduledTime: orderData.scheduledTime,
-      items: orderData.items,
-      subtotal: orderData.subtotal,
-      convenienceFee: orderData.convenienceFee,
-      discount: orderData.discount || 0,
-      total: orderData.total,
-      paymentMethod: 'razorpay',
-      status: 'received',
-      statusToken,
-      updateToken,
-      userId: orderData.userId,
-      referralCode: orderData.referralCode,
-      referrerUserId: orderData.referrerUserId,
-      sitePincode: orderData.sitePincode,
-      siteLat: orderData.siteLat,
-      siteLng: orderData.siteLng,
-      gstin: orderData.gstin,
-      businessName: orderData.businessName,
-    };
-
-    const dbSuccess = await createOrder(order);
-    if (!dbSuccess) {
-      logger.error('Payment', 'verify-payment - DB write failed', { orderId });
-      logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
-      return NextResponse.json({ error: 'Failed to save order. Please contact support.' }, { status: 502 });
+    // Payment confirmed - create the order (idempotent per payment; refunds if
+    // the coins / first-order offer it used were taken by another order).
+    const result = await createPaidOrder(orderData, {
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      signature: razorpay_signature,
+    });
+    if (!result.ok) {
+      logger.api('POST', '/api/payment/verify-payment', result.status, Date.now() - start);
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
-
-    const confirmed = await confirmOrderPayment(orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature);
-    if (!confirmed) {
-      logger.error('Payment', 'verify-payment - payment confirmation DB update failed', { orderId });
-      await deleteOrder(orderId);
-      logger.api('POST', '/api/payment/verify-payment', 502, Date.now() - start);
-      return NextResponse.json({ error: 'Failed to record payment. Contact support.' }, { status: 502 });
-    }
-
-    logger.info('Payment', 'Payment verified and order created', { orderId, razorpay_payment_id });
-
-    // Debit the coins reserved at create-order time now that the order is
-    // confirmed paid & saved. Best-effort - a debit failure here is a
-    // reconciliation issue to log, not a reason to fail the (already paid) order.
-    if (orderData.userId && orderData.coinsRedeemed && orderData.coinsRedeemed > 0) {
-      const debited = await debitCoins(orderData.userId, orderData.coinsRedeemed, orderId);
-      if (!debited) {
-        logger.error('Payment', 'verify-payment - coin debit failed after order creation', {
-          orderId,
-          userId: orderData.userId,
-          coinsRedeemed: orderData.coinsRedeemed,
-        });
-      }
-    }
-
-    // Best-effort staff alert (Telegram + email) - never blocks/fails the response.
-    await notifyStaffOfNewOrder(order);
 
     logger.api('POST', '/api/payment/verify-payment', 200, Date.now() - start);
 
-    return NextResponse.json({ success: true, statusToken });
+    return NextResponse.json({ success: true, statusToken: result.statusToken });
   } catch (error) {
     logger.error('Payment', 'verify-payment - unhandled error', {
       error: error instanceof Error ? error.message : String(error),

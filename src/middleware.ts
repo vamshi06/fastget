@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/session';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // Single source of truth for route protection (runs in the Edge runtime).
 //
@@ -25,8 +26,7 @@ export async function middleware(request: NextRequest) {
   // mobile app). The old /admin/login address forwards there for old bookmarks.
   if (pathname === '/admin/login') {
     const loginUrl = new URL('/login', request.url);
-    const next = request.nextUrl.searchParams.get('next');
-    loginUrl.searchParams.set('redirect', next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin');
+    loginUrl.searchParams.set('redirect', safeRedirectPath(request.nextUrl.searchParams.get('next')) ?? '/admin');
     return NextResponse.redirect(loginUrl);
   }
 

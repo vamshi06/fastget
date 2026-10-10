@@ -1200,6 +1200,23 @@ export async function hasUserOrderedBefore(userId: string): Promise<boolean> {
 }
 
 /**
+ * Whether the user has any order other than `orderId`. Checked right AFTER an
+ * order carrying the first-order discount is saved: hasUserOrderedBefore runs
+ * at pricing time, so two checkouts placed together would otherwise both get
+ * the discount. Whichever saves second always sees the first; fails closed.
+ */
+export async function hasOtherOrder(userId: string, orderId: string): Promise<boolean> {
+  const sql = getUnpooledClient();
+  try {
+    const result = await sql`SELECT 1 FROM orders WHERE user_id = ${userId} AND id <> ${orderId} LIMIT 1`;
+    return result.length > 0;
+  } catch (error) {
+    logger.error('DB', 'Failed to check other orders for user', { userId, error: error instanceof Error ? error.message : String(error) });
+    return true;
+  }
+}
+
+/**
  * Whether the user has any order that isn't cancelled - referral codes only
  * apply to a first order. Fails closed (true) like hasUserOrderedBefore.
  */

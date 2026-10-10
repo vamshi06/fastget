@@ -48,6 +48,15 @@ export async function fetchPayment(paymentId: string) {
 }
 
 /**
+ * Refunds a payment in full. Used when a paid order is rejected after payment
+ * (e.g. the coins it redeemed were spent by another order meanwhile).
+ */
+export async function refundPayment(paymentId: string) {
+  const rz = getInstance();
+  return rz.payments.refund(paymentId, {});
+}
+
+/**
  * Verifies a Razorpay webhook payload signature (HMAC SHA256 over the exact
  * raw request body, keyed with the webhook secret set in Razorpay Dashboard →
  * Settings → Webhooks - NOT the same as RAZORPAY_KEY_SECRET).

@@ -21,9 +21,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { reviews, average, count } = await getProductReviews(productCode);
+    // Public endpoint - never expose reviewers' user or order ids.
+    const publicReviews = reviews.map(({ userId: _userId, orderId: _orderId, ...rest }) => rest);
     logger.api('GET', '/api/reviews', 200, Date.now() - start);
     return NextResponse.json(
-      { success: true, data: { reviews, average, count } },
+      { success: true, data: { reviews: publicReviews, average, count } },
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {

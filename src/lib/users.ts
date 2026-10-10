@@ -692,6 +692,14 @@ function generateSecureToken(): string {
   return randomBytes(32).toString('hex');
 }
 
+// Shape of generateSecureToken() output. reset_password_token also holds the
+// 6-digit reset OTP until it's exchanged, so token lookups must reject anything
+// else - otherwise the OTP could be guessed directly against reset-password,
+// skipping verify-reset-otp's per-account attempt limit.
+function isSecureToken(token: string): boolean {
+  return /^[0-9a-f]{64}$/.test(token);
+}
+
 function generateOtp(): string {
   return (100000 + (randomBytes(3).readUIntBE(0, 3) % 900000)).toString();
 }
@@ -963,6 +971,7 @@ export async function setResetPasswordToken(userId: string): Promise<string | nu
  * Look up a user by their password reset token, verifying it is not expired.
  */
 export async function getUserByResetToken(token: string): Promise<User | null> {
+  if (!isSecureToken(token)) return null;
   // Use the pooled client - same connection path as setResetPasswordToken writes.
   // The unpooled (direct) endpoint can lag behind the pooler for freshly committed rows.
   const sql = getClient();
@@ -1007,6 +1016,7 @@ export async function resetUserPasswordByToken(
   token: string,
   newPassword: string,
 ): Promise<User | null> {
+  if (!isSecureToken(token)) return null;
   const sql = getClient();
   try {
     const passwordHash = await hashPassword(newPassword);
@@ -1027,7 +1037,15 @@ export async function resetUserPasswordByToken(
       RETURNING *
     `;
     if (result.length === 0) return null;
-    return dbUserToUser(result[0] as DbUser);
+    const user = result[0] as DbUser;
+    // Sign out every existing session (src/lib/auth.ts). Separate statement so
+    // the reset still works before migration 029 adds the column.
+    try {
+      await sql`UPDATE users SET sessions_valid_after = NOW() WHERE id = ${user.id}`;
+    } catch (error) {
+      logger.error('Users', 'Failed to revoke sessions after password reset', { error: error instanceof Error ? error.message : String(error) });
+    }
+    return dbUserToUser(user);
   } catch (error) {
     logger.error('Users', 'Failed to reset user password', { error: error instanceof Error ? error.message : String(error) });
     return null;

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AuthHero } from '@/components/AuthHero';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
 
 
@@ -15,8 +16,7 @@ function VerifyEmailContent() {
   const prefillEmail = searchParams.get('email') || '';
   // Where the customer was headed before signing up (e.g. /checkout) - carried
   // through to login so they land back there. Same-site paths only.
-  const redirectParam = searchParams.get('redirect');
-  const redirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null;
+  const redirect = safeRedirectPath(searchParams.get('redirect'));
 
   const [email, setEmail] = useState(prefillEmail);
   const loginParams = new URLSearchParams();
