@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
+// Category photos (public/categories/*.jpg) shown beside the hero on wide screens.
+const HERO_COLLAGE = ['cement', 'plumbing', 'electrical', 'paints', 'tools-machines', 'glass-aluminium'];
+
 interface HeroSlide {
   title: string;
   highlight: string;
@@ -126,6 +129,23 @@ export function HeroSection() {
 
       <div className="relative z-10 px-4 py-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 md:py-10">
 
+        {/* Wide screens: product-category collage fills the right half (the
+            slide text gets matching right padding so they never overlap) */}
+        <div
+          aria-hidden
+          className="hidden xl:grid grid-cols-3 gap-3 absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none"
+        >
+          {HERO_COLLAGE.map((img, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={img}
+              src={`/categories/${img}.jpg`}
+              alt=""
+              className={`w-28 h-28 rounded-2xl object-cover ring-1 ring-white/10 shadow-lg ${i % 3 === 1 ? 'translate-y-5' : ''}`}
+            />
+          ))}
+        </div>
+
         {/* Scrollable, snap-paged track - auto-advances but the user can swipe/drag too */}
         <div
           ref={trackRef}
@@ -140,7 +160,7 @@ export function HeroSection() {
           {extendedSlides.map((slide, i) => (
             <div
               key={i}
-              className="snap-start shrink-0 w-full"
+              className="snap-start shrink-0 w-full xl:pr-[400px]"
               aria-hidden={i === slides.length}
             >
               <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-[1.08] md:leading-[1.04] tracking-tight mb-2 md:mb-4">

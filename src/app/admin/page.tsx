@@ -13,10 +13,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 const RANGES = [
-  { key: 'today', label: 'Today' },
-  { key: '7d', label: 'Last 7 days' },
-  { key: '30d', label: 'Last 30 days' },
-  { key: 'all', label: 'All time' },
+  // short: phone label, so all four tabs fit on one row.
+  { key: 'today', label: 'Today', short: 'Today' },
+  { key: '7d', label: 'Last 7 days', short: '7 days' },
+  { key: '30d', label: 'Last 30 days', short: '30 days' },
+  { key: 'all', label: 'All time', short: 'All time' },
 ] as const;
 
 type RangeKey = (typeof RANGES)[number]['key'];
@@ -73,18 +74,19 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
         <h1 className="text-2xl font-black text-brand-charcoal">Dashboard</h1>
         <p className="text-brand-slate text-sm mt-1">FastGet Admin - Overview</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-4 sm:flex gap-2 w-full sm:w-auto">
         {RANGES.map((r) => (
           <Link
             key={r.key}
             href={`/admin?range=${r.key}` as any}
-            className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-colors ${
+            className={`px-2 sm:px-3 py-1.5 rounded-xl text-sm font-semibold border text-center whitespace-nowrap transition-colors ${
               range === r.key
                 ? 'bg-brand-primary text-white border-brand-primary'
                 : 'bg-white text-brand-slate border-neutral-200 hover:border-brand-primary'
             }`}
           >
-            {r.label}
+            <span className="sm:hidden">{r.short}</span>
+            <span className="hidden sm:inline">{r.label}</span>
           </Link>
         ))}
       </div>
@@ -180,17 +182,17 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
       {stockBanner}
 
       {/* Stat Cards - each opens the matching filtered order list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {statCards.map(({ label, value, sub, icon: Icon, color, href }) => (
-          <Link key={label} href={href as any} className="card p-5 hover:shadow-md hover:border-brand-primary/40 transition-all">
-            <div className="flex items-center justify-between mb-3">
+          <Link key={label} href={href as any} className="card p-4 sm:p-5 hover:shadow-md hover:border-brand-primary/40 transition-all">
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
               <span className="text-sm font-medium text-brand-slate">{label}</span>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
+              <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
                 <Icon className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-black text-brand-charcoal">{value}</p>
-            <p className="text-xs text-brand-steel mt-1">{sub}</p>
+            <p className="text-xl sm:text-2xl font-black text-brand-charcoal">{value}</p>
+            <p className="text-[11px] sm:text-xs text-brand-steel mt-1 line-clamp-2">{sub}</p>
           </Link>
         ))}
       </div>

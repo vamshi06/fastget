@@ -22,5 +22,8 @@
   "cancel": "Cancel",
   "delete": "Delete",
   "deleting": "Deleting…",
-  "offline": "You're offline. Showing what's already loaded - we'll refresh when you're back online."
+  "offline": "You're offline. Showing what's already loaded - we'll refresh when you're back online.",
+  "notFoundTitle": "Page not found",
+  "notFoundMessage": "This page doesn't exist or may have moved. Let's get you back to shopping.",
+  "goHome": "Go to Home"
 }

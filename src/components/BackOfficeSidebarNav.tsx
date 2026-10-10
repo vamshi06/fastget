@@ -37,7 +37,9 @@ export function BackOfficeSidebarNav() {
               'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
               isActive
                 ? 'bg-brand-primary text-white'
-                : 'text-gray-300 hover:bg-white/10 hover:text-white',
+                // white/75, not gray-300: greys flip dark in dark mode, but
+                // this sidebar stays dark in both themes.
+                : 'text-white/75 hover:bg-white/10 hover:text-white',
             )}
           >
             <Icon className="w-4 h-4" />

@@ -57,12 +57,12 @@ export function BackOfficeShell({ panelName, logoHref, children }: BackOfficeShe
           </div>
           <div>
             <p className="font-bold text-sm">FastGet</p>
-            <p className="text-xs text-gray-400">{panelName}</p>
+            <p className="text-xs text-white/55">{panelName}</p>
           </div>
         </Link>
         <button
           onClick={() => setDrawerOpen(false)}
-          className="lg:hidden p-3 mr-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10"
+          className="lg:hidden p-3 mr-2 rounded-lg text-white/75 hover:text-white hover:bg-white/10"
           aria-label="Close menu"
         >
           <X className="w-5 h-5" />
@@ -75,12 +75,12 @@ export function BackOfficeShell({ panelName, logoHref, children }: BackOfficeShe
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
         >
           <LogOut className="w-4 h-4" />
           {loggingOut ? 'Logging out…' : 'Log out'}
         </button>
-        <Link href="/" className="block px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+        <Link href="/" className="block px-3 py-1.5 text-xs text-white/55 hover:text-white transition-colors">
           ← Back to Store
         </Link>
       </div>

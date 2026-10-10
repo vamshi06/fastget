@@ -38,6 +38,14 @@ interface ProductWithVariants extends Product {
   variants?: Variant[];
 }
 
+// Display labels for variant attribute keys (raw keys like "uom" read as jargon).
+const SPEC_LABEL_KEYS: Record<string, 'specUnit' | 'specSize' | 'specColour' | 'specRemarks'> = {
+  uom: 'specUnit',
+  size: 'specSize',
+  colour: 'specColour',
+  remarks: 'specRemarks',
+};
+
 export default function ProductDetailPage() {
   const params    = useParams();
   const productId = decodeURIComponent(params.id as string);
@@ -245,11 +253,12 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Product Section */}
-        <div className="grid lg:grid-cols-2 gap-6 md:gap-10 mb-10 md:mb-16">
+        <div className="grid lg:grid-cols-2 gap-6 md:gap-10 mb-4 md:mb-16">
 
-          {/* Image */}
+          {/* Image - self-start + sticky so it stays photo-sized beside a tall
+              info column instead of stretching into a big empty grey box */}
           <div
-            className="card relative p-3 md:p-6 flex items-center justify-center md:min-h-[300px]"
+            className="card relative p-3 md:p-6 flex items-center justify-center md:min-h-[300px] lg:self-start lg:sticky lg:top-32"
             style={{ background: 'linear-gradient(135deg, #F5F5F5 0%, #EBEBEB 100%)' }}
           >
             <WishlistHeart
@@ -406,12 +415,14 @@ export default function ProductDetailPage() {
             {selectedVariant && Object.keys(selectedVariant.attributes).length > 0 && (
               <div className="border-t border-neutral-100 pt-5">
                 <h3 className="text-sm font-bold text-brand-charcoal mb-3">{t('specifications')}</h3>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
                   {Object.entries(selectedVariant.attributes)
                     .filter(([, v]) => v)
                     .map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between py-1 border-b border-neutral-50">
-                        <dt className="text-xs text-brand-steel capitalize">{k}</dt>
+                      <div key={k} className="flex items-center justify-between gap-3 py-1 border-b border-neutral-100">
+                        <dt className="text-xs text-brand-steel capitalize">
+                          {SPEC_LABEL_KEYS[k] ? t(SPEC_LABEL_KEYS[k]) : k}
+                        </dt>
                         <dd className="text-xs font-semibold text-brand-charcoal">{v}</dd>
                       </div>
                     ))}

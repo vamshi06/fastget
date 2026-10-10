@@ -63,6 +63,7 @@ import { useLocationSplash, SERVICE_AREAS } from "./LocationSplashContext";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { DELIVERY_ETA_MINUTES } from "@/lib/service-area";
+import { isAuthRoute } from "@/lib/auth-routes";
 import { Product } from "@/types";
 
 const SUGGESTION_MIN_CHARS = 2;
@@ -401,7 +402,8 @@ export function Header() {
         className={cn(
           "md:hidden w-full px-4 pb-3",
           (pathname.startsWith("/my-orders") ||
-            pathname.startsWith("/account")) &&
+            pathname.startsWith("/account") ||
+            isAuthRoute(pathname)) &&
             "hidden",
         )}
       >

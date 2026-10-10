@@ -11,16 +11,13 @@ function CategoryTile({ slug, name, img, tileKey }: { slug: string; name: string
       <div
         className="w-full aspect-square rounded-2xl overflow-hidden relative border border-neutral-100 bg-primary-50"
       >
+        {/* The tile names its exact file: a .jpg-then-.png onError fallback
+            misses when the 404 lands before hydration, leaving a broken image. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/categories/${img}.jpg`}
+          src={`/categories/${img}`}
           alt={name}
           className="absolute inset-0 w-full h-full object-cover"
-          onError={(e) => {
-            const el = e.target as HTMLImageElement;
-            if (!el.src.endsWith('.png')) { el.src = `/categories/${img}.png`; }
-            else { el.style.display = 'none'; }
-          }}
         />
       </div>
       <span className="text-[11px] sm:text-xs font-medium text-brand-charcoal text-center leading-tight px-0.5 line-clamp-2">

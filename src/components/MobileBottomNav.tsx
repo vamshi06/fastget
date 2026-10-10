@@ -8,6 +8,7 @@ import { Home, LayoutGrid, ShoppingCart, ClipboardList, User } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { useCart } from '@/components/CartContext';
 import { isStaffRoute } from '@/lib/staff-routes';
+import { isAuthRoute } from '@/lib/auth-routes';
 
 // Task screens with their own pinned action bar at the bottom (Add to cart /
 // Checkout / Place order). The tab bar steps aside there, as in native
@@ -56,7 +57,7 @@ function useKeyboardOpen() {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const isKeyboardOpen = useKeyboardOpen();
-  const isHiddenRoute = isStaffRoute(pathname) || isFlowRoute(pathname);
+  const isHiddenRoute = isStaffRoute(pathname) || isFlowRoute(pathname) || isAuthRoute(pathname);
   const isVisible = !isHiddenRoute && !isKeyboardOpen;
   const { getItemCount } = useCart();
   const itemCount = getItemCount();

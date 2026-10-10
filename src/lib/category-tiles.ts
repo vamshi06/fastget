@@ -11,7 +11,7 @@
 
 // slug: DB category slug used for the /catalog link. tileKey: key under
 // catalog.categoryTiles for this tile's display name, and the catalog's
-// ?sub= value. img: image filename. Group titles use either titleKey
+// ?sub= value. img: image filename in public/categories (with extension). Group titles use either titleKey
 // (catalog namespace) or titleCategorySlug (reuses the shared categories
 // namespace when the group name matches a DB category).
 export interface CategoryTileDef {
@@ -31,51 +31,51 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     titleKey: 'groupCivilConstruction',
     categories: [
-      { slug: 'civil-materials',   tileKey: 'cement',        img: 'cement',        terms: ['cement'] },
+      { slug: 'civil-materials',   tileKey: 'cement',        img: 'cement.jpg',    terms: ['cement'] },
       // Floor/wall tiles, grout and tile adhesive live in civil materials.
-      { slug: 'civil-materials',   tileKey: 'tiling',        img: 'tiling',        terms: ['tile', 'floor tile', 'wall tile', 'grout'] },
-      { slug: 'paints',            tileKey: 'paints',        img: 'paints',        terms: [] },
-      { slug: 'civil-materials',   tileKey: 'waterproofing', img: 'waterproofing', terms: ['waterproof', 'curing'] },
-      { slug: 'carpentry',         tileKey: 'plywood',       img: 'plywood',       terms: ['plywood', 'blockboard', 'board', 'mdf', 'hdhmr', 'pre-lam', 'laminate'] },
-      { slug: 'carpentry',         tileKey: 'adhesives',     img: 'adhesives',     terms: ['adhesive', 'fevicol', 'sealant', 'silicone'] },
-      { slug: 'civil-materials',   tileKey: 'sand',          img: 'sand',          terms: ['sand', 'm-sand', 'aggregate'] },
+      { slug: 'civil-materials',   tileKey: 'tiling',        img: 'tiling.jpg',    terms: ['tile', 'floor tile', 'wall tile', 'grout'] },
+      { slug: 'paints',            tileKey: 'paints',        img: 'paints.jpg',    terms: [] },
+      { slug: 'civil-materials',   tileKey: 'waterproofing', img: 'waterproofing.jpg', terms: ['waterproof', 'curing'] },
+      { slug: 'carpentry',         tileKey: 'plywood',       img: 'plywood.jpg',   terms: ['plywood', 'blockboard', 'board', 'mdf', 'hdhmr', 'pre-lam', 'laminate'] },
+      { slug: 'carpentry',         tileKey: 'adhesives',     img: 'adhesives.jpg', terms: ['adhesive', 'fevicol', 'sealant', 'silicone'] },
+      { slug: 'civil-materials',   tileKey: 'sand',          img: 'sand.jpg',      terms: ['sand', 'm-sand', 'aggregate'] },
     ],
   },
   {
     titleCategorySlug: 'plumbing',
     categories: [
-      { slug: 'plumbing', tileKey: 'pipes',    img: 'pipes',    terms: ['pipe', 'cpvc', 'pvc', 'upvc', 'coupler', 'elbow', 'tee', 'reducer', 'hose'] },
-      { slug: 'plumbing', tileKey: 'taps',     img: 'taps',     terms: ['tap', 'faucet', 'mixer', 'cock', 'stopcock', 'pillar cock', 'valve'] },
-      { slug: 'plumbing', tileKey: 'drainage', img: 'drainage', terms: ['drain', 'trap', 'bottle trap', 'p-trap', 'sink'] },
+      { slug: 'plumbing', tileKey: 'pipes',    img: 'pipes.jpg', terms: ['pipe', 'cpvc', 'pvc', 'upvc', 'coupler', 'elbow', 'tee', 'reducer', 'hose'] },
+      { slug: 'plumbing', tileKey: 'taps',     img: 'taps.png', terms: ['tap', 'faucet', 'mixer', 'cock', 'stopcock', 'pillar cock', 'valve'] },
+      { slug: 'plumbing', tileKey: 'drainage', img: 'drainage.jpg', terms: ['drain', 'trap', 'bottle trap', 'p-trap', 'sink'] },
     ],
   },
   {
     titleKey: 'groupCarpentryHardware',
     categories: [
-      { slug: 'carpentry',         tileKey: 'hinges',       img: 'hinges',        terms: ['hinge', 'channel', 'bed fitting'] },
-      { slug: 'carpentry',         tileKey: 'handles',      img: 'handles',       terms: ['handle', 'knob'] },
-      { slug: 'glass-aluminium',   tileKey: 'glass',        img: 'glass',         terms: ['glass', 'mirror'] },
-      { slug: 'glass-aluminium',   tileKey: 'aluminium',    img: 'aluminium',     terms: ['aluminium', 'section', 'profile', 'u track'] },
-      { slug: 'glass-aluminium',   tileKey: 'doorWindow',   img: 'door-window',   terms: ['door', 'window', 'casement', 'sliding'] },
+      { slug: 'carpentry',         tileKey: 'hinges',       img: 'hinges.jpg',    terms: ['hinge', 'channel', 'bed fitting'] },
+      { slug: 'carpentry',         tileKey: 'handles',      img: 'handles.png',   terms: ['handle', 'knob'] },
+      { slug: 'glass-aluminium',   tileKey: 'glass',        img: 'glass.png',     terms: ['glass', 'mirror'] },
+      { slug: 'glass-aluminium',   tileKey: 'aluminium',    img: 'aluminium.jpg', terms: ['aluminium', 'section', 'profile', 'u track'] },
+      { slug: 'glass-aluminium',   tileKey: 'doorWindow',   img: 'door-window.jpg', terms: ['door', 'window', 'casement', 'sliding'] },
       // Locks are carpentry hardware (cupboard / multi locks).
-      { slug: 'carpentry',         tileKey: 'locks',        img: 'locks',         terms: ['lock', 'cupboard lock', 'multi lock'] },
-      { slug: 'flooring-ceilings', tileKey: 'falseCeiling', img: 'false-ceiling', terms: ['ceiling', 'grid', 'hanger', 'perimeter', 'gypsum', 'cornice', 'pop'] },
+      { slug: 'carpentry',         tileKey: 'locks',        img: 'locks.jpg',     terms: ['lock', 'cupboard lock', 'multi lock'] },
+      { slug: 'flooring-ceilings', tileKey: 'falseCeiling', img: 'false-ceiling.jpg', terms: ['ceiling', 'grid', 'hanger', 'perimeter', 'gypsum', 'cornice', 'pop'] },
     ],
   },
   {
     titleCategorySlug: 'tools-machines',
     categories: [
-      { slug: 'tools-machines', tileKey: 'handTools', img: 'hand-tools', terms: ['screw driver', 'screwdriver', 'allen', 'chisel', 'caulking', 'sand paper', 'tile cutter', 'spanner', 'plier', 'wrench', 'claw hammer', 'hacksaw'] },
-      { slug: 'tools-machines', tileKey: 'measuring', img: 'measuring',  terms: ['measur', 'spirit level', 'level'] },
+      { slug: 'tools-machines', tileKey: 'handTools', img: 'hand-tools.png', terms: ['screw driver', 'screwdriver', 'allen', 'chisel', 'caulking', 'sand paper', 'tile cutter', 'spanner', 'plier', 'wrench', 'claw hammer', 'hacksaw'] },
+      { slug: 'tools-machines', tileKey: 'measuring', img: 'measuring.jpg', terms: ['measur', 'spirit level', 'level'] },
     ],
   },
   {
     titleCategorySlug: 'electrical',
     categories: [
-      { slug: 'electrical', tileKey: 'wires',    img: 'wires',    terms: ['wire', 'fr wire', 'cable'] },
-      { slug: 'electrical', tileKey: 'switches', img: 'switches', terms: ['switch', 'socket', 'usb socket', 'plate', 'module'] },
-      { slug: 'electrical', tileKey: 'lighting', img: 'lighting', terms: ['led', 'light', 'downlight', 'batten', 'lamp'] },
-      { slug: 'electrical', tileKey: 'mcb',      img: 'mcb',      terms: ['mcb', 'rccb', 'distribution board'] },
+      { slug: 'electrical', tileKey: 'wires',    img: 'wires.png', terms: ['wire', 'fr wire', 'cable'] },
+      { slug: 'electrical', tileKey: 'switches', img: 'switches.jpg', terms: ['switch', 'socket', 'usb socket', 'plate', 'module'] },
+      { slug: 'electrical', tileKey: 'lighting', img: 'lighting.jpg', terms: ['led', 'light', 'downlight', 'batten', 'lamp'] },
+      { slug: 'electrical', tileKey: 'mcb',      img: 'mcb.jpg',  terms: ['mcb', 'rccb', 'distribution board'] },
     ],
   },
 ];

@@ -246,7 +246,9 @@ export default function EditProductPage() {
               {productCode}
             </span>
             {categorySlug && (
-              <span className="ml-2 text-brand-steel">· {categorySlug}</span>
+              <span className="ml-2 text-brand-steel">
+                · {categoryOptions.find((c) => c.slug === categorySlug)?.name ?? categorySlug}
+              </span>
             )}
           </p>
         </div>
@@ -471,9 +473,12 @@ export default function EditProductPage() {
                 min="1" step="1" className={inputCls} disabled={saving} />
             </div>
             <div>
-              <label className={labelCls}>
-                Stock Qty (manual)
-                <span className={`ml-2 text-xs font-normal normal-case px-1.5 py-0.5 rounded-full ${
+              <label className={labelCls}>Stock Qty (manual)</label>
+              {/* Status badge sits inside the field - beside the label it wrapped in this narrow column */}
+              <div className="relative">
+                <input type="number" name="stockQuantity" value={formData.stockQuantity}
+                  onChange={handleChange} min="0" step="1" className={`${inputCls} pr-24`} disabled={saving} />
+                <span className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium whitespace-nowrap px-1.5 py-0.5 rounded-full ${
                   parseInt(formData.stockQuantity) > 10
                     ? 'bg-green-100 text-green-700'
                     : parseInt(formData.stockQuantity) > 0
@@ -486,9 +491,7 @@ export default function EditProductPage() {
                     ? 'Low Stock'
                     : 'Out of Stock'}
                 </span>
-              </label>
-              <input type="number" name="stockQuantity" value={formData.stockQuantity}
-                onChange={handleChange} min="0" step="1" className={inputCls} disabled={saving} />
+              </div>
               <p className="text-xs text-brand-steel mt-1">
                 Orders don&apos;t reduce this automatically - update it when your stock changes. At 0 the
                 product page shows it as out of stock.

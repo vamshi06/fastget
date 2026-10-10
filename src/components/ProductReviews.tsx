@@ -137,9 +137,9 @@ export function ProductReviews({ productCode }: { productCode: string }) {
                 {t('reviewSummary', { average: average.toFixed(1), count })}
               </span>
             </div>
-          ) : (
+          ) : !loading ? (
             <p className="text-sm text-brand-slate mt-1">{t('noReviewsYet')}</p>
-          )}
+          ) : null}
         </div>
 
         {isLoaded && currentUser && eligibility?.canReview && !showForm && (

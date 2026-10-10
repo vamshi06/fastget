@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { Order, OrderStatus, PaymentMethod, ORDER_STATUS_LABELS } from '@/types';
 import type { AdminOrderFilters } from '@/lib/db';
 import { adminOrderFiltersToQuery } from '@/lib/admin-order-filters';
-import { formatOrderNumber } from '@/lib/utils';
+import { formatOrderNumber, orderCoinDiscount } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
@@ -77,7 +77,7 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
               onChange={(e) => setFilter('status', e.target.value === 'all' ? '' : (e.target.value as OrderStatus))}
               className={inputCls}
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All</option>
               {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => (
                 <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>
               ))}
@@ -93,7 +93,7 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
               onChange={(e) => setFilter('payment', e.target.value === 'all' ? '' : (e.target.value as PaymentMethod))}
               className={inputCls}
             >
-              <option value="all">All Payment Methods</option>
+              <option value="all">All</option>
               <option value="cod">Cash on Delivery</option>
               <option value="razorpay">Paid Online</option>
             </select>
@@ -107,7 +107,7 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Name, phone or order ID"
+              placeholder="Name, phone, order no."
               className={inputCls}
             />
           </div>
@@ -166,7 +166,40 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
           </a>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Phones: one card per order - the 7-column table only fits from md up */}
+        <div className="md:hidden divide-y divide-neutral-100">
+          {orders.length > 0 ? (
+            orders.map((order) => (
+              <Link
+                key={order.id}
+                href={`/admin/orders/${order.id}`}
+                className="block px-4 py-3.5 active:bg-primary-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-semibold text-brand-charcoal">{formatOrderNumber(order)}</p>
+                    <p className="text-sm font-medium text-brand-charcoal truncate">{order.customerName}</p>
+                    <p className="text-xs text-brand-steel">
+                      {order.customerPhone} · {formatAdminOrderDate(order.createdAt)}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <OrderAmount order={order} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <PaymentBadge order={order} />
+                  <StatusBadge status={order.status} />
+                  <ChevronRight className="w-4 h-4 text-brand-steel ml-auto" />
+                </div>
+              </Link>
+            ))
+          ) : (
+            <p className="px-4 py-12 text-center text-brand-slate font-medium">No orders found</p>
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[760px]">
             <thead>
               <tr className="bg-brand-fog border-b border-neutral-100">
@@ -194,17 +227,10 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
                       <div className="text-xs text-brand-steel">{order.customerPhone}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-brand-slate whitespace-nowrap">
-                      {new Date(order.createdAt).toLocaleString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Kolkata',
-                      })}
+                      {formatAdminOrderDate(order.createdAt)}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-brand-charcoal whitespace-nowrap">
-                      ₹{order.total.toLocaleString('en-IN')}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <OrderAmount order={order} />
                     </td>
                     <td className="px-6 py-4">
                       <PaymentBadge order={order} />
@@ -256,6 +282,30 @@ export function OrdersListClient({ orders, total, page, pageSize, filters }: Ord
         )}
       </div>
     </div>
+  );
+}
+
+function formatAdminOrderDate(iso: string) {
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  });
+}
+
+/** Amount due, plus any part paid with coins (else a coin-paid order shows a bare ₹0). */
+function OrderAmount({ order }: { order: Order }) {
+  const coins = orderCoinDiscount(order);
+  return (
+    <>
+      <p className="text-sm font-bold text-brand-charcoal">₹{order.total.toLocaleString('en-IN')}</p>
+      {coins > 0 && (
+        <p className="text-[11px] font-medium text-brand-dark">+ ₹{coins.toLocaleString('en-IN')} coins</p>
+      )}
+    </>
   );
 }
 

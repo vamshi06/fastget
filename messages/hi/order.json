@@ -151,6 +151,7 @@
     }
   },
   "coinsUsed": "इस्तेमाल किए गए FastGet कॉइन",
+  "paidWithCoins": "{amount} कॉइन से भुगतान",
   "totalAmountPaid": "कुल भुगतान की गई राशि:",
   "totalPaid": "कुल भुगतान",
   "gstinLine": "GSTIN: {gstin}",

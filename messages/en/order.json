@@ -151,6 +151,7 @@
     }
   },
   "coinsUsed": "FastGet coins used",
+  "paidWithCoins": "{amount} paid with coins",
   "totalAmountPaid": "Total Amount Paid:",
   "totalPaid": "Total Paid",
   "gstinLine": "GSTIN: {gstin}",

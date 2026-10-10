@@ -56,6 +56,16 @@ const CATALOG_SELECT = `
 
 // ── Row → Product mapper ──────────────────────────────────────────────────────
 
+/**
+ * Unit of measure as shown to shoppers. The catalogue mixes "piece", "set",
+ * "metre" with "Bag", "Roll", "Nos"; capitalise the first letter so cards read
+ * consistently. Display only - admin forms read the raw uom column.
+ */
+function displayUnit(uom: string | null | undefined): string {
+  const unit = (uom || 'piece').trim() || 'piece';
+  return unit.charAt(0).toUpperCase() + unit.slice(1);
+}
+
 function catalogRowToProduct(row: any): Product {
   const effectivePaise = Number(row.effective_price_paise) || 0;
   const mrpPaise       = Number(row.mrp_price_paise)       || 0;
@@ -83,7 +93,7 @@ function catalogRowToProduct(row: any): Product {
     description:  row.description || '',
     price:        Math.round(effectivePaise / 100),
     mrpPrice:     mrpPaise > 0 ? Math.round(mrpPaise / 100) : undefined,
-    unit:         attrs.uom || row.product_uom || 'piece',
+    unit:         displayUnit(attrs.uom || row.product_uom),
     category:     (row.category_slug || 'carpentry') as CategoryId,
     imageUrl:     row.image_url || undefined,
     stockStatus:  stock > 10 ? 'in_stock' : stock > 0 ? 'low' : 'in_stock',
@@ -349,7 +359,7 @@ function categoryTableRowToProduct(row: any): Product {
     description:  row.description_i18n || row.description || '',
     price:        Math.round(effectivePriceVal / 100),
     mrpPrice:     mrpVal > 0 ? Math.round(mrpVal / 100) : undefined,
-    unit:         row.uom || 'piece',
+    unit:         displayUnit(row.uom),
     category:     (row.category_slug || 'carpentry') as CategoryId,
     imageUrl:     row.image_url || undefined,
     stockStatus:  'in_stock',
@@ -899,7 +909,7 @@ export async function getProductWithVariants(
       description:  pr.description || '',
       price:        firstVariant?.priceRupees ?? Math.round(Number(pr.base_price_paise) / 100),
       mrpPrice:     firstVariant?.mrpRupees,
-      unit:         attrs.uom || pr.product_uom || 'piece',
+      unit:         displayUnit(attrs.uom || pr.product_uom),
       category:     (pr.category_slug || 'carpentry') as CategoryId,
       categoryName: pr.category_name || undefined,
       imageUrl:     pr.image_url || undefined,

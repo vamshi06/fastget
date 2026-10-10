@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useUser } from '@/components/UserContext';
 import { SignInPrompt } from '@/components/SignInPrompt';
 import { Order, OrderStatus } from '@/types';
-import { formatCurrency, formatOrderNumber } from '@/lib/utils';
+import { formatCurrency, formatOrderNumber, orderCoinDiscount } from '@/lib/utils';
 import { useReorder } from '@/lib/use-reorder';
 import { OrderReviewPanel } from '@/components/OrderReviewPanel';
 import { ArrowRight, CheckCircle, ChevronRight, ClipboardList, Clock, MapPin, Package, RefreshCw, RotateCcw, ShoppingBag, Truck, XCircle } from 'lucide-react';
@@ -215,6 +215,12 @@ export default function MyOrdersPage() {
                       <div className="text-right">
                         <p className="text-xs text-brand-steel mb-0.5">{t('total')}</p>
                         <p className="text-base font-black text-brand-charcoal">{formatCurrency(order.total)}</p>
+                        {/* Without this, a fully coin-paid order reads as a ₹0 bug */}
+                        {orderCoinDiscount(order) > 0 && (
+                          <p className="text-[11px] font-medium text-brand-dark mt-0.5">
+                            {t('paidWithCoins', { amount: formatCurrency(orderCoinDiscount(order)) })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

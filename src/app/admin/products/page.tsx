@@ -336,7 +336,46 @@ export default function ProductsPage() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Phones: one card per product - the 9-column table only fits from md up */}
+          <div className="md:hidden divide-y divide-neutral-100">
+            {products.map((product) => {
+              const code = product.productCode ?? product.id;
+              const discontinued = product.status === 'discontinued';
+              return (
+                <div key={code} className={`px-4 py-3 ${discontinued ? 'opacity-60' : ''}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <Link href={`/admin/products/${encodeURIComponent(code)}/edit`} className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm text-brand-charcoal line-clamp-2">
+                        {product.name}
+                        {product.isFlashSale && (
+                          <span className="ml-1.5 inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 align-middle">🔥 SALE</span>
+                        )}
+                        {product.status && product.status !== 'active' && (
+                          <span className="ml-1.5 inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 text-brand-graphite uppercase align-middle">{product.status}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-brand-steel mt-0.5">
+                        <span className="font-mono">{code}</span>
+                        {product.brand && ` · ${product.brand}`}
+                      </p>
+                      <p className="text-sm mt-1">
+                        <span className="font-semibold text-brand-charcoal">₹{product.price.toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-brand-steel">/{product.unit}</span>
+                        {product.mrpPrice ? <span className="text-xs text-brand-steel line-through ml-1.5">₹{product.mrpPrice.toLocaleString('en-IN')}</span> : null}
+                        <span className="text-xs text-brand-steel ml-1.5">· MOQ {product.moq ?? 1}</span>
+                      </p>
+                    </Link>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <StockBadge quantity={product.stockQuantity} />
+                      <ProductRowActions code={code} name={product.name} discontinued={discontinued} onAction={setPendingAction} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead className="bg-brand-fog border-b border-neutral-100">
                 <tr>
@@ -409,7 +448,7 @@ export default function ProductsPage() {
                       {/* Sub-category slug */}
                       <td className="px-4 py-3">
                         <span className="inline-block text-xs bg-neutral-100 text-brand-graphite px-2 py-0.5 rounded-full whitespace-nowrap">
-                          {product.category}
+                          {CATEGORY_LABELS[product.category] ?? product.category}
                         </span>
                       </td>
 
@@ -431,66 +470,12 @@ export default function ProductsPage() {
 
                       {/* Stock */}
                       <td className="px-4 py-3 text-center">
-                        {product.stockQuantity !== undefined ? (
-                          <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            product.stockQuantity > 10
-                              ? 'bg-green-100 text-green-700'
-                              : product.stockQuantity > 0
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {product.stockQuantity}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-300 text-xs">-</span>
-                        )}
+                        <StockBadge quantity={product.stockQuantity} />
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href={`/admin/products/${encodeURIComponent(code)}/edit`}
-                            className="p-1.5 rounded-lg text-brand-steel hover:text-brand-primary hover:bg-primary-50 inline-flex transition-all"
-                            title="Edit product"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Link>
-                          <Link
-                            href={`/product/${code}`}
-                            target="_blank"
-                            className="p-1.5 rounded-lg text-brand-steel hover:text-brand-charcoal hover:bg-neutral-100 inline-flex transition-all"
-                            title="View in catalog"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </Link>
-                          {discontinued ? (
-                            <>
-                              <button
-                                onClick={() => setPendingAction({ kind: 'restore', productCode: code, name: product.name })}
-                                className="p-1.5 rounded-lg text-brand-steel hover:text-green-700 hover:bg-green-50 inline-flex transition-all"
-                                title="Restore (make active again)"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setPendingAction({ kind: 'delete', productCode: code, name: product.name })}
-                                className="p-1.5 rounded-lg text-brand-steel hover:text-red-600 hover:bg-red-50 inline-flex transition-all"
-                                title="Delete permanently"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => setPendingAction({ kind: 'discontinue', productCode: code, name: product.name })}
-                              className="p-1.5 rounded-lg text-brand-steel hover:text-red-600 hover:bg-red-50 inline-flex transition-all"
-                              title="Discontinue (hide from store)"
-                            >
-                              <Archive className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                        <ProductRowActions code={code} name={product.name} discontinued={discontinued} onAction={setPendingAction} />
                       </td>
                     </tr>
                   );
@@ -567,6 +552,74 @@ export default function ProductsPage() {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function StockBadge({ quantity }: { quantity?: number }) {
+  if (quantity === undefined) return <span className="text-neutral-300 text-xs">-</span>;
+  return (
+    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
+      quantity > LOW_STOCK_THRESHOLD
+        ? 'bg-green-100 text-green-700'
+        : quantity > 0
+        ? 'bg-yellow-100 text-yellow-700'
+        : 'bg-red-100 text-red-700'
+    }`}>
+      {quantity}
+    </span>
+  );
+}
+
+function ProductRowActions({ code, name, discontinued, onAction }: {
+  code: string;
+  name: string;
+  discontinued: boolean;
+  onAction: (action: PendingAction) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Link
+        href={`/admin/products/${encodeURIComponent(code)}/edit`}
+        className="p-1.5 rounded-lg text-brand-steel hover:text-brand-primary hover:bg-primary-50 inline-flex transition-all"
+        title="Edit product"
+      >
+        <Pencil className="w-4 h-4" />
+      </Link>
+      <Link
+        href={`/product/${code}`}
+        target="_blank"
+        className="p-1.5 rounded-lg text-brand-steel hover:text-brand-charcoal hover:bg-neutral-100 inline-flex transition-all"
+        title="View in catalog"
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+      </Link>
+      {discontinued ? (
+        <>
+          <button
+            onClick={() => onAction({ kind: 'restore', productCode: code, name })}
+            className="p-1.5 rounded-lg text-brand-steel hover:text-green-700 hover:bg-green-50 inline-flex transition-all"
+            title="Restore (make active again)"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onAction({ kind: 'delete', productCode: code, name })}
+            className="p-1.5 rounded-lg text-brand-steel hover:text-red-600 hover:bg-red-50 inline-flex transition-all"
+            title="Delete permanently"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => onAction({ kind: 'discontinue', productCode: code, name })}
+          className="p-1.5 rounded-lg text-brand-steel hover:text-red-600 hover:bg-red-50 inline-flex transition-all"
+          title="Discontinue (hide from store)"
+        >
+          <Archive className="w-4 h-4" />
+        </button>
       )}
     </div>
   );

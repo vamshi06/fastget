@@ -4,8 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Header } from './Header';
 import { isStaffRoute } from '@/lib/staff-routes';
-
-const AUTH_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password'];
+import { isAuthRoute } from '@/lib/auth-routes';
 
 export function ConditionalHeader() {
   const pathname = usePathname();
@@ -22,7 +21,7 @@ export function ConditionalHeader() {
     return null;
   }
 
-  if (AUTH_ROUTES.includes(pathname) && isNativeApp) {
+  if (isAuthRoute(pathname) && isNativeApp) {
     return null;
   }
 
