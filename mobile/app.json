@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "versionCode": 14,
+      "versionCode": 16,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5A623"
@@ -61,6 +61,7 @@
     },
     "plugins": [
       "expo-asset",
+      "./plugins/withOptionalLocationFeatures",
       "expo-status-bar",
       [
         "expo-navigation-bar",
