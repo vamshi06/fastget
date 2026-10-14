@@ -179,7 +179,8 @@ const NAV_CATEGORY_IDS = [
 ];
 
 export function Header() {
-  const { getItemCount } = useCart();
+  // Coin balance comes from the cart context so it refreshes after an order spends coins.
+  const { getItemCount, coinBalance } = useCart();
   const { currentUser, logout } = useUser();
   const { wishlistCount } = useWishlist();
   const { selectedLocation, openSplash } = useLocationSplash();
@@ -202,7 +203,6 @@ export function Header() {
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [coinBalance, setCoinBalance] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const suggestionsAbortRef = useRef<AbortController | null>(null);
 
@@ -222,16 +222,6 @@ export function Header() {
 
   // Never leave the header tucked away on a freshly opened screen.
   useEffect(() => setCollapsed(false), [pathname]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    fetch("/api/coins/balance", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && typeof data.balance === "number") setCoinBalance(data.balance);
-      })
-      .catch(() => {});
-  }, [currentUser]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -367,13 +357,13 @@ export function Header() {
             {currentUser && (
               <Link
                 href={"/my-coins" as any}
-                aria-label={t("header.coinsLabel", { count: coinBalance ?? 0 })}
+                aria-label={t("header.coinsLabel", { count: coinBalance })}
                 className="pressable flex items-center gap-1.5 h-10 pl-2 pr-3 rounded-full bg-white/90 shadow-sm"
               >
                 <span className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center">
                   <Coins className="w-3.5 h-3.5 text-white" />
                 </span>
-                <span className="text-sm font-black text-brand-charcoal">{coinBalance ?? "–"}</span>
+                <span className="text-sm font-black text-brand-charcoal">{coinBalance}</span>
               </Link>
             )}
             <Link
@@ -613,7 +603,7 @@ export function Header() {
                     >
                       <Coins className="w-4 h-4 text-brand-primary flex-shrink-0" />
                       <span className="flex-1">{t('myCoins')}</span>
-                      <span className="text-xs font-bold text-brand-charcoal">{coinBalance ?? '-'}</span>
+                      <span className="text-xs font-bold text-brand-charcoal">{coinBalance}</span>
                     </Link>
 
                     {/* Refer & Earn */}

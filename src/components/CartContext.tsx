@@ -264,6 +264,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [redeemCoins, setRedeemCoins] = useState(false);
   const [coinsToRedeem, setCoinsToRedeem] = useState(0);
 
+  const refreshCoinBalance = useCallback(() => {
+    fetch('/api/coins/balance', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!currentUser) {
       setCoinBalance(0);
@@ -271,13 +280,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCoinsToRedeem(0);
       return;
     }
-    fetch('/api/coins/balance', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && typeof data.balance === 'number') setCoinBalance(data.balance);
-      })
-      .catch(() => {});
-  }, [currentUser]);
+    refreshCoinBalance();
+  }, [currentUser, refreshCoinBalance]);
 
   useEffect(() => {
     try {
@@ -402,11 +406,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
   }, []);
 
+  // Also called after a successful order, which may have spent coins - re-fetch
+  // the balance, or the next order is priced against a stale one and rejected
+  // by the server's total check.
   const clearCart = useCallback(() => {
     dispatch({ type: 'CLEAR_CART' });
     setRedeemCoins(false);
     setCoinsToRedeem(0);
-  }, []);
+    if (currentUser) refreshCoinBalance();
+  }, [currentUser, refreshCoinBalance]);
 
   const getItemCount = useCallback(() => {
     return state.items.reduce((sum, item) => sum + item.quantity, 0);

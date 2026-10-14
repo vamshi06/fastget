@@ -1169,7 +1169,7 @@ function CheckoutPageContent() {
                           type="number"
                           min={0}
                           max={maxRedeemable}
-                          value={coinsToRedeem}
+                          value={Math.min(coinsToRedeem, maxRedeemable)}
                           onChange={(e) => {
                             const v = Math.round(Number(e.target.value) || 0);
                             setCoinsToRedeem(Math.max(0, Math.min(maxRedeemable, v)));
