@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Package, ShoppingBag, Star, Truck, Coins, Gift, GalleryHorizontal } from 'lucide-react';
+import { BarChart3, Package, ShoppingBag, Star, Truck, Coins, Gift, GalleryHorizontal, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/admin',           label: 'Dashboard',       icon: BarChart3   },
   { href: '/admin/products',  label: 'Products',        icon: Package     },
   { href: '/admin/orders',    label: 'Orders',          icon: ShoppingBag },
+  { href: '/admin/users',     label: 'Users',           icon: Users       },
   { href: '/admin/reviews',   label: 'Reviews',         icon: Star        },
   { href: '/admin/coins',     label: 'Coins',           icon: Coins       },
   { href: '/admin/referrals', label: 'Referrals',       icon: Gift        },

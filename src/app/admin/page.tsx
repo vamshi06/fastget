@@ -1,5 +1,6 @@
 import { getAdminOrderStats } from '@/lib/db';
 import { getStockAlertCounts, LOW_STOCK_THRESHOLD } from '@/lib/products';
+import { getAdminUserStats } from '@/lib/users';
 import { requireAdminPage } from '@/lib/auth';
 import { adminOrderFiltersToQuery, daysAgoInIndia, todayInIndia } from '@/lib/admin-order-filters';
 import { formatCurrency } from '@/lib/utils';
@@ -7,7 +8,7 @@ import Link from 'next/link';
 import { OrderStatus, ORDER_STATUS_LABELS } from '@/types';
 import {
   ShoppingBag, TrendingUp, CheckCircle2, Truck,
-  Clock, XCircle, BarChart3, ArrowRight, AlertCircle, PackageX,
+  Clock, XCircle, BarChart3, ArrowRight, AlertCircle, PackageX, Users,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -40,9 +41,10 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
     : 'all';
   const rangeLabel = RANGES.find((r) => r.key === range)!.label;
   const dates = rangeDates(range);
-  const [stats, stockAlerts] = await Promise.all([
+  const [stats, stockAlerts, userStats] = await Promise.all([
     getAdminOrderStats(dates.dateFrom, dates.dateTo),
     getStockAlertCounts(),
+    getAdminUserStats(dates.dateFrom, dates.dateTo),
   ]);
 
   // Stock is current state, not tied to the date range, so it shows on every tab.
@@ -169,6 +171,18 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
           icon: PackageX,
           color: stockAlerts.outOfStock > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600',
           href: stockAlerts.outOfStock > 0 || stockAlerts.lowStock === 0 ? '/admin/products?stock=out' : '/admin/products?stock=low',
+        }]
+      : []),
+    ...(userStats
+      ? [{
+          label: 'Users',
+          value: userStats.totalCustomers.toLocaleString('en-IN'),
+          sub: range === 'all'
+            ? 'Registered customers'
+            : `${userStats.newCustomers.toLocaleString('en-IN')} new · ${rangeLabel}`,
+          icon: Users,
+          color: 'bg-primary-50 text-brand-primary',
+          href: '/admin/users',
         }]
       : []),
   ];

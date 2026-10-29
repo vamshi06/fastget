@@ -1098,3 +1098,97 @@ function dbAddressToUserAddress(dbAddr: DbUserAddress): UserAddress {
         : String(dbAddr.created_at),
   };
 }
+
+/**
+ * Customer counts for the admin dashboard: total customers, and how many
+ * signed up within the optional IST date range. Returns null on a DB error.
+ */
+export async function getAdminUserStats(
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<{ totalCustomers: number; newCustomers: number } | null> {
+  const sql = getUnpooledClient();
+  const from = dateFrom || null;
+  const to = dateTo || null;
+  try {
+    const rows = await sql`
+      SELECT COUNT(*)::int AS total,
+             COUNT(*) FILTER (
+               WHERE (${from}::date IS NULL
+                      OR created_at >= (${from}::date)::timestamp AT TIME ZONE 'Asia/Kolkata')
+                 AND (${to}::date IS NULL
+                      OR created_at < (${to}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')
+             )::int AS new_in_range
+      FROM users
+      WHERE role = 'customer'
+    `;
+    return { totalCustomers: Number(rows[0]?.total ?? 0), newCustomers: Number(rows[0]?.new_in_range ?? 0) };
+  } catch (error) {
+    logger.error('Users', 'Failed to get admin user stats', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
+
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+  coinBalance: number;
+  orderCount: number;
+  lastOrderAt: string | null;
+}
+
+/**
+ * Paginated customer list for the admin Users page, newest sign-ups first,
+ * optionally filtered by name / email / phone. Returns null on a DB error so
+ * the page can say so instead of showing an empty list.
+ */
+export async function searchUsersForAdmin(
+  query: string,
+  limit: number,
+  offset: number,
+): Promise<{ users: AdminUserRow[]; total: number } | null> {
+  const sql = getUnpooledClient();
+  const q = query.trim() ? `%${query.trim().replace(/[\%_]/g, (c) => `\${c}`)}%` : null;
+  try {
+    const rows = await sql`
+      SELECT u.id, u.name, u.email, u.phone, u.created_at, u.coin_balance,
+             COALESCE(o.order_count, 0)::int AS order_count, o.last_order_at,
+             COUNT(*) OVER() AS full_count
+      FROM users u
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) AS order_count, MAX(created_at) AS last_order_at
+        FROM orders
+        WHERE user_id IS NOT NULL
+        GROUP BY user_id
+      ) o ON o.user_id = u.id
+      WHERE u.role = 'customer'
+        AND (${q}::text IS NULL
+             OR u.name ILIKE ${q}
+             OR u.email ILIKE ${q}
+             OR u.phone LIKE ${q})
+      ORDER BY u.created_at DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+    const toIso = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
+    return {
+      total: rows.length > 0 ? Number(rows[0].full_count) : 0,
+      users: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        createdAt: toIso(r.created_at),
+        coinBalance: Number(r.coin_balance ?? 0),
+        orderCount: Number(r.order_count),
+        lastOrderAt: r.last_order_at ? toIso(r.last_order_at) : null,
+      })),
+    };
+  } catch (error) {
+    logger.error('Users', 'Failed to search users for admin', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+}
