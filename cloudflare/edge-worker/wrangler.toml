@@ -1,0 +1,21 @@
+# FastGet edge fallback Worker - see src/index.js for what it does.
+# Deploy:  cd cloudflare/edge-worker && npx wrangler deploy
+# Routes only fire when the fastget.in / www DNS records are PROXIED (orange cloud).
+name = "fastget-edge"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = false
+
+routes = [
+  { pattern = "fastget.in/*", zone_name = "fastget.in" },
+  { pattern = "www.fastget.in/*", zone_name = "fastget.in" },
+]
+
+# Workers Logs - every fallback is logged with its ref (Ray ID).
+[observability]
+enabled = true
+
+# Optional Telegram alert on outage. Set the chat ID here, and the bot token as
+# a secret:  npx wrangler secret put TELEGRAM_BOT_TOKEN
+[vars]
+TELEGRAM_ALERT_CHAT_ID = ""
