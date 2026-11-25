@@ -252,7 +252,7 @@ export interface WishlistItem {
 // ============================================================================
 
 export type CoinTransactionReason =
-  | 'order_delivered'   // 10% of order total, credited when the order is marked delivered
+  | 'order_delivered'   // 5% of order total, credited when the order is marked delivered
   | 'redemption'        // spent at checkout, 1 coin = ₹1 off
   | 'redemption_refund' // a redemption is refunded if its order is later cancelled
   | 'admin_adjustment'; // manual correction by an admin

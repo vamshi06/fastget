@@ -912,7 +912,7 @@ export async function updateOrderStatus(
     // the primary effect). Guest orders (no userId) don't participate.
     if (currentOrder.userId) {
       if (newStatus === 'delivered') {
-        const coinsEarned = Math.round(currentOrder.total * 0.10);
+        const coinsEarned = Math.round(currentOrder.total * 0.05);
         if (coinsEarned > 0) {
           await creditCoins(currentOrder.userId, coinsEarned, 'order_delivered', orderId);
         }

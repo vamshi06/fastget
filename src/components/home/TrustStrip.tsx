@@ -9,7 +9,7 @@ import { Banknote, Coins, Gift, Truck, Zap } from 'lucide-react';
  *   delivery   - the 60-min promise used across the site
  *   cod        - cash on delivery at checkout
  *   firstOrder - order-pricing FIRST_ORDER_DISCOUNT_RUPEES
- *   coins      - db.ts credits 10% of the order total on delivery
+ *   coins      - db.ts credits 5% of the order total on delivery
  */
 export async function TrustStrip() {
   const t = await getTranslations('home.trust');
