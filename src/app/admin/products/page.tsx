@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, ExternalLink, Pencil, Trash2, Archive, RotateCcw, Search, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, Archive, RotateCcw, Search, ChevronLeft, ChevronRight, Layers, Download } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 
 // Mirrors LOW_STOCK_THRESHOLD in lib/products.ts (not imported: that module is server-only).
@@ -214,6 +214,10 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a href="/admin/api/products/export" download className="btn-secondary">
+            <Download className="w-4 h-4" />
+            Download products
+          </a>
           <Link href={'/admin/products/families' as any} className="btn-secondary">
             <Layers className="w-4 h-4" />
             Size families
